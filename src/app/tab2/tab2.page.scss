@@ -1,0 +1,385 @@
+// ── Variables ──────────────────────────────────────────────
+$bg: #f0f0f0;
+$surface: #ffffff;
+$lavender: #e8e0f0;
+$lavender-mid: #d4c8e8;
+$lavender-text: #7c5cbf;
+$text: #111111;
+$text-mid: #555555;
+$text-muted: #999999;
+$border: #e2e2e2;
+
+// ── Fonts ───────────────────────────────────────────────────
+// Add to your index.html <head> if not already there:
+// <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+// ── Toolbar / Header ────────────────────────────────────────
+ion-toolbar {
+  --background: #{$surface};
+  --border-color: #{$border};
+  --color: #{$text};
+}
+
+ion-header {
+  box-shadow: none;
+}
+
+.title-italic {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+  color: $text;
+}
+
+.title-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+  color: $text;
+}
+
+// ── Ion content background ───────────────────────────────────
+ion-content {
+  --background: #{$bg};
+}
+
+// ── Messages area ────────────────────────────────────────────
+.messages-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 16px 24px;
+  min-height: 100%;
+}
+
+// ── Timestamp divider ────────────────────────────────────────
+.time-divider {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: $text-muted;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 8px 0;
+}
+
+// ── Message rows ─────────────────────────────────────────────
+.msg-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 82%;
+  gap: 3px;
+
+  &.bot {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+
+  &.user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  &.assistant {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+}
+
+// ── Bubbles ──────────────────────────────────────────────────
+.bubble {
+  padding: 12px 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: $text;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  .msg-row.bot & {
+    background: $surface;
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .msg-row.assistant & {
+    background: $surface;
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .msg-row.user & {
+    background: $lavender;
+    border-radius: 18px 18px 4px 18px;
+    color: $text;
+  }
+}
+
+// ── Message timestamp ────────────────────────────────────────
+.msg-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: $text-muted;
+  padding: 0 4px;
+}
+
+// ── Typing indicator ─────────────────────────────────────────
+.bubble.typing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 18px;
+  background: $surface;
+  border-radius: 18px 18px 18px 4px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $text-muted;
+    animation: dot-bounce 1.2s infinite;
+
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+}
+
+@keyframes dot-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+// ── Chips row ────────────────────────────────────────────────
+.chips-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  background: $bg;
+  flex-shrink: 0;
+
+  // hide scrollbar
+  &::-webkit-scrollbar { display: none; }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  ion-chip {
+    --background: #e8e8e8;
+    --color: #{$text-mid};
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    border-radius: 20px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin: 0;
+
+    &:active {
+      --background: #{$lavender-mid};
+      --color: #{$lavender-text};
+    }
+  }
+}
+
+// ── Input bar (footer) ───────────────────────────────────────
+ion-footer {
+  background: $bg;
+
+  &::before {
+    display: none; // remove Ionic's default top shadow line
+  }
+}
+
+.input-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  background: $bg;
+
+  ion-button {
+    --color: #{$text-mid};
+    --padding-start: 4px;
+    --padding-end: 4px;
+    flex-shrink: 0;
+
+    &:hover {
+      --color: #{$lavender-text};
+    }
+  }
+
+  .input-field {
+    flex: 1;
+    --background: #{$surface};
+    --color: #{$text};
+    --placeholder-color: #{$text-muted};
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --padding-top: 10px;
+    --padding-bottom: 10px;
+    border-radius: 24px;
+    font-size: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    min-height: 44px;
+  }
+}
+
+// ── Compare modal ────────────────────────────────────────────
+ion-modal {
+  --border-radius: 20px 20px 0 0;
+  --box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.1);
+
+  ion-toolbar {
+    --background: #{$surface};
+    --border-color: transparent;
+  }
+
+  ion-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: $text;
+
+    em {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+    }
+  }
+
+  ion-content {
+    --background: #{$surface};
+  }
+
+  ion-button {
+    --color: #{$text-mid};
+  }
+}
+// ── Compare sheet ────────────────────────────────────────────
+.compare-content {
+  --background: #{$surface};
+}
+
+.compare-category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 8px;
+
+  .category-prefix {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: $text-muted;
+    flex-shrink: 0;
+  }
+
+  .category-select {
+    flex: 1;
+    background: $lavender;
+    color: $lavender-text;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+    appearance: auto;
+  }
+}
+
+  .category-arrow {
+    font-size: 12px;
+    color: $lavender-text;
+  }
+
+
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.plan-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1.5px solid $border;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &.checked {
+    border-color: $lavender-mid;
+    background: #faf8ff;
+  }
+
+  .plan-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid $border;
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon {
+      font-size: 14px;
+      color: $lavender-text;
+    }
+  }
+
+  &.checked .plan-checkbox {
+    background: $lavender;
+    border-color: $lavender-mid;
+  }
+
+  .plan-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .plan-name {
+    font-size: 15px;
+    color: $text;
+  }
+
+  .plan-premium {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: $text-muted;
+  }
+}
+
+.compare-footer {
+  padding: 12px 16px 20px;
+
+  .compare-run-btn {
+    width: 100%;
+    background: $lavender;
+    color: $lavender-text;
+    border: none;
+    border-radius: 28px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    &:not(:disabled):hover {
+      background: $lavender-mid;
+    }
+  }
+}

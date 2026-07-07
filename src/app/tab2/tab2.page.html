@@ -1,17 +1,120 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Tab 2
+      <span class="title-italic">Talk to</span>
+      <span class="title-mono"> Cova</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="reset()">
+        <ion-icon name="refresh-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
   <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 2</ion-title>
-    </ion-toolbar>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet">
   </ion-header>
+  <!-- Messages -->
+  <div class="messages-area">
+    <div class="time-divider">TODAY {{ nowTime() }}</div>
 
-  <app-explore-container name="Tab 2 page"></app-explore-container>
+    <!-- Welcome message -->
+    <div class="msg-row bot">
+      <div class="bubble">
+        Hi there, I'm <strong>Cova</strong>, your Prudential insurance assistant.
+        Ask me anything about your coverage or to simplify any policy terms.
+      </div>
+    </div>
+
+    <!-- Conversation -->
+    <ng-container *ngFor="let msg of messages">
+      <div class="msg-row" [ngClass]="msg.role">
+        <div class="bubble">{{ msg.content }}</div>
+        <span class="msg-time">{{ nowTime() }}</span>
+      </div>
+    </ng-container>
+
+    <!-- Typing indicator -->
+    <div class="msg-row bot" *ngIf="isLoading">
+      <div class="bubble typing">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div #messagesEnd></div>
+  </div>
+
 </ion-content>
+
+<!-- Chips -->
+<div class="chips-row">
+  <ion-chip *ngFor="let chip of chips" (click)="send(chip)">{{ chip }}</ion-chip>
+</div>
+
+<!-- Input bar -->
+<ion-footer class="ion-no-border">
+  <div class="input-bar">
+    <ion-button fill="clear" (click)="openCompare()">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-button>
+    <ion-input [(ngModel)]="inputText" placeholder="Ask anything..." (keyup.enter)="send()" class="input-field">
+    </ion-input>
+    <ion-button fill="clear" (click)="send()" [disabled]="!inputText.trim()">
+      <ion-icon name="arrow-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+</ion-footer>
+
+<!-- Compare sheet -->
+<ion-modal [isOpen]="isCompareOpen" (didDismiss)="closeCompare()" [breakpoints]="[0, 0.6]" [initialBreakpoint]="0.6">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Choose <em>2–3</em> to compare</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeCompare()">✕</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="compare-content">
+
+      <!-- Category dropdown -->
+      <div class="compare-category">
+        <span class="category-prefix">Selected Product:</span>
+        <select class="category-select" [(ngModel)]="currentCategoryLabel" (ngModelChange)="onCategoryChange()">
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <!-- Plan checkboxes — dynamic based on category -->
+      <div class="plan-list">
+        <div class="plan-item" *ngFor="let plan of currentPlans" [class.checked]="isPlanSelected(plan)"
+          (click)="togglePlan(plan)">
+          <div class="plan-checkbox">
+            <ion-icon name="checkmark-outline" *ngIf="isPlanSelected(plan)"></ion-icon>
+          </div>
+          <div class="plan-info">
+            <span class="plan-name">{{ plan.name }}</span>
+            <span class="plan-premium">{{ plan.premium }}</span>
+          </div>
+        </div>
+      </div>
+
+    </ion-content>
+
+    <!-- Compare button -->
+    <ion-footer class="ion-no-border">
+      <div class="compare-footer">
+        <button class="compare-run-btn" [disabled]="selectedPlans.length < 2" (click)="runComparison()">
+          Compare Selected Plans &nbsp;→
+        </button>
+      </div>
+    </ion-footer>
+
+  </ng-template>
+</ion-modal>
