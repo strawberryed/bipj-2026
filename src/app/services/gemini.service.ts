@@ -31,7 +31,6 @@ export class GeminiService {
   async sendMessage(
     userMessage: string,
     history: Message[]
-    // removed userProfile parameter
   ): Promise<GeminiResponse> {
 
     const category = this.detectCategory(userMessage);
@@ -54,12 +53,11 @@ Return ONLY a raw JSON object (no markdown, no backticks) with exactly these key
   "reply": "your conversational response",
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"]
 }`.trim();
-    // removed trailing comma after "chips" array — breaks JSON.parse
 
     const contents = [
       { role: 'user', parts: [{ text: systemPrompt }] },
       { role: 'model', parts: [{ text: '{"reply":"Understood.","chips":[]}' }] },
-      // removed profileUpdates from model acknowledgement
+    
       ...history.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{ text: m.content }]
@@ -102,19 +100,31 @@ You are Cova, a friendly insurance assistant for Prudential Singapore.
 Compare these plans in simple, conversational language — like explaining to a friend.
 Focus on: key differences, who each plan suits best, and one honest takeaway.
 Never tell the user which to buy — just explain clearly.
+Keep the reply concise — maximum 4 sentences.
 
 Plans to compare:
-${JSON.stringify(plans, null, 2)}
+${JSON.stringify(plans.map(p => ({
+      name: p.name,
+      premium: p.premium,
+      description: p.description,
+      covered: p.covered,
+      notCovered: p.notCovered,
+      bestFor: p.bestFor
+    })), null, 2)}
 
-Return ONLY a raw JSON object:
+Return ONLY a raw JSON object, no markdown, no backticks:
 {
   "reply": "your comparison in plain conversational language",
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"]
 }`.trim();
 
     const body = {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 1000 }
+      contents: [
+        { role: 'user', parts: [{ text: prompt }] },
+        { role: 'model', parts: [{ text: '{"reply":"Understood.","chips":[]}' }] },
+        { role: 'user', parts: [{ text: 'Now compare the plans.' }] }
+      ],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2000 } // ← increased
     };
 
     const res: any = await this.http.post(this.apiUrl, body).toPromise();

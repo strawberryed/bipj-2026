@@ -89,7 +89,6 @@ export class Tab2Page implements AfterViewChecked {
   }
 
 
-  // Add these properties
   categories = ['Health Protection', 'Life Protection', 'Critical Illness', 'Wealth Accumulation'];
   currentCategoryLabel = 'Health Protection';
 
