@@ -1,0 +1,147 @@
+.landing-page {
+  --background: #f7f7f9; // Light grey background color
+
+  // Header Styles
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+
+    .date-text {
+      color: #8a8a8f;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      font-weight: 300;
+      color:#111;
+      font-family: 'Georgia', serif; // Clean serif font matching image
+
+      .bold-text {
+        font-weight: bold;
+      }
+    }
+
+    .profile-avatar {
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+    }
+  }
+
+  // Top Brief Purple Card
+  .brief-card {
+    background: #5b257c; // Dark Purple background
+    border-radius: 16px;
+    margin: 0 0 20px 0;
+    box-shadow: none;
+
+    .brief-title-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .brief-subtitle {
+      color: #bfa3d4;
+      font-size: 0.9rem;
+      font-family: monospace;
+    }
+
+    .insights-badge {
+      --background: #a372cc;
+      color: white;
+      text-transform: capitalize;
+      border-radius: 12px;
+      font-weight: normal;
+      padding: 4px 12px;
+    }
+
+    .main-card-title {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .brief-item {
+      --background: transparent;
+      --color: white;
+      padding: 0;
+      margin-bottom: 12px;
+
+      .brief-icon {
+        color: #e0e0e0;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 1.3rem;
+      }
+
+      h3 {
+        color: #111; // To resemble the font overlay or adjust accordingly
+        font-size: 0.7rem;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+        opacity: 0.7;
+      }
+
+      p {
+        color: #f1f1f1;
+        font-size: 0.85rem;
+      }
+    }
+  }
+
+  // Bottom Action Cards (Grid)
+  .action-card {
+    background: white;
+    border-radius: 12px;
+    margin: 6px;
+    height: calc(100% - 12px); // Equal heights
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.04);
+    position: relative;
+
+    ion-card-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .action-icon {
+      font-size: 1.8rem;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      color: #111;
+      font-family: 'Georgia', serif;
+      font-size: 1.1rem;
+      margin: 0 0 6px 0;
+    }
+
+    p {
+      color: #8e8e93;
+      font-family: monospace;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      margin-bottom: 30px; // Leave room for the arrow
+    }
+
+    .arrow-icon {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      font-size: 1.2rem;
+      color: #333;
+    }
+  }
+}
