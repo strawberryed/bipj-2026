@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
-import { GeminiService, Message } from '../services/gemini.service';
+import { GeminiService, Message, ReplyBlock } from '../services/gemini.service';
 import { POLICIES, PLANS, Plan } from '../../data/policies';
 
 
@@ -54,13 +54,25 @@ export class Tab2Page implements AfterViewChecked {
     this.isLoading = true;
     this.messages.push({ role: 'user', content: message });
 
-    // slice AFTER pushing, so history excludes the message just added
     const history = this.messages.slice(0, -1);
 
     try {
-      const res = await this.gemini.sendMessage(message, history); // use history, not this.messages
+      const res = await this.gemini.sendMessage(message, history);
 
-      this.messages.push({ role: 'assistant', content: res.reply });
+      if (Array.isArray(res.reply)) {
+        // structured block response
+        this.messages.push({
+          role: 'assistant',
+          content: '',
+          blocks: res.reply as ReplyBlock[]
+        });
+      } else {
+        // plain string response
+        this.messages.push({
+          role: 'assistant',
+          content: res.reply as string
+        });
+      }
 
       if (res.chips?.length) this.chips = res.chips;
 
@@ -130,11 +142,41 @@ export class Tab2Page implements AfterViewChecked {
     this.isLoading = true;
     try {
       const res = await this.gemini.compareMessage(this.selectedPlans);
-      this.messages.push({ role: 'assistant', content: res.reply });
+
+      // build the card rows from plan data
+      const rows = [
+        {
+          label: 'Monthly premium',
+          values: this.selectedPlans.map(p => p.premium)
+        },
+        {
+          label: 'Best for',
+          values: this.selectedPlans.map(p => p.bestFor.join(', '))
+        },
+        {
+          label: 'Covers',
+          values: this.selectedPlans.map(p => p.covered.join(', '))
+        },
+        {
+          label: 'Does not cover',
+          values: this.selectedPlans.map(p => p.notCovered.join(', '))
+        }
+      ];
+
+      this.messages.push({
+        role: 'assistant',
+        content: res.reply as string, // ← add the cast
+        compareCard: {
+          plans: [...this.selectedPlans],
+          rows
+        }
+      });
+
       if (res.chips?.length) this.chips = res.chips;
     } catch (e) {
       this.messages.push({ role: 'assistant', content: "Sorry, couldn't run the comparison. Try again?" });
     }
+
     this.isLoading = false;
     this.selectedPlans = [];
   }
