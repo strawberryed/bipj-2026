@@ -1,0 +1,74 @@
+<ion-header [translucent]="true" class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/connect-consultant" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Upgrades</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding upgrade-page">
+  <div class="header-section ion-margin-bottom">
+    <h1>Unlock your next step</h1>
+    <p class="subtitle">Select the upgrades you want and checkout when you're ready</p>
+  </div>
+
+  <h2 class="section-title">AVAILABLE UPGRADES</h2>
+
+  <ion-card class="payment-card purple-card" [class.selected-card]="isReportSelected">
+    <ion-card-content>
+      <div class="card-header-layout">
+        <div class="icon-square">
+          <ion-icon name="download-outline"></ion-icon>
+        </div>
+        <div class="card-titles">
+          <h3>PROFILE & NEEDS REPORT</h3>
+          <h2>DOWNLOAD YOUR FULL AI SUMMARY</h2>
+        </div>
+        <ion-checkbox slot="end" [(ngModel)]="isReportSelected" (ionChange)="updateTotal()"></ion-checkbox>
+      </div>
+      
+      <ul class="feature-list paid-list">
+        <li>Full PDF export of your coverage analysis</li>
+        <li>Shareable link valid for 30 days</li>
+      </ul>
+      <div class="price-tag">$5.00</div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card class="payment-card purple-card ion-margin-top" [class.selected-card]="isConsultantSelected">
+    <ion-card-content>
+      <div class="card-header-layout">
+        <div class="icon-square">
+          <ion-icon name="person-add-outline"></ion-icon>
+        </div>
+        <div class="card-titles">
+          <h3>CONSULTANT CONNECTION</h3>
+          <h2>MATCH AND CONNECT WITH A CONSULTANT</h2>
+        </div>
+        <ion-checkbox slot="end" [(ngModel)]="isConsultantSelected" (ionChange)="updateTotal()"></ion-checkbox>
+      </div>
+      
+      <ul class="feature-list paid-list">
+        <li>Match with a verified financial consultant</li>
+        <li>Book a 30-min video or phone call session</li>
+      </ul>
+      <div class="price-tag">$10.00</div>
+    </ion-card-content>
+  </ion-card>
+</ion-content>
+
+<ion-footer class="ion-no-border" *ngIf="cartTotal > 0">
+  <ion-toolbar class="cart-footer-toolbar">
+    <div class="footer-layout">
+      <div class="cart-info">
+        <span class="items-count">Selected: {{ getSelectedCount() }} items</span>
+        <span class="running-total">Total: ${{ cartTotal | number:'1.2-2' }}</span>
+      </div>
+      <ion-button class="checkout-btn" (click)="goToCheckout()">
+        PROCEED TO CHECKOUT
+        <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

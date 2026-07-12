@@ -1,0 +1,94 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>connect-consultant</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding consultant-page">
+  <div class="header-section ion-margin-bottom">
+    <h1>Connect with a consultant!</h1>
+    <p>Your AI session has been summarised and shared with matched consultants so you can skip the intro.</p>
+  </div>
+
+  <ion-card class="summary-card">
+    <ion-card-header>
+      <ion-card-title>Cova AI summary</ion-card-title>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ul class="bullet-list" [class.blurred-content]="!isPaidUser">
+        <li>2 alternative plans identified</li>
+        <li>Policy exclusions summarised</li>
+        <li>Costs and coverage</li>
+        <li>Current plan policy expirations</li>
+      </ul>
+
+      <div class="download-banner">
+        <div class="banner-left">
+          <ion-icon name="lock-closed-outline" class="lock-icon"></ion-icon>
+          <span>DOWNLOAD FULL AI SUMMARY</span>
+        </div>
+        <ion-button *ngIf="!isPaidUser" size="small" class="upgrade-btn" (click)="upgradeUser()">
+          Upgrade
+        </ion-button>
+        <ion-button *ngIf="isPaidUser" size="small" color="light" fill="clear">
+          <ion-icon name="download-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <h2 class="section-title">MATCHED CONSULTANTS</h2>
+
+  <div class="consultant-list-container">
+
+    <ion-item lines="none" class="consultant-item" detail="true">
+      <ion-avatar slot="start" class="consultant-avatar">
+        <img src="assets/sarah.jpg" alt="Sarah Lim" />
+      </ion-avatar>
+      <ion-label>
+        <h3>SARAH LIM</h3>
+        <p class="role-text">Financial and Health Advisor</p>
+        <div class="tag-container">
+          <ion-badge class="custom-badge text-purple">Health</ion-badge>
+          <ion-badge class="custom-badge text-purple">Benefits optimisation</ion-badge>
+        </div>
+      </ion-label>
+    </ion-item>
+
+    <div class="protected-row">
+      <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
+        <ion-avatar slot="start" class="consultant-avatar">
+          <img src="assets/brandon.jpg" alt="Brandon" />
+        </ion-avatar>
+        <ion-label>
+          <h3>BRANDON</h3>
+          <p class="role-text">Senior Financial Advisor</p>
+          <div class="tag-container">
+            <ion-badge class="custom-badge text-purple">Health</ion-badge>
+            <ion-badge class="custom-badge text-purple">Plan Switching</ion-badge>
+          </div>
+        </ion-label>
+      </ion-item>
+      <div class="center-lock-overlay" *ngIf="!isPaidUser" (click)="upgradeUser()">
+        <ion-icon name="lock-closed-outline"></ion-icon>
+      </div>
+    </div>
+
+    <div class="protected-row">
+      <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
+        <ion-avatar slot="start" class="consultant-avatar">
+          <img src="assets/johnny.jpg" alt="Johnny Lee" />
+        </ion-avatar>
+        <ion-label>
+          <h3>JOHNNY LEE</h3>
+          <p class="role-text">Group and Individual Plans</p>
+          <div class="tag-container">
+            <ion-badge class="custom-badge text-purple">Wealth</ion-badge>
+          </div>
+        </ion-label>
+      </ion-item>
+    </div>
+
+  </div>
+</ion-content>

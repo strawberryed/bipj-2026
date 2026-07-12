@@ -9,7 +9,20 @@ const routes: Routes = [
   {
     path: 'tab4',
     loadChildren: () => import('./tab4/tab4.module').then( m => m.Tab4PageModule)
+  },
+  {
+    path: 'connect-consultant',
+    loadChildren: () => import('./connect-consultant/connect-consultant.module').then( m => m.ConnectConsultantPageModule)
+  },
+  {
+    path: 'upgrade',
+    loadChildren: () => import('./upgrade/upgrade.module').then( m => m.UpgradePageModule)
+  },
+  {
+    path: 'checkout-page',
+    loadChildren: () => import('./checkout-page/checkout-page.module').then( m => m.CheckoutPageModule)
   }
+
 ];
 @NgModule({
   imports: [

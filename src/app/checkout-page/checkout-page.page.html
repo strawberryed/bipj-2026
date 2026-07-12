@@ -1,0 +1,82 @@
+<ion-header [translucent]="true" class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/upgrade" text=""></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding checkout-page">
+  <div class="header-section ion-margin-bottom">
+    <h1>Checkout</h1>
+    <p class="subtitle">Review your order before making payment</p>
+  </div>
+
+  <h2 class="section-title">ORDER SUMMARY</h2>
+  
+  <div class="summary-box">
+    <div class="summary-row item-row" *ngIf="includeReport">
+      <div class="row-left">
+        <div class="icon-container"><ion-icon name="document-text-outline"></ion-icon></div>
+        <span class="item-name">Profile And Needs Report</span>
+      </div>
+      <span class="item-price">$5.00</span>
+    </div>
+
+    <div class="summary-row item-row" *ngIf="includeConsultant">
+      <div class="row-left">
+        <div class="icon-container"><ion-icon name="person-add-outline"></ion-icon></div>
+        <span class="item-name">Consultant Connection</span>
+      </div>
+      <span class="item-price">$10.00</span>
+    </div>
+
+    <div class="summary-row total-row">
+      <span class="total-label">Total Due</span>
+      <span class="total-price">${{ totalPrice | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <h2 class="section-title ion-margin-top">PAYMENT DETAILS</h2>
+
+  <div class="card-brands ion-margin-bottom">
+    <ion-chip class="brand-chip active-chip">VISA</ion-chip>
+    <ion-chip class="brand-chip">Mastercard</ion-chip>
+  </div>
+
+  <form [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form">
+    
+    <div class="input-group">
+      <label>Name On Card</label>
+      <ion-input type="text" formControlName="cardName" class="custom-input" [class.invalid-input]="isFieldInvalid('cardName')"></ion-input>
+      <div class="error-msg" *ngIf="isFieldInvalid('cardName')">Name is required.</div>
+    </div>
+
+    <div class="input-group">
+      <label>Card Number</label>
+      <ion-input type="text" placeholder="16-digit card number" formControlName="cardNumber" class="custom-input" [class.invalid-input]="isFieldInvalid('cardNumber')"></ion-input>
+      <div class="error-msg" *ngIf="isFieldInvalid('cardNumber')">Enter a valid 16-digit card number.</div>
+    </div>
+
+    <ion-row class="ion-no-padding">
+      <ion-col size="6" class="ion-no-padding ion-padding-end">
+        <div class="input-group">
+          <label>Expiry</label>
+          <ion-input type="text" placeholder="MM/YY" formControlName="expiry" class="custom-input" [class.invalid-input]="isFieldInvalid('expiry')"></ion-input>
+          <div class="error-msg" *ngIf="isFieldInvalid('expiry')">Use MM/YY format.</div>
+        </div>
+      </ion-col>
+      <ion-col size="6" class="ion-no-padding">
+        <div class="input-group">
+          <label>CVV</label>
+          <ion-input type="password" placeholder="3 digits" formControlName="cvv" class="custom-input" [class.invalid-input]="isFieldInvalid('cvv')"></ion-input>
+          <div class="error-msg" *ngIf="isFieldInvalid('cvv')">Must be 3 digits.</div>
+        </div>
+      </ion-col>
+    </ion-row>
+
+    <ion-button expand="block" type="submit" class="pay-btn" [disabled]="paymentForm.invalid">
+      CONFIRM AND PAY ${{ totalPrice | number:'1.2-2' }}
+    </ion-button>
+  </form>
+</ion-content>

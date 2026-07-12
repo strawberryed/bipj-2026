@@ -1,0 +1,159 @@
+.consultant-page {
+  background: #ffffff;
+
+  .header-section {
+    h1 {
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+  }
+
+  // Purple Summary Card Setup
+  .summary-card {
+    background: #5b257c;
+    border-radius: 16px;
+    margin: 0 0 24px 0;
+    box-shadow: none;
+
+    ion-card-title {
+      color: white;
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .bullet-list {
+      color: white;
+      padding-left: 16px;
+      margin: 8px 0 20px 0;
+      line-height: 1.6;
+      font-size: 0.9rem;
+    }
+
+    // Bottom banner layout within the card
+    .download-banner {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px;
+      
+      .banner-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+      }
+
+      .upgrade-btn {
+        --background: #bfa3d4;
+        --color: #5b257c;
+        --border-radius: 8px;
+        font-weight: bold;
+        text-transform: none;
+        margin: 0;
+      }
+    }
+  }
+
+  .section-title {
+    font-size: 0.85rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #222;
+    margin-bottom: 16px;
+  }
+
+  // Consultant List Layout
+  .consultant-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .protected-row {
+      position: relative;
+    }
+
+    .consultant-item {
+      --padding-start: 0px;
+      --inner-padding-end: 0px;
+      border-bottom: 1px solid #f2f2f5;
+
+      .consultant-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      h3 {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #444;
+        margin: 0 0 2px 0;
+      }
+
+      .role-text {
+        font-size: 1rem;
+        color: #777;
+        margin-bottom: 6px;
+      }
+
+      .tag-container {
+        display: flex;
+        gap: 6px;
+      }
+
+      .custom-badge {
+        --background: #e6daf0;
+        --color: #5b257c;
+        font-size: 0.75rem;
+        font-weight: normal;
+        text-transform: none;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+    }
+  }
+
+  // Blur UI Mechanism
+  .blurred-content {
+    filter: blur(5px);
+    pointer-events: none; // Disables interaction with blurred fields
+    user-select: none;
+  }
+
+  // Lock Icon Box Overlay over lower items
+  .center-lock-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    cursor: pointer;
+
+    ion-icon {
+      font-size: 2.2rem;
+      background: white;
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      color: #333;
+      border: 1px solid #ddd;
+    }
+  }
+}
