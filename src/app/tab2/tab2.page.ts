@@ -1,6 +1,7 @@
 import { Component, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { GeminiService, Message, ReplyBlock } from '../services/gemini.service';
 import { POLICIES, PLANS, Plan } from '../../data/policies';
+import jsPDF from 'jspdf';
 
 
 @Component({
@@ -179,5 +180,86 @@ export class Tab2Page implements AfterViewChecked {
 
     this.isLoading = false;
     this.selectedPlans = [];
+  }
+
+
+  downloadSummary() {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 16;
+    const maxWidth = pageWidth - margin * 2;
+    let y = 20;
+
+    // Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Cova Chat Summary', margin, y);
+    y += 8;
+
+    // Date
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(150);
+    doc.text(new Date().toLocaleString(), margin, y);
+    y += 10;
+
+    // Divider
+    doc.setDrawColor(220);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    // Messages
+    this.messages.forEach(msg => {
+      const isUser = msg.role === 'user';
+
+      // Role label
+      if (isUser) {
+        doc.setTextColor(100, 100, 100); // grey for user
+      } else {
+        doc.setTextColor(124, 92, 191);  // lavender for Cova
+      }
+
+      // Content
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(30);
+
+      if (msg.blocks) {
+        // structured blocks
+        msg.blocks.forEach(block => {
+          if (block.type === 'header') {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            const lines = doc.splitTextToSize(block.content.toUpperCase(), maxWidth);
+            doc.text(lines, margin, y);
+            y += lines.length * 5 + 2;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+          } else if (block.type === 'text' || block.type === 'note') {
+            const lines = doc.splitTextToSize(block.content, maxWidth);
+            doc.text(lines, margin, y);
+            y += lines.length * 6 + 2;
+          } else if (block.type === 'bullets') {
+            block.items.forEach(item => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth - 4);
+              doc.text(lines, margin + 4, y);
+              y += lines.length * 6;
+            });
+            y += 2;
+          }
+          // new page if needed
+          if (y > 270) { doc.addPage(); y = 20; }
+        });
+      } else if (msg.content) {
+        const lines = doc.splitTextToSize(msg.content, maxWidth);
+        doc.text(lines, margin, y);
+        y += lines.length * 6;
+      }
+
+      y += 6; // gap between messages
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    doc.save('cova-chat-summary.pdf');
   }
 }
