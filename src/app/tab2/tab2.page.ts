@@ -40,6 +40,7 @@ export class Tab2Page implements AfterViewChecked, OnInit {
 
   ngOnInit() {
     this.chips = [...this.activeProfile.defaultChips];
+    this.loadChat();
   }
 
   ngAfterViewChecked() {
@@ -47,6 +48,14 @@ export class Tab2Page implements AfterViewChecked, OnInit {
       this.lastMessageCount = this.messages.length;
       this.scrollToBottom();
     }
+  }
+  saveChat() {
+    localStorage.setItem('cova_chat', JSON.stringify(this.messages));
+  }
+
+  loadChat() {
+    const saved = localStorage.getItem('cova_chat');
+    if (saved) this.messages = JSON.parse(saved);
   }
 
   scrollToBottom() {
@@ -98,11 +107,14 @@ export class Tab2Page implements AfterViewChecked, OnInit {
     }
 
     this.isLoading = false;
+    this.saveChat();
   }
 
   reset() {
     this.messages = [];
     this.chips = [...this.activeProfile.defaultChips];
+    localStorage.removeItem('cova_chat');
+
   }
 
   openCompare() { this.isCompareOpen = true; }
@@ -158,9 +170,9 @@ export class Tab2Page implements AfterViewChecked, OnInit {
 
       const rows = [
         { label: 'Monthly premium', values: this.selectedPlans.map(p => p.premium) },
-        { label: 'Best for',        values: this.selectedPlans.map(p => p.bestFor.join(', ')) },
-        { label: 'Covers',          values: this.selectedPlans.map(p => p.covered.join(', ')) },
-        { label: 'Does not cover',  values: this.selectedPlans.map(p => p.notCovered.join(', ')) }
+        { label: 'Best for', values: this.selectedPlans.map(p => p.bestFor.join(', ')) },
+        { label: 'Covers', values: this.selectedPlans.map(p => p.covered.join(', ')) },
+        { label: 'Does not cover', values: this.selectedPlans.map(p => p.notCovered.join(', ')) }
       ];
 
       this.messages.push({
@@ -180,6 +192,7 @@ export class Tab2Page implements AfterViewChecked, OnInit {
 
     this.isLoading = false;
     this.selectedPlans = [];
+    this.saveChat();
   }
 
   getFitScore(card: CompareCard, planId: string): number {

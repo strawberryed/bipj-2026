@@ -184,6 +184,13 @@ You are Cova, a friendly insurance assistant for Prudential Singapore.
 Compare these plans in simple, conversational language.
 Never tell the user which to buy — just explain clearly.
 Keep the reply to 2 sentences maximum.
+Calculate fit scores based on these specific criteria:
+- Budget match: does the premium fit within ${profile.monthlyBudget}? (30% weight)
+- Coverage match: does it address their stated concerns and goals? (40% weight)  
+- Life stage match: is it suitable for their current situation? (20% weight)
+- Health condition compatibility: any exclusions that affect them? (10% weight)
+
+Score strictly 0-100 based on these criteria only.
 Keep each fitScore reason to 10 words maximum.
 
 ${this.formatProfile(profile)}
@@ -223,7 +230,7 @@ Return ONLY a raw JSON object, no markdown, no backticks:
         { role: 'model', parts: [{ text: '{"reply":"Understood.","chips":[],"fitScores":[]}' }] },
         { role: 'user', parts: [{ text: 'Now compare the plans.' }] }
       ],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4000 }
+      generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
     };
 
     const res: any = await this.http.post(this.apiUrl, body).toPromise();
