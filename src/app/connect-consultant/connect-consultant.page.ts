@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router'; // 1. Import Angular Router
+import { ActivatedRoute, Router } from '@angular/router'; // 1. Import Angular Router
 
 @Component({
   selector: 'app-consultant',
@@ -11,13 +11,18 @@ export class ConsultantPage implements OnInit {
   isPaidUser: boolean = false;
 
   // 2. Inject router in constructor
-  constructor(private router: Router) { }
+  constructor(private router: Router, private route: ActivatedRoute) { }
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['unlocked'] === 'true') {
+        this.isPaidUser = true;
+      }
+    });
+  }
 
   // 3. Update method to redirect the user
   upgradeUser() {
     this.router.navigate(['/upgrade']);
   }
 }
-  
