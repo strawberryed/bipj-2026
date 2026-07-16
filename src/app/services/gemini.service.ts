@@ -35,10 +35,20 @@ export class GeminiService {
 
   private detectCategory(message: string): string {
     const msg = message.toLowerCase();
-    if (msg.includes('health') || msg.includes('hospital') || msg.includes('medical') || msg.includes('prushield') || msg.includes('accident')) return 'health';
+
+    // match by plan name first
+    if (msg.includes('pruactive life') || msg.includes('pru active life')) return 'ci';
+    if (msg.includes('prumajor') || msg.includes('pru major') || msg.includes('pruearly') || msg.includes('pru early')) return 'ci';
+    if (msg.includes('prushield') || msg.includes('pru shield') || msg.includes('pruhealth') || msg.includes('prupersonal')) return 'health';
+    if (msg.includes('pruactive term') || msg.includes('pruvital') || msg.includes('prulife') || msg.includes('prugolden')) return 'life';
+    if (msg.includes('pruactive saver') || msg.includes('prulink') || msg.includes('prucash')) return 'wealth';
+
+    // then fall back to keywords
+    if (msg.includes('health') || msg.includes('hospital') || msg.includes('medical') || msg.includes('accident')) return 'health';
     if (msg.includes('critical') || msg.includes('cancer') || msg.includes('ci') || msg.includes('illness') || msg.includes('stroke')) return 'ci';
     if (msg.includes('savings') || msg.includes('investment') || msg.includes('wealth') || msg.includes('retirement') || msg.includes('endowment')) return 'wealth';
     if (msg.includes('life') || msg.includes('death') || msg.includes('tpd') || msg.includes('term')) return 'life';
+
     return 'health';
   }
 
@@ -190,5 +200,33 @@ Return ONLY a raw JSON object, no markdown, no backticks:
       }
       return { reply: "Sorry, I couldn't process that response. Try again?", chips: [] };
     }
+  }
+  async generateSummary(messages: Message[]): Promise<string> {
+    const transcript = messages
+      .map(m => `${m.role === 'user' ? 'User' : 'Cova'}: ${m.content || JSON.stringify(m.blocks)}`)
+      .join('\n');
+
+    const prompt = `
+Based on this insurance chat, generate a structured summary with these exact sections:
+1. Plans Discussed (list plan names and categories mentioned)
+2. Key Questions Asked (list main questions the user had)
+3. Comparisons Done (if any, summarise what was compared and key differences)
+4. Important Terms Explained (any jargon that was clarified)
+5. A short disclaimer that this is for reference only
+
+Chat transcript:
+${transcript}
+
+Return plain text only, no JSON, no markdown symbols. Use clear section headers in ALL CAPS.
+Keep it concise — this is a reference document, not a full transcript.
+  `.trim();
+
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
+    };
+
+    const res: any = await this.http.post(this.apiUrl, body).toPromise();
+    return res.candidates[0].content.parts[0].text.trim();
   }
 }
