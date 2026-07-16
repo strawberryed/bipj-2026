@@ -5,6 +5,9 @@
       <span class="title-mono"> Cova</span>
     </ion-title>
     <ion-buttons slot="end">
+<ion-button fill="clear" (click)="downloadSummary()" *ngIf="messages.length > 0" [disabled]="isGeneratingSummary">
+  <ion-icon [name]="isGeneratingSummary ? 'hourglass-outline' : 'download-outline'"></ion-icon>
+</ion-button>
       <ion-button (click)="reset()">
         <ion-icon name="refresh-outline"></ion-icon>
       </ion-button>
