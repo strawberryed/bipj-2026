@@ -2,10 +2,18 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Plan, POLICIES } from '../../data/policies';
+import { DemoProfile } from '../../data/demoProfiles';
+
+export interface FitScore {
+  planId: string;
+  score: number;
+  reason: string;
+}
 
 export interface CompareCard {
   plans: Plan[];
   rows: { label: string; values: string[] }[];
+  fitScores?: FitScore[];
 }
 
 export type ReplyBlock =
@@ -24,6 +32,7 @@ export interface Message {
 export interface GeminiResponse {
   reply: string | ReplyBlock[];
   chips: string[];
+  fitScores?: FitScore[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -36,14 +45,12 @@ export class GeminiService {
   private detectCategory(message: string): string {
     const msg = message.toLowerCase();
 
-    // match by plan name first
     if (msg.includes('pruactive life') || msg.includes('pru active life')) return 'ci';
     if (msg.includes('prumajor') || msg.includes('pru major') || msg.includes('pruearly') || msg.includes('pru early')) return 'ci';
     if (msg.includes('prushield') || msg.includes('pru shield') || msg.includes('pruhealth') || msg.includes('prupersonal')) return 'health';
     if (msg.includes('pruactive term') || msg.includes('pruvital') || msg.includes('prulife') || msg.includes('prugolden')) return 'life';
     if (msg.includes('pruactive saver') || msg.includes('prulink') || msg.includes('prucash')) return 'wealth';
 
-    // then fall back to keywords
     if (msg.includes('health') || msg.includes('hospital') || msg.includes('medical') || msg.includes('accident')) return 'health';
     if (msg.includes('critical') || msg.includes('cancer') || msg.includes('ci') || msg.includes('illness') || msg.includes('stroke')) return 'ci';
     if (msg.includes('savings') || msg.includes('investment') || msg.includes('wealth') || msg.includes('retirement') || msg.includes('endowment')) return 'wealth';
@@ -51,10 +58,58 @@ export class GeminiService {
 
     return 'health';
   }
+  private formatProfile(profile: DemoProfile): string {
+    return `
+ACTIVE USER PROFILE:
+- Name: ${profile.name}
+- Age: ${profile.age}
+- Occupation: ${profile.occupation}
+- Life stage: ${profile.lifeStage}
+- Monthly Income: ${profile.monthlyIncome}
+- Monthly budget for insurance: ${profile.monthlyBudget}
+- Existing health conditions: ${profile.healthConditions.length > 0 ? profile.healthConditions.join(', ') : 'None'}
+- Current coverage: ${profile.existingCoverage.join(', ')}
+- Main concerns: ${profile.concerns.join('; ')}
+- Goals: ${profile.goals.join('; ')}
+
+Use this profile to personalise all responses. Reference the user by name naturally.
+Tailor fit scores, recommendations, and explanations to their specific situation.
+`.trim();
+  }
+
+  private parseResponse(raw: string): GeminiResponse {
+    try {
+      const clean = raw
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      const parsed = JSON.parse(clean);
+
+      if (Array.isArray(parsed.reply)) {
+        return { reply: parsed.reply, chips: parsed.chips ?? [], fitScores: parsed.fitScores };
+      }
+
+      if (parsed.reply && typeof parsed.reply === 'string') {
+        return { reply: parsed.reply, chips: parsed.chips ?? [], fitScores: parsed.fitScores };
+      }
+
+      return { reply: clean, chips: [] };
+
+    } catch {
+      const match = raw.match(/"reply"\s*:\s*"([\s\S]*?)(?<!\\)"/);
+      if (match) {
+        return { reply: match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'), chips: [] };
+      }
+      return { reply: "Sorry, I couldn't process that response. Try again?", chips: [] };
+    }
+  }
 
   async sendMessage(
     userMessage: string,
-    history: Message[]
+    history: Message[],
+    profile: DemoProfile
   ): Promise<GeminiResponse> {
 
     const category = this.detectCategory(userMessage);
@@ -67,6 +122,8 @@ Always explain jargon immediately after using it.
 Never invent figures or coverage details not in the policy data below.
 If something isn't in the data, say "I don't have that detail — a Prudential advisor can help."
 Never tell the user which plan to buy — guide and explain only.
+
+${this.formatProfile(profile)}
 
 Relevant Prudential policy data:
 ${JSON.stringify(relevantPolicies, null, 2)}
@@ -87,15 +144,15 @@ Return ONLY a raw JSON object, no markdown, no backticks:
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"]
 }`.trim();
 
+
+
     const contents = [
       { role: 'user', parts: [{ text: systemPrompt }] },
       { role: 'model', parts: [{ text: '{"reply":"Understood.","chips":[]}' }] },
       ...history.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{
-          text: m.blocks
-            ? JSON.stringify(m.blocks)
-            : m.content
+          text: m.blocks ? JSON.stringify(m.blocks) : m.content
         }]
       })),
       { role: 'user', parts: [{ text: userMessage }] }
@@ -108,99 +165,73 @@ Return ONLY a raw JSON object, no markdown, no backticks:
 
     const res: any = await this.http.post(this.apiUrl, body).toPromise();
     const raw = res.candidates[0].content.parts[0].text.trim();
-    //console.log('RAW GEMINI RESPONSE:', raw); // ← add this
-
-    try {
-      const clean = raw
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-
-      const parsed = JSON.parse(clean);
-
-      if (Array.isArray(parsed.reply)) {
-        return { reply: parsed.reply, chips: parsed.chips ?? [] };
-      }
-
-      if (parsed.reply && typeof parsed.reply === 'string') {
-        return { reply: parsed.reply, chips: parsed.chips ?? [] };
-      }
-
-      return { reply: clean, chips: [] };
-
-    } catch {
-      const match = raw.match(/"reply"\s*:\s*"([\s\S]*?)(?<!\\)"/);
-      if (match) {
-        return { reply: match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'), chips: [] };
-      }
-      return { reply: "Sorry, I couldn't process that response. Try again?", chips: [] };
-    }
+    return this.parseResponse(raw);
   }
 
-  async compareMessage(plans: Plan[]): Promise<GeminiResponse> {
+  async compareMessage(
+    plans: Plan[],
+    history: Message[],
+    profile: DemoProfile  // ← add
+  ): Promise<GeminiResponse> {
+
+    const recentContext = history
+      .slice(-6)
+      .map(m => `${m.role === 'user' ? 'User' : 'Cova'}: ${m.content || ''}`)
+      .join('\n');
+
     const prompt = `
 You are Cova, a friendly insurance assistant for Prudential Singapore.
-Compare these plans in simple, conversational language — like explaining to a friend.
-Focus on: key differences, who each plan suits best, and one honest takeaway.
+Compare these plans in simple, conversational language.
 Never tell the user which to buy — just explain clearly.
-Keep the reply concise — maximum 4 sentences.
+Keep the reply to 2 sentences maximum.
+Keep each fitScore reason to 10 words maximum.
+
+${this.formatProfile(profile)}
+
+Recent conversation:
+${recentContext || 'No prior context.'}
 
 Plans to compare:
 ${JSON.stringify(plans.map(p => ({
+      id: p.id,
       name: p.name,
       premium: p.premium,
       description: p.description,
       covered: p.covered,
       notCovered: p.notCovered,
-      bestFor: p.bestFor
+      bestFor: p.bestFor,
+      risks: p.risks,
+      considerations: p.considerations
     })), null, 2)}
+
+Calculate fit scores based specifically on this user's profile — age, budget, health conditions, existing coverage, concerns and goals.
+A high score means the plan strongly addresses their needs. A low score means it's less relevant or has issues for their situation.
 
 Return ONLY a raw JSON object, no markdown, no backticks:
 {
   "reply": "your comparison in plain conversational language",
-  "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"]
+  "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
+  "fitScores": [
+{ "planId": "<exact plan id>", "score": <0-100>, "reason": "<max 10 words>" }
+  ]
 }`.trim();
+
 
     const body = {
       contents: [
         { role: 'user', parts: [{ text: prompt }] },
-        { role: 'model', parts: [{ text: '{"reply":"Understood.","chips":[]}' }] },
+        { role: 'model', parts: [{ text: '{"reply":"Understood.","chips":[],"fitScores":[]}' }] },
         { role: 'user', parts: [{ text: 'Now compare the plans.' }] }
       ],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2000 }
+      generationConfig: { temperature: 0.7, maxOutputTokens: 4000 }
     };
 
     const res: any = await this.http.post(this.apiUrl, body).toPromise();
     const raw = res.candidates[0].content.parts[0].text.trim();
-
-    try {
-      const clean = raw
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-
-      const parsed = JSON.parse(clean);
-
-      if (Array.isArray(parsed.reply)) {
-        return { reply: parsed.reply, chips: parsed.chips ?? [] };
-      }
-
-      if (parsed.reply && typeof parsed.reply === 'string') {
-        return { reply: parsed.reply, chips: parsed.chips ?? [] };
-      }
-
-      return { reply: clean, chips: [] };
-
-    } catch {
-      const match = raw.match(/"reply"\s*:\s*"([\s\S]*?)(?<!\\)"/);
-      if (match) {
-        return { reply: match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'), chips: [] };
-      }
-      return { reply: "Sorry, I couldn't process that response. Try again?", chips: [] };
-    }
+    // console.log('COMPARE RAW:', raw);
+    return this.parseResponse(raw);
   }
+
   async generateSummary(messages: Message[]): Promise<string> {
     const transcript = messages
       .map(m => `${m.role === 'user' ? 'User' : 'Cova'}: ${m.content || JSON.stringify(m.blocks)}`)
@@ -219,7 +250,7 @@ ${transcript}
 
 Return plain text only, no JSON, no markdown symbols. Use clear section headers in ALL CAPS.
 Keep it concise — this is a reference document, not a full transcript.
-  `.trim();
+    `.trim();
 
     const body = {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
