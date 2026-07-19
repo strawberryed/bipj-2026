@@ -49,13 +49,17 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       this.scrollToBottom();
     }
   }
+
+  // Single shared chat history — persists across refresh, shared across profiles.
+  // We keep one conversation regardless of which demo profile is active; only the
+  // AI's responses (fit scores, personalization) change based on activeProfile.
   saveChat() {
-    localStorage.setItem('cova_chat', JSON.stringify(this.messages));
+    localStorage.setItem('chatbot_history', JSON.stringify(this.messages));
   }
 
   loadChat() {
-    const saved = localStorage.getItem('cova_chat');
-    if (saved) this.messages = JSON.parse(saved);
+    const saved = localStorage.getItem('chatbot_history');
+    this.messages = saved ? JSON.parse(saved) : [];
   }
 
   scrollToBottom() {
@@ -69,8 +73,11 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     const profile = DEMO_PROFILES.find(p => p.id === profileId);
     if (profile) {
       this.activeProfile = profile;
-      this.messages = [];
       this.chips = [...profile.defaultChips];
+      // Note: messages are intentionally NOT cleared or reloaded here —
+      // chat history is shared across profiles by design, so switching
+      // profiles keeps the same conversation but changes whose "lens"
+      // (budget, concerns, health conditions) future responses use.
     }
   }
 
@@ -113,8 +120,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   reset() {
     this.messages = [];
     this.chips = [...this.activeProfile.defaultChips];
-    localStorage.removeItem('cova_chat');
-
+    localStorage.removeItem('chatbot_history');
   }
 
   openCompare() { this.isCompareOpen = true; }
