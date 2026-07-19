@@ -6,12 +6,12 @@ import { AlertController } from '@ionic/angular';
 import { DEMO_PROFILES, DEFAULT_PROFILE_ID, DemoProfile } from '../../data/demoProfiles';
 
 @Component({
-  selector: 'app-tab2',
-  templateUrl: './tab2.page.html',
-  styleUrls: ['./tab2.page.scss'],
+  selector: 'app-chatbot',
+  templateUrl: './chatbot.page.html',
+  styleUrls: ['./chatbot.page.scss'],
   standalone: false,
 })
-export class Tab2Page implements AfterViewChecked, OnInit {
+export class ChatbotPage implements AfterViewChecked, OnInit {
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
 
