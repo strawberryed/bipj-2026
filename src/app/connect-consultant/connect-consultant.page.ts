@@ -25,4 +25,9 @@ export class ConsultantPage implements OnInit {
   upgradeUser() {
     this.router.navigate(['/upgrade']);
   }
+
+  goToBooking() {
+    // Navigates the window display stack directly into tab4
+    this.router.navigate(['/book-meeting']);
+  }
 }

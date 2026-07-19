@@ -1,0 +1,61 @@
+<ion-header [translucent]="true" class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/connect-consultant"></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding book-meeting-page">
+  <div class="header-section ion-margin-bottom">
+    <h1>Book a consultant meeting</h1>
+    <p class="subtitle">Your Cova AI Session Will Be Shared Before The Call</p>
+  </div>
+
+  <h2 class="section-title">YOUR MATCHED ADVISORS</h2>
+  
+  <div class="advisor-list">
+    <div class="advisor-card" 
+         *ngFor="let advisor of advisors" 
+         [class.active-card]="selectedAdvisor?.name === advisor.name"
+         (click)="selectAdvisor(advisor)">
+      <ion-avatar>
+        <img [src]="advisor.avatar" alt="advisor avatar" />
+      </ion-avatar>
+      <div class="advisor-info">
+        <h3>{{ advisor.name }}</h3>
+        <p>{{ advisor.title }}</p>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title ion-margin-top">AVAILABLE SLOTS</h2>
+  
+  <ion-row class="slots-grid">
+    <ion-col size="6" *ngFor="let slot of slots" class="slot-col">
+      <div class="slot-box" 
+           [class.active-slot]="selectedSlot === slot"
+           (click)="selectSlot(slot)">
+        <span class="slot-time">{{ slot.time }}</span>
+        <span class="slot-duration">{{ slot.duration }}</span>
+      </div>
+    </ion-col>
+  </ion-row>
+
+  <div class="ai-banner ion-margin-vertical" *ngIf="selectedAdvisor">
+    <div class="banner-icon">
+      <ion-icon name="checkmark-circle"></ion-icon>
+    </div>
+    <div class="banner-text">
+      <strong>AI SUMMARY ATTACHED</strong>
+      <p>{{ selectedAdvisor.name }} Will Receive Your Cova AI Session Before The Call</p>
+    </div>
+  </div>
+
+  <ion-button expand="block" 
+              class="confirm-booking-btn" 
+              [disabled]="!selectedAdvisor || !selectedSlot"
+              (click)="confirmBooking()">
+    CONFIRM BOOKING {{ selectedAdvisor ? '– ' + selectedAdvisor.name : '' }}
+  </ion-button>
+</ion-content>

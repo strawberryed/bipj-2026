@@ -1,0 +1,66 @@
+.book-meeting-page {
+  .advisor-card {
+    display: flex;
+    align-items: center;
+    background: #f4f4f7;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 2px solid transparent;
+    gap: 12px;
+
+    ion-avatar { width: 44px; height: 44px; }
+    h3 { font-weight: bold; margin: 0; font-size: 0.95rem; color: #111; }
+    p { margin: 2px 0 0 0; font-size: 0.8rem; color: #666; }
+  }
+
+  .active-card {
+    background: #ffffff;
+    border: 2px solid #bfa3d4;
+  }
+
+  .slots-grid {
+    margin: 0 -4px;
+    .slot-col { padding: 4px; }
+  }
+
+  .slot-box {
+    background: #e5e5ea;
+    padding: 14px;
+    border-radius: 6px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    border: 2px solid transparent;
+
+    .slot-time { font-weight: bold; color: #111; }
+    .slot-duration { font-size: 0.75rem; color: #555; margin-top: 2px; }
+  }
+
+  .active-slot {
+    background: #ebdcf5;
+    border: 2px solid #5b257c;
+    .slot-time { color: #5b257c; }
+  }
+
+  .ai-banner {
+    background: #b57cd8;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    .banner-icon ion-icon { font-size: 1.6rem; }
+    strong { font-size: 0.85rem; }
+    p { margin: 2px 0 0 0; font-size: 0.75rem; color: #fdfcff; }
+  }
+
+  .confirm-booking-btn {
+    --background: #e5e5ea;
+    --color: #111;
+    --border-radius: 8px;
+    font-weight: bold;
+  }
+}
