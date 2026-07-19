@@ -1,40 +1,45 @@
 import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit } from '@angular/core';
-import { GeminiService, Message, ReplyBlock } from '../services/gemini.service';
-import { POLICIES, Plan } from '../../data/policies';
+import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gemini.service';
+import { POLICIES, PLANS, Plan } from '../../data/policies';
 import jsPDF from 'jspdf';
+import { AlertController } from '@ionic/angular';
+import { DEMO_PROFILES, DEFAULT_PROFILE_ID, DemoProfile } from '../../data/demoProfiles';
 
 @Component({
-  selector: 'app-tab2',
-  templateUrl: './tab2.page.html',
-  styleUrls: ['./tab2.page.scss'],
+  selector: 'app-chatbot',
+  templateUrl: './chatbot.page.html',
+  styleUrls: ['./chatbot.page.scss'],
   standalone: false,
 })
-export class Tab2Page implements AfterViewChecked, OnInit {
+export class ChatbotPage implements AfterViewChecked, OnInit {
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
+
+  // Demo profiles — declared first
+  demoProfiles = DEMO_PROFILES;
+  activeProfile: DemoProfile = DEMO_PROFILES.find(p => p.id === DEFAULT_PROFILE_ID)!;
 
   messages: Message[] = [];
   inputText = '';
   isLoading = false;
   isGeneratingSummary = false;
-  chips: string[] = [
-    'What is a deductible?',
-    'Do I need medical coverage?',
-    'What does PRUShield cover?',
-    'How does co-payment work?'
-  ];
+  chips: string[] = [];
 
+  // Compare sheet
   isCompareOpen = false;
   selectedPlans: any[] = [];
-
   categories = ['Health Protection', 'Life Protection', 'Critical Illness', 'Wealth Accumulation'];
   currentCategoryLabel = 'Health Protection';
 
   private lastMessageCount = 0;
 
-  constructor(private gemini: GeminiService) { }
+  constructor(
+    private gemini: GeminiService,
+    private alertCtrl: AlertController
+  ) { }
 
   ngOnInit() {
+    this.chips = [...this.activeProfile.defaultChips];
     this.loadChat();
   }
 
@@ -45,19 +50,35 @@ export class Tab2Page implements AfterViewChecked, OnInit {
     }
   }
 
+  // Single shared chat history — persists across refresh, shared across profiles.
+  // We keep one conversation regardless of which demo profile is active; only the
+  // AI's responses (fit scores, personalization) change based on activeProfile.
+  saveChat() {
+    localStorage.setItem('chatbot_history', JSON.stringify(this.messages));
+  }
+
+  loadChat() {
+    const saved = localStorage.getItem('chatbot_history');
+    this.messages = saved ? JSON.parse(saved) : [];
+  }
+
   scrollToBottom() {
     try {
       this.messagesEnd.nativeElement.scrollIntoView({ behavior: 'smooth' });
     } catch { }
   }
 
-  saveChat() {
-    localStorage.setItem('cova_chat', JSON.stringify(this.messages));
-  }
-
-  loadChat() {
-    const saved = localStorage.getItem('cova_chat');
-    if (saved) this.messages = JSON.parse(saved);
+  switchProfile(profileId: string) {
+    if (profileId === this.activeProfile.id) return;
+    const profile = DEMO_PROFILES.find(p => p.id === profileId);
+    if (profile) {
+      this.activeProfile = profile;
+      this.chips = [...profile.defaultChips];
+      // Note: messages are intentionally NOT cleared or reloaded here —
+      // chat history is shared across profiles by design, so switching
+      // profiles keeps the same conversation but changes whose "lens"
+      // (budget, concerns, health conditions) future responses use.
+    }
   }
 
   async send(text?: string) {
@@ -71,7 +92,7 @@ export class Tab2Page implements AfterViewChecked, OnInit {
     const history = this.messages.slice(0, -1);
 
     try {
-      const res = await this.gemini.sendMessage(message, history);
+      const res = await this.gemini.sendMessage(message, history, this.activeProfile);
 
       if (Array.isArray(res.reply)) {
         this.messages.push({
@@ -98,13 +119,8 @@ export class Tab2Page implements AfterViewChecked, OnInit {
 
   reset() {
     this.messages = [];
-    this.chips = [
-      'What is a deductible?',
-      'Do I need medical coverage?',
-      'What does PRUShield cover?',
-      'How does co-payment work?'
-    ];
-    localStorage.removeItem('cova_chat');
+    this.chips = [...this.activeProfile.defaultChips];
+    localStorage.removeItem('chatbot_history');
   }
 
   openCompare() { this.isCompareOpen = true; }
@@ -127,6 +143,10 @@ export class Tab2Page implements AfterViewChecked, OnInit {
     };
     const key = categoryMap[this.currentCategoryLabel];
     return POLICIES[key] ?? [];
+  }
+
+  getPlansByCategory(category: string): Plan[] {
+    return PLANS.filter(p => p.category === category);
   }
 
   togglePlan(plan: Plan) {
@@ -152,7 +172,7 @@ export class Tab2Page implements AfterViewChecked, OnInit {
 
     this.isLoading = true;
     try {
-      const res = await this.gemini.compareMessage(this.selectedPlans);
+      const res = await this.gemini.compareMessage(this.selectedPlans, this.messages, this.activeProfile);
 
       const rows = [
         { label: 'Monthly premium', values: this.selectedPlans.map(p => p.premium) },
@@ -166,7 +186,8 @@ export class Tab2Page implements AfterViewChecked, OnInit {
         content: res.reply as string,
         compareCard: {
           plans: [...this.selectedPlans],
-          rows
+          rows,
+          fitScores: res.fitScores
         }
       });
 
@@ -180,11 +201,26 @@ export class Tab2Page implements AfterViewChecked, OnInit {
     this.saveChat();
   }
 
+  getFitScore(card: CompareCard, planId: string): number {
+    return card.fitScores?.find(f => f.planId === planId)?.score ?? 0;
+  }
+
+  async showFitReason(card: CompareCard, planId: string) {
+    const fit = card.fitScores?.find(f => f.planId === planId);
+    if (!fit) return;
+    const alert = await this.alertCtrl.create({
+      header: `${fit.score}% Fit`,
+      message: fit.reason,
+      buttons: ['Got it']
+    });
+    await alert.present();
+  }
+
   async downloadSummary() {
     if (this.messages.length === 0) return;
     this.isGeneratingSummary = true;
     try {
-      const summaryText = await this.gemini.generateSummary(this.messages); // ← from service
+      const summaryText = await this.gemini.generateSummary(this.messages);
       this.buildPDF(summaryText);
     } catch (e) {
       console.error('Summary generation failed', e);
@@ -208,6 +244,9 @@ export class Tab2Page implements AfterViewChecked, OnInit {
     doc.setFontSize(9);
     doc.setTextColor(150);
     doc.text(`Generated on ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })}`, margin, y);
+    y += 4;
+
+    doc.text(`Prepared for: ${this.activeProfile.name}, ${this.activeProfile.age}`, margin, y);
     y += 10;
 
     doc.setDrawColor(220);
@@ -248,6 +287,6 @@ export class Tab2Page implements AfterViewChecked, OnInit {
     doc.setTextColor(180);
     doc.text('This summary was generated by Cova and is for reference purposes only. Please consult a Prudential advisor before making any financial decisions.', margin, 285, { maxWidth });
 
-    doc.save('cova-summary.pdf');
+    doc.save(`cova-summary-${this.activeProfile.name.toLowerCase()}.pdf`);
   }
 }
