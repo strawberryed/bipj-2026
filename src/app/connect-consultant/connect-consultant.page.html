@@ -1,6 +1,8 @@
-<ion-header [translucent]="true">
+<ion-header [translucent]="true" class="ion-no-border">
   <ion-toolbar>
-    <ion-title>connect-consultant</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab1" text=""></ion-back-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -16,7 +18,7 @@
     </ion-card-header>
 
     <ion-card-content>
-      <ul class="bullet-list" [class.blurred-content]="!isPaidUser">
+      <ul class="bullet-list">
         <li>2 alternative plans identified</li>
         <li>Policy exclusions summarised</li>
         <li>Costs and coverage</li>
@@ -42,7 +44,7 @@
 
   <div class="consultant-list-container">
 
-    <ion-item lines="none" class="consultant-item" detail="true">
+    <ion-item lines="none" class="consultant-item" detail="true" (click)="goToBooking()">
       <ion-avatar slot="start" class="consultant-avatar">
         <img src="assets/sarah.jpg" alt="Sarah Lim" />
       </ion-avatar>
@@ -56,7 +58,7 @@
       </ion-label>
     </ion-item>
 
-    <div class="protected-row">
+    <div class="protected-row" (click)="isPaidUser ? goToBooking() : upgradeUser()">
       <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
         <ion-avatar slot="start" class="consultant-avatar">
           <img src="assets/brandon.jpg" alt="Brandon" />
@@ -70,12 +72,12 @@
           </div>
         </ion-label>
       </ion-item>
-      <div class="center-lock-overlay" *ngIf="!isPaidUser" (click)="upgradeUser()">
+      <div class="center-lock-overlay" *ngIf="!isPaidUser">
         <ion-icon name="lock-closed-outline"></ion-icon>
       </div>
     </div>
 
-    <div class="protected-row">
+    <div class="protected-row" (click)="isPaidUser ? goToBooking() : upgradeUser()">
       <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
         <ion-avatar slot="start" class="consultant-avatar">
           <img src="assets/johnny.jpg" alt="Johnny Lee" />
@@ -88,6 +90,9 @@
           </div>
         </ion-label>
       </ion-item>
+      <div class="center-lock-overlay" *ngIf="!isPaidUser">
+        <ion-icon name="lock-closed-outline"></ion-icon>
+      </div>
     </div>
 
   </div>

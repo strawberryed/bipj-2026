@@ -1,14 +1,20 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>
+    <ion-title slot="start">
       <span class="title-italic">Talk to</span>
       <span class="title-mono"> Cova</span>
     </ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="downloadSummary()" *ngIf="messages.length > 0">
-        <ion-icon name="download-outline"></ion-icon>
+      <ion-select [(ngModel)]="activeProfile" (ngModelChange)="switchProfile($event.id)" interface="popover"
+        class="profile-select">
+        <ion-select-option *ngFor="let p of demoProfiles" [value]="p">
+          {{ p.name }}, {{ p.age }}
+        </ion-select-option>
+      </ion-select>
+      <ion-button fill="clear" (click)="downloadSummary()" *ngIf="messages.length > 0" [disabled]="isGeneratingSummary">
+        <ion-icon [name]="isGeneratingSummary ? 'hourglass-outline' : 'download-outline'"></ion-icon>
       </ion-button>
-      <ion-button (click)="reset()">
+      <ion-button fill="clear" (click)="reset()">
         <ion-icon name="refresh-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -16,11 +22,6 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet">
-  </ion-header>
 
   <!-- Messages -->
   <div class="messages-area">
@@ -29,7 +30,7 @@
     <!-- Welcome message -->
     <div class="msg-row bot">
       <div class="bubble">
-        Hi there, I'm <strong>Cova</strong>, your Prudential insurance assistant.
+        Hi {{ activeProfile.name }}! I'm <strong>Cova</strong>, your Prudential insurance assistant.
         Ask me anything about your coverage or to simplify any policy terms.
       </div>
     </div>
@@ -48,6 +49,18 @@
             <div class="compare-plan-col" *ngFor="let plan of msg.compareCard.plans">
               <div class="compare-plan-name">{{ plan.name }}</div>
               <div class="compare-plan-price">{{ plan.premium }}</div>
+              <div class="fit-bar">
+                <div class="fit-bar-fill" [style.width]="getFitScore(msg.compareCard, plan.id) + '%'">
+                </div>
+              </div>
+              <div class="fit-row">
+                <span class="fit-percent">{{ getFitScore(msg.compareCard, plan.id) }}% FIT</span>
+                <button class="why-btn" *ngIf="msg.compareCard.fitScores?.length"
+                  (click)="showFitReason(msg.compareCard, plan.id)">
+                  Why?
+                </button>
+              </div>
+
             </div>
           </div>
 

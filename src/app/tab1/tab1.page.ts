@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { BookingService, BookingDetails } from '../services/booking';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-tab1',
@@ -8,12 +10,27 @@ import { Component, OnInit } from '@angular/core';
 })
 export class Tab1Page implements OnInit {
   todayDate: Date = new Date();
+  activeBooking$: Observable<BookingDetails | null>;
+  isDetailsModalOpen: boolean = false;
 
-  constructor() { }
+  constructor(private bookingService: BookingService) { 
+    this.activeBooking$ = this.bookingService.currentBooking$;
+  }
 
   ngOnInit() {
     // Optionally refresh the date when the component initializes
     this.todayDate = new Date();
+  }
+
+  openDetailsModal() { this.isDetailsModalOpen = true; }
+  closeDetailsModal() { this.isDetailsModalOpen = false; }
+
+  handleCancellation() {
+    if (confirm('Are you sure you want to cancel this booking? (No penalties apply)')) {
+      this.bookingService.cancelBooking();
+      this.closeDetailsModal();
+      alert('Booking cancelled successfully without penalties.');
+    }
   }
 
 }

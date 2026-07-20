@@ -1,15 +1,27 @@
 .consultant-page {
   background: #ffffff;
 
+  // Force parent Ionic page context wrappers into light theme space
+  ion-content {
+    --background: #ffffff;
+    --color: #111111;
+  }
+
+  ion-toolbar {
+    --background: #ffffff;
+    --color: #111111;
+  }
+
   .header-section {
     h1 {
       font-family: 'Georgia', serif;
       font-style: italic;
       font-size: 1.8rem;
       margin-bottom: 8px;
+      color: #111111; // Explicit dark text color
     }
     p {
-      color: #666;
+      color: #555555; // Darker gray for clear reading contrast
       font-size: 0.9rem;
       line-height: 1.4;
     }
@@ -20,7 +32,7 @@
     background: #5b257c;
     border-radius: 16px;
     margin: 0 0 24px 0;
-    box-shadow: none;
+    box-shadow: 0 4px 12px rgba(91, 37, 124, 0.15); // Subtle purple tint shadow
 
     ion-card-title {
       color: white;
@@ -70,7 +82,7 @@
     font-size: 0.85rem;
     font-weight: bold;
     letter-spacing: 0.5px;
-    color: #222;
+    color: #111111; // Crisp dark gray/black color heading
     margin-bottom: 16px;
   }
 
@@ -85,9 +97,11 @@
     }
 
     .consultant-item {
+      --background: #ffffff; // Card color override for item rows
+      --color: #111111;      // Text color override for list labels
       --padding-start: 0px;
       --inner-padding-end: 0px;
-      border-bottom: 1px solid #f2f2f5;
+      border-bottom: 1px solid #e5e5ea; // Standard light gray borders
 
       .consultant-avatar {
         width: 50px;
@@ -97,15 +111,15 @@
       }
 
       h3 {
-        font-size: 0.75rem;
+        font-size: 0.85rem; // Slightly larger for light mode emphasis
         font-weight: bold;
-        color: #444;
+        color: #111111;    // Solid header text line
         margin: 0 0 2px 0;
       }
 
       .role-text {
-        font-size: 1rem;
-        color: #777;
+        font-size: 0.95rem;
+        color: #555555;   // Visible subtext color
         margin-bottom: 6px;
       }
 
@@ -115,10 +129,10 @@
       }
 
       .custom-badge {
-        --background: #e6daf0;
-        --color: #5b257c;
+        --background: #ebdcf5; // Soft lavender/purple color tint
+        --color: #5b257c;      // Rich brand purple text
         font-size: 0.75rem;
-        font-weight: normal;
+        font-weight: 600;
         text-transform: none;
         padding: 4px 8px;
         border-radius: 6px;
@@ -128,8 +142,9 @@
 
   // Blur UI Mechanism
   .blurred-content {
-    filter: blur(5px);
-    pointer-events: none; // Disables interaction with blurred fields
+    filter: blur(5px) grayscale(30%); // Grayscales lightly for locked state representation
+    opacity: 0.5;                     // Light opacity overlay look
+    pointer-events: none;             // Disables interaction with blurred fields
     user-select: none;
   }
 
@@ -148,12 +163,12 @@
 
     ion-icon {
       font-size: 2.2rem;
-      background: white;
+      background: #ffffff;
       padding: 10px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      color: #333;
-      border: 1px solid #ddd;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); // Clean shadow line
+      color: #5b257c; // Swapped to brand purple to emphasize clickability
+      border: 1px solid #e5e5ea;
     }
   }
 }

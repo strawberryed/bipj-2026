@@ -53,10 +53,60 @@
     </ion-card-content>
   </ion-card>
 
+  <div class="dashboard-booking-container" *ngIf="activeBooking$ | async as booking">
+    <h2 class="section-title">UPCOMING MEETING</h2>
+    <div class="dashboard-booking-card" (click)="openDetailsModal()">
+      <div class="card-left-strip"></div>
+      <div class="card-main-content">
+        <div class="card-header-row">
+          <ion-icon name="calendar-outline"></ion-icon>
+          <span>Today at {{ booking.timeSlot }} ({{ booking.type }})</span>
+        </div>
+        <h3>With {{ booking.consultantName }}</h3>
+        <p class="tap-hint">Tap to view details or cancel</p>
+      </div>
+    </div>
+  </div>
+
+  <ion-modal [isOpen]="isDetailsModalOpen" (didDismiss)="closeDetailsModal()">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Meeting Details</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeDetailsModal()">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding ion-text-center" *ngIf="activeBooking$ | async as booking">
+        <div class="modal-body-details">
+          <ion-icon name="time-outline" class="big-modal-icon"></ion-icon>
+          <h2>Confirmed Session</h2>
+          <h3 class="consultant-highlight">{{ booking.consultantName }}</h3>
+          <p class="title-sub">{{ booking.consultantTitle }}</p>
+
+          <div class="detail-pill ion-margin-vertical">
+            <strong>{{ booking.timeSlot }}</strong> — {{ booking.type }}
+          </div>
+
+          <p class="penalty-free-notice">
+            <ion-icon name="shield-checkmark-outline"></ion-icon>
+            This presentation testing slot can be cancelled without penalties.
+          </p>
+
+          <ion-button expand="block" color="danger" class="cancel-session-btn" (click)="handleCancellation()">
+            CANCEL BOOKING
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
   <ion-grid class="ion-no-padding ion-margin-top">
     <ion-row>
       <ion-col size="6">
-        <ion-card class="action-card" button="true" routerLink="/tabs/tab2">
+        <ion-card class="action-card" button="true" routerLink="/tabs/Chatbot">
           <ion-card-content>
             <ion-icon name="chatbubble-ellipses-outline" class="action-icon"></ion-icon>
             <h2>Ask Cova</h2>

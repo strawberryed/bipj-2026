@@ -3,17 +3,20 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/upgrade" text=""></ion-back-button>
     </ion-buttons>
+    <ion-title>Checkout</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding checkout-page">
-  <div class="header-section ion-margin-bottom">
-    <h1>Checkout</h1>
-    <p class="subtitle">Review your order before making payment</p>
+  <div class="sandbox-balance-banner">
+    <ion-icon name="flask-outline"></ion-icon>
+    <div>
+      <strong>● Sandbox Testing Mode</strong>
+      <p class="sandbox-hint">Use Card: 4242 4242 4242 4242 | Expiry: 12/28 | CVV: 123</p>
+    </div>
   </div>
 
   <h2 class="section-title">ORDER SUMMARY</h2>
-  
   <div class="summary-box">
     <div class="summary-row item-row" *ngIf="includeReport">
       <div class="row-left">
@@ -37,24 +40,26 @@
     </div>
   </div>
 
-  <h2 class="section-title ion-margin-top">PAYMENT DETAILS</h2>
-
+  <h2 class="section-title ion-margin-top">PAYMENT METHOD</h2>
   <div class="card-brands ion-margin-bottom">
-    <ion-chip class="brand-chip active-chip">VISA</ion-chip>
-    <ion-chip class="brand-chip">Mastercard</ion-chip>
+    <ion-chip class="brand-chip" [class.active-chip]="selectedMethod === 'card'" (click)="setPaymentMethod('card')">
+      Credit Card
+    </ion-chip>
+    <ion-chip class="brand-chip" [class.active-chip]="selectedMethod === 'nets'" (click)="setPaymentMethod('nets')">
+      NETS QR
+    </ion-chip>
   </div>
 
-  <form [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form">
-    
+  <form *ngIf="selectedMethod === 'card'" [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form">
     <div class="input-group">
       <label>Name On Card</label>
       <ion-input type="text" formControlName="cardName" class="custom-input" [class.invalid-input]="isFieldInvalid('cardName')"></ion-input>
-      <div class="error-msg" *ngIf="isFieldInvalid('cardName')">Name is required.</div>
+      <div class="error-msg" *ngIf="isFieldInvalid('cardName')">Please enter a valid cardholder name.</div>
     </div>
 
     <div class="input-group">
       <label>Card Number</label>
-      <ion-input type="text" placeholder="16-digit card number" formControlName="cardNumber" class="custom-input" [class.invalid-input]="isFieldInvalid('cardNumber')"></ion-input>
+      <ion-input type="text" inputmode="numeric" placeholder="0000 0000 0000 0000" formControlName="cardNumber" (ionInput)="blockNonNumbers($event, 'cardNumber', 19)" class="custom-input" [class.invalid-input]="isFieldInvalid('cardNumber')"></ion-input>
       <div class="error-msg" *ngIf="isFieldInvalid('cardNumber')">Enter a valid 16-digit card number.</div>
     </div>
 
@@ -62,15 +67,15 @@
       <ion-col size="6" class="ion-no-padding ion-padding-end">
         <div class="input-group">
           <label>Expiry</label>
-          <ion-input type="text" placeholder="MM/YY" formControlName="expiry" class="custom-input" [class.invalid-input]="isFieldInvalid('expiry')"></ion-input>
-          <div class="error-msg" *ngIf="isFieldInvalid('expiry')">Use MM/YY format.</div>
+          <ion-input type="text" inputmode="numeric" placeholder="MM/YY" formControlName="expiry" (ionInput)="formatExpiry($event)" class="custom-input" [class.invalid-input]="isFieldInvalid('expiry')"></ion-input>
+          <div class="error-msg" *ngIf="isFieldInvalid('expiry')">Expiry must be standard MM/YY up to year 2031.</div>
         </div>
       </ion-col>
       <ion-col size="6" class="ion-no-padding">
         <div class="input-group">
           <label>CVV</label>
-          <ion-input type="password" placeholder="3 digits" formControlName="cvv" class="custom-input" [class.invalid-input]="isFieldInvalid('cvv')"></ion-input>
-          <div class="error-msg" *ngIf="isFieldInvalid('cvv')">Must be 3 digits.</div>
+          <ion-input type="password" inputmode="numeric" placeholder="XXX" formControlName="cvv" (ionInput)="blockNonNumbers($event, 'cvv', 3)" class="custom-input" [class.invalid-input]="isFieldInvalid('cvv')"></ion-input>
+          <div class="error-msg" *ngIf="isFieldInvalid('cvv')">Must be exactly 3 digits.</div>
         </div>
       </ion-col>
     </ion-row>
@@ -79,4 +84,15 @@
       CONFIRM AND PAY ${{ totalPrice | number:'1.2-2' }}
     </ion-button>
   </form>
+
+  <div *ngIf="selectedMethod === 'nets'" class="nets-sim-box ion-text-center">
+    <p class="nets-instructions">Scan QR with your NETSPay or Banking App to complete checkout</p>
+    <div class="qr-placeholder ion-margin-vertical">
+      <ion-icon name="qr-code-outline"></ion-icon>
+    </div>
+    
+    <ion-button expand="block" class="pay-btn nets-btn" (click)="processPayment()">
+      SIMULATE NETS QR SUCCESS
+    </ion-button>
+  </div>
 </ion-content>

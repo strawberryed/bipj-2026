@@ -157,5 +157,57 @@
                 opacity: 0.5;
             }
         }
+
     }
+
+    // Styled Sandbox Notice Banner at top
+    .sandbox-balance-banner {
+        background: #fff8e1;
+        border: 1px dashed #ffb300;
+        padding: 12px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #b78103;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+
+        ion-icon {
+            font-size: 1.5rem;
+        }
+
+        .sandbox-hint {
+            margin: 2px 0 0 0;
+            font-size: 0.75rem;
+            color: #8c6200;
+            font-family: monospace;
+        }
+    }
+
+    // Interactive NETS QR Box Container
+    .nets-sim-box {
+        background: #f4f4f7;
+        padding: 32px 20px;
+        border-radius: 12px;
+        border: 1px solid #e5e5ea;
+
+        .nets-instructions {
+            font-size: 0.85rem;
+            color: #555555;
+            margin-bottom: 20px;
+        }
+
+        .qr-placeholder {
+            font-size: 8rem;
+            color: #111111;
+        }
+
+        .nets-btn {
+            --background: #009688; // Professional corporate green accents for NETS themes
+            --color: white;
+            margin-top: 24px;
+        }
+    }
+
 }
