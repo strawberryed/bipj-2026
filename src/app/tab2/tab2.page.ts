@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit } from '@angular/core';
 import { GeminiService, Message, ReplyBlock } from '../services/gemini.service';
 import { POLICIES, PLANS, Plan } from '../../data/policies';
 import jsPDF from 'jspdf';
@@ -10,7 +10,7 @@ import jsPDF from 'jspdf';
   styleUrls: ['./tab2.page.scss'],
   standalone: false,
 })
-export class Tab2Page implements AfterViewChecked {
+export class Tab2Page implements OnInit, AfterViewChecked {
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
 
@@ -31,6 +31,18 @@ export class Tab2Page implements AfterViewChecked {
   constructor(
     private gemini: GeminiService,
   ) { }
+
+  ngOnInit() {
+    const pendingPrompt = localStorage.getItem('tab2_continue_prompt_v1');
+    if (!pendingPrompt) {
+      return;
+    }
+
+    localStorage.removeItem('tab2_continue_prompt_v1');
+    setTimeout(() => {
+      this.send(pendingPrompt);
+    }, 150);
+  }
 
   private lastMessageCount = 0;
 
