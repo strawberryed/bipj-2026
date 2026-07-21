@@ -21,7 +21,11 @@ const routes: Routes = [
   {
     path: 'checkout-page',
     loadChildren: () => import('./checkout-page/checkout-page.module').then( m => m.CheckoutPageModule)
+  },  {
+    path: 'book-meeting',
+    loadChildren: () => import('./book-meeting/book-meeting.module').then( m => m.BookMeetingPageModule)
   }
+
 
 ];
 @NgModule({
