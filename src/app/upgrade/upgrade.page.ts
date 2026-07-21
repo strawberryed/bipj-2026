@@ -9,25 +9,33 @@ import { Router } from '@angular/router';
 })
 export class UpgradePage implements OnInit {
   // Cart state tracking
-  isReportSelected: boolean = false;
+  isSummarySelected: boolean = false;
   isConsultantSelected: boolean = false;
   cartTotal: number = 0;
+
+  readonly SUMMARY_PRICE: number = 5.0;
+  readonly CONSULTANT_PRICE: number = 10.0;
+
 
   constructor(private router: Router) { }
 
   ngOnInit() {}
 
   // Automatically fires whenever a user checks or unchecks a box
-  updateTotal() {
+  calculateCartTotal() {
     let total = 0;
-    if (this.isReportSelected) total += 5.00;
-    if (this.isConsultantSelected) total += 10.00;
+    if (this.isSummarySelected) {
+      total += this.SUMMARY_PRICE;
+    }
+    if (this.isConsultantSelected) {
+      total += this.CONSULTANT_PRICE;
+    }
     this.cartTotal = total;
   }
 
   getSelectedCount(): number {
     let count = 0;
-    if (this.isReportSelected) count++;
+    if (this.isSummarySelected) count++;
     if (this.isConsultantSelected) count++;
     return count;
   }
@@ -36,7 +44,7 @@ export class UpgradePage implements OnInit {
   goToCheckout() {
     this.router.navigate(['/checkout-page'], {
       queryParams: {
-        report: this.isReportSelected,
+        report: this.isSummarySelected,
         consultant: this.isConsultantSelected
       }
     });
