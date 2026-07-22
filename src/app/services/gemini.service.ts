@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Plan, POLICIES } from '../../data/policies';
 import { DemoProfile } from '../../data/demoProfiles';
@@ -87,12 +88,27 @@ Tailor fit scores, recommendations, and explanations to their specific situation
 
       const parsed = JSON.parse(clean);
 
-      if (Array.isArray(parsed.reply)) {
-        return { reply: parsed.reply, chips: parsed.chips ?? [], fitScores: parsed.fitScores };
+      let reply = parsed.reply;
+
+      // Gemini sometimes double-encodes the blocks array as a JSON string
+      // instead of a real nested array — detect and unwrap that case.
+      if (typeof reply === 'string') {
+        const trimmedReply = reply.trim();
+        if (trimmedReply.startsWith('[') || trimmedReply.startsWith('{')) {
+          try {
+            reply = JSON.parse(trimmedReply);
+          } catch {
+            // genuinely just a plain string reply — leave as is
+          }
+        }
       }
 
-      if (parsed.reply && typeof parsed.reply === 'string') {
-        return { reply: parsed.reply, chips: parsed.chips ?? [], fitScores: parsed.fitScores };
+      if (Array.isArray(reply)) {
+        return { reply, chips: parsed.chips ?? [], fitScores: parsed.fitScores };
+      }
+
+      if (typeof reply === 'string') {
+        return { reply, chips: parsed.chips ?? [], fitScores: parsed.fitScores };
       }
 
       return { reply: clean, chips: [] };
@@ -170,7 +186,7 @@ Return ONLY a raw JSON object, no markdown, no backticks:
       generationConfig: { temperature: 0.7, maxOutputTokens: 2000 }
     };
 
-    const res: any = await this.http.post(this.apiUrl, body).toPromise();
+    const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
     const raw = res.candidates[0].content.parts[0].text.trim();
     return this.parseResponse(raw);
   }
@@ -247,7 +263,7 @@ Return ONLY a raw JSON object, no markdown, no backticks:
       generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
     };
 
-    const res: any = await this.http.post(this.apiUrl, body).toPromise();
+    const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
     const raw = res.candidates[0].content.parts[0].text.trim();
     // console.log('COMPARE RAW:', raw);
     return this.parseResponse(raw);
@@ -278,7 +294,7 @@ Keep it concise — this is a reference document, not a full transcript.
       generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
     };
 
-    const res: any = await this.http.post(this.apiUrl, body).toPromise();
+    const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
     return res.candidates[0].content.parts[0].text.trim();
   }
 }
