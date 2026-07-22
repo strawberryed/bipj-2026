@@ -1,206 +1,171 @@
-.upgrade-page {
-    --background: #ffffff;
+// Target ion-content directly or via class
+ion-content.upgrade-page {
+  --background: #ffffff;
+  --color: #111111;
 
-    .header-section {
-        h1 {
-            font-family: 'Georgia', serif;
-            font-style: italic;
-            font-size: 2rem;
-            margin-bottom: 6px;
-            color: #111;
-        }
-
-        .subtitle {
-            color: #8e8e93;
-            font-size: 0.95rem;
-        }
+  // Header Section Styling
+  .header-section {
+    h1 {
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      font-size: 2rem;
+      margin-bottom: 6px;
+      color: #111111 !important;
     }
 
-    .free-tier-section {
-        margin-top: 24px;
+    .subtitle {
+      color: #8e8e93 !important;
+      font-size: 0.95rem;
+    }
+  }
 
-        h2 {
-            font-family: 'Georgia', serif;
-            font-style: italic;
-            font-size: 1.4rem;
-            margin-bottom: 8px;
+  // Section Title ("AVAILABLE UPGRADES")
+  .section-title {
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    color: #ebdcf5 !important;
+    margin: 0 0 16px 0;
+    letter-spacing: 0.5px;
+  }
+
+  // Main Purple Wrapper Container
+  .upgrades-section-container {
+    background: #5b257c !important; // Deep purple container
+    border-radius: 20px;
+    padding: 20px;
+    margin: 16px 0;
+    display: flex;
+    flex-direction: column;
+
+    // Individual Item Upgrade Cards
+    .upgrade-item-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+
+      .card-left {
+        display: flex;
+        gap: 12px;
+        flex: 1;
+
+        .icon-badge {
+          background: #ffffff;
+          color: #5b257c;
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.3rem;
+          flex-shrink: 0;
         }
 
-        .free-badge {
-            --background: #b2e3b6;
-            --color: #2e7d32;
-            font-size: 0.75rem;
-            font-weight: bold;
-            padding: 6px 12px;
-            border-radius: 8px;
+        .card-info {
+          .category-tag {
+            font-size: 0.65rem;
             letter-spacing: 0.5px;
-        }
-    }
-
-    .section-title {
-        font-family: 'Georgia', serif;
-        font-style: italic;
-        font-size: 1.5rem;
-        color: #222;
-        margin: 28px 0 16px 0;
-        letter-spacing: 0.5px;
-    }
-
-    // Feature Lists Shared Configuration
-    .feature-list {
-        list-style-type: none;
-        padding-left: 0;
-        margin: 16px 0;
-
-        li {
-            position: relative;
-            padding-left: 14px;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-            line-height: 1.4;
-
-            &::before {
-                content: "•";
-                position: absolute;
-                left: 0;
-                top: -1px;
-            }
-        }
-    }
-
-    .free-list li {
-        color: #333;
-    }
-
-    // Purple Payment Cards Layout
-    .payment-card.purple-card {
-        background: #5b257c;
-        border-radius: 16px;
-        margin: 0;
-        box-shadow: none;
-
-        ion-card-content {
-            padding: 16px;
-        }
-
-        .card-header-layout {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .icon-square {
-            background: #ffffff;
-            color: #333;
-            padding: 10px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            width: 44px;
-            height: 44px;
-        }
-
-        .card-titles {
-            h3 {
-                color: #bfa3d4;
-                font-size: 0.75rem;
-                font-weight: bold;
-                letter-spacing: 0.5px;
-                margin: 0 0 4px 0;
-                font-family: monospace;
-            }
-
-            h2 {
-                color: #ffffff;
-                font-size: 1.15rem;
-                font-weight: bold;
-                margin: 0;
-                letter-spacing: 0.3px;
-            }
-        }
-
-        .paid-list li {
-            color: #e2d3ed;
-        }
-
-        .action-btn {
-            --background: #ebdcf5;
-            --color: #000000;
-            --border-radius: 20px;
-            --box-shadow: none;
+            color: #ebdcf5 !important;
             font-weight: bold;
-            font-size: 1.05rem;
-            margin-top: 16px;
-            height: 48px;
-        }
+            display: block;
+          }
 
-        // Layout tweaks for card header with checkbox controls
-        .card-header-layout {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
+          h3 {
+            color: #ffffff !important;
+            font-size: 0.95rem;
+            font-weight: bold;
+            margin: 4px 0 8px 0;
+            line-height: 1.3;
+          }
 
-            ion-checkbox {
-                --checkbox-background-checked: #ebdcf5;
-                --checkmark-color: #5b257c;
-                --border-color: #ebdcf5;
-                margin-left: auto; // Pushes checkbox perfectly to the right edge
+          ul {
+            margin: 0;
+            padding-left: 14px;
+            color: #f1f1f1 !important;
+            font-size: 0.78rem;
+
+            li {
+              margin-bottom: 4px;
+              line-height: 1.3;
             }
+          }
+        }
+      }
+
+      .card-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: space-between;
+        min-height: 80px;
+
+        ion-checkbox {
+          --size: 22px;
+          --checkbox-background-checked: #ebdcf5;
+          --checkmark-color: #5b257c;
+          --border-color: rgba(255, 255, 255, 0.6);
+          --border-radius: 4px;
         }
 
         .price-tag {
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin-top: 8px;
-            text-align: right;
+          color: #ffffff !important;
+          font-weight: bold;
+          font-size: 1rem;
         }
-
-        // Visual border indicator when an upgrade item card is checked
-        .selected-card {
-            border: 2px solid #bfa3d4 !important;
-        }
-
-        // Sticky Cart Footer layout
-        .cart-footer-toolbar {
-            --background: #5b257c;
-            padding: 8px 16px;
-
-            .footer-layout {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                width: 100%;
-            }
-
-            .cart-info {
-                display: flex;
-                flex-direction: column;
-                color: white;
-
-                .items-count {
-                    font-size: 0.75rem;
-                    color: #bfa3d4;
-                }
-
-                .running-total {
-                    font-size: 1.2rem;
-                    font-weight: bold;
-                }
-            }
-
-            .checkout-btn {
-                --background: white;
-                --color: #5b257c;
-                --border-radius: 8px;
-                font-weight: bold;
-                font-size: 0.85rem;
-                margin: 0;
-            }
-        }
+      }
     }
+
+    // Gap separator between individual cards
+    .card-separator {
+      height: 14px;
+    }
+  }
+}
+
+// Fixed Footer Toolbar Styling
+ion-footer {
+  ion-toolbar.cart-footer-toolbar {
+    --background: #5b257c;
+    --border-color: transparent;
+    padding: 10px 16px;
+
+    .footer-layout {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .cart-info {
+      display: flex;
+      flex-direction: column;
+
+      .items-count {
+        font-size: 0.75rem;
+        color: #ebdcf5;
+      }
+
+      .running-total {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #ffffff;
+      }
+    }
+
+    .checkout-btn {
+      --background: #ffffff;
+      --color: #5b257c;
+      --border-radius: 10px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin: 0;
+      height: 42px;
+    }
+  }
 }

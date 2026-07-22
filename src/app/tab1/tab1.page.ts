@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { BookingService, BookingDetails } from '../services/booking';
+import { BookingService, Booking } from '../services/booking';
 import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-tab1',
@@ -10,11 +12,19 @@ import { Observable } from 'rxjs';
 })
 export class Tab1Page implements OnInit {
   todayDate: Date = new Date();
-  activeBooking$: Observable<BookingDetails | null>;
+  activeBooking$: Observable<Booking | null>;
   isDetailsModalOpen: boolean = false;
 
-  constructor(private bookingService: BookingService) { 
-    this.activeBooking$ = this.bookingService.currentBooking$;
+  userNotes: string = '';
+
+  constructor(private bookingService: BookingService, private router: Router) { 
+    this.activeBooking$ = this.bookingService.activeBooking$.pipe(
+      tap(booking => {
+        if (booking) {
+          this.userNotes = booking.notes || '';
+        }
+      })
+    );
   }
 
   ngOnInit() {
@@ -22,15 +32,36 @@ export class Tab1Page implements OnInit {
     this.todayDate = new Date();
   }
 
-  openDetailsModal() { this.isDetailsModalOpen = true; }
-  closeDetailsModal() { this.isDetailsModalOpen = false; }
-
-  handleCancellation() {
-    if (confirm('Are you sure you want to cancel this booking? (No penalties apply)')) {
-      this.bookingService.cancelBooking();
-      this.closeDetailsModal();
-      alert('Booking cancelled successfully without penalties.');
-    }
+  openDetailsModal() { 
+    this.isDetailsModalOpen = true; 
+  }
+  closeDetailsModal() { 
+    this.isDetailsModalOpen = false; 
   }
 
+  saveNotesChange() {
+    this.bookingService.updateBookingNotes(this.userNotes);
+  }
+
+  goToProfile() {
+    this.closeDetailsModal();
+    this.router.navigate(['/tabs/tab3']); 
+  }
+
+  rescheduleBooking(currentBooking: Booking) {
+    this.closeDetailsModal();
+    
+    // We navigate to Tab4 and pass query params to pre-select the active advisor automatically!
+    this.router.navigate(['/book-meeting'], { 
+      queryParams: { 
+        reschedule: true,
+        advisorName: currentBooking.consultantName 
+      } 
+    });
+  }
+
+  handleCancellation() {
+    this.bookingService.clearBooking();
+    this.closeDetailsModal();
+  }
 }
