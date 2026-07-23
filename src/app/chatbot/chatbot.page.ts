@@ -5,6 +5,26 @@ import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
 import { DEMO_PROFILES, DEFAULT_PROFILE_ID, DemoProfile } from '../../data/demoProfiles';
 
+// ─────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = 'chatbot_history';
+const MAX_HISTORY = 50;
+const MAX_COMPARE_PLANS = 3;
+
+const PDF_PAGE_HEIGHT = 297;   // A4 mm
+const PDF_MARGIN = 16;
+const PDF_BOTTOM_MARGIN = 20;
+const PDF_USABLE_HEIGHT = PDF_PAGE_HEIGHT - PDF_MARGIN - PDF_BOTTOM_MARGIN;
+
+const CATEGORY_MAP: Record<string, string> = {
+  'Health Protection': 'health',
+  'Life Protection': 'life',
+  'Critical Illness': 'ci',
+  'Wealth Accumulation': 'wealth'
+};
+
 @Component({
   selector: 'app-chatbot',
   templateUrl: './chatbot.page.html',
@@ -15,7 +35,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
 
-  // Demo profiles — declared first
+  // Demo profiles
   demoProfiles = DEMO_PROFILES;
   activeProfile: DemoProfile = DEMO_PROFILES.find(p => p.id === DEFAULT_PROFILE_ID)!;
 
@@ -27,7 +47,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
 
   // Compare sheet
   isCompareOpen = false;
-  selectedPlans: any[] = [];
+  selectedPlans: Plan[] = [];
   categories = ['Health Protection', 'Life Protection', 'Critical Illness', 'Wealth Accumulation'];
   currentCategoryLabel = 'Health Protection';
 
@@ -50,36 +70,63 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     }
   }
 
-  // Single shared chat history — persists across refresh, shared across profiles.
-  // We keep one conversation regardless of which demo profile is active; only the
-  // AI's responses (fit scores, personalization) change based on activeProfile.
+  // ─────────────────────────────────────────────────────────
+  // Chat Persistence
+  // ─────────────────────────────────────────────────────────
+
   saveChat() {
-    localStorage.setItem('chatbot_history', JSON.stringify(this.messages));
+    // Cap history to control API cost, storage, and DOM performance
+    const trimmed = this.messages.length > MAX_HISTORY
+      ? this.messages.slice(-MAX_HISTORY)
+      : this.messages;
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    } catch (e) {
+      // QuotaExceeded or other storage error
+      console.warn('[ChatbotPage] Failed to save chat history:', e);
+    }
   }
 
   loadChat() {
-    const saved = localStorage.getItem('chatbot_history');
-    this.messages = saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      this.messages = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.warn('[ChatbotPage] Failed to load chat history, resetting:', e);
+      this.messages = [];
+      localStorage.removeItem(STORAGE_KEY);
+    }
   }
 
-  scrollToBottom() {
-    try {
-      this.messagesEnd.nativeElement.scrollIntoView({ behavior: 'smooth' });
-    } catch { }
+  reset() {
+    this.messages = [];
+    this.chips = [...this.activeProfile.defaultChips];
+    localStorage.removeItem(STORAGE_KEY);
   }
+
+  // ─────────────────────────────────────────────────────────
+  // Profile Switching
+  // ─────────────────────────────────────────────────────────
 
   switchProfile(profileId: string) {
     if (profileId === this.activeProfile.id) return;
+
     const profile = DEMO_PROFILES.find(p => p.id === profileId);
-    if (profile) {
-      this.activeProfile = profile;
-      this.chips = [...profile.defaultChips];
-      // Note: messages are intentionally NOT cleared or reloaded here —
-      // chat history is shared across profiles by design, so switching
-      // profiles keeps the same conversation but changes whose "lens"
-      // (budget, concerns, health conditions) future responses use.
+    if (!profile) {
+      console.warn(`[ChatbotPage] Profile "${profileId}" not found`);
+      return;
     }
+
+    this.activeProfile = profile;
+    this.chips = [...profile.defaultChips];
+    // Chat history is intentionally shared across profiles by design.
+    // Future responses use the new profile's lens (budget, concerns, etc.).
   }
+
+  // ─────────────────────────────────────────────────────────
+  // Messaging
+  // ─────────────────────────────────────────────────────────
 
   async send(text?: string) {
     const message = (text ?? this.inputText).trim();
@@ -110,51 +157,41 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       if (res.chips?.length) this.chips = res.chips;
 
     } catch (e) {
-      this.messages.push({ role: 'assistant', content: "Sorry, something went wrong. Try again?" });
+      console.error('[ChatbotPage] sendMessage failed:', e);
+      this.messages.push({
+        role: 'assistant',
+        content: "Sorry, something went wrong. Try again?"
+      });
     }
 
     this.isLoading = false;
     this.saveChat();
   }
 
-  reset() {
-    this.messages = [];
-    this.chips = [...this.activeProfile.defaultChips];
-    localStorage.removeItem('chatbot_history');
-  }
+  // ─────────────────────────────────────────────────────────
+  // Comparison
+  // ─────────────────────────────────────────────────────────
 
   openCompare() { this.isCompareOpen = true; }
   closeCompare() { this.isCompareOpen = false; }
-
-  nowTime() {
-    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
 
   onCategoryChange() {
     this.selectedPlans = [];
   }
 
   get currentPlans(): Plan[] {
-    const categoryMap: Record<string, string> = {
-      'Health Protection': 'health',
-      'Life Protection': 'life',
-      'Critical Illness': 'ci',
-      'Wealth Accumulation': 'wealth'
-    };
-    const key = categoryMap[this.currentCategoryLabel];
+    const key = CATEGORY_MAP[this.currentCategoryLabel];
     return POLICIES[key] ?? [];
   }
 
-  getPlansByCategory(category: string): Plan[] {
-    return PLANS.filter(p => p.category === category);
-  }
+
 
   togglePlan(plan: Plan) {
     const idx = this.selectedPlans.findIndex(p => p.id === plan.id);
     if (idx > -1) {
       this.selectedPlans.splice(idx, 1);
     } else {
-      if (this.selectedPlans.length >= 3) return;
+      if (this.selectedPlans.length >= MAX_COMPARE_PLANS) return;
       this.selectedPlans.push(plan);
     }
   }
@@ -172,7 +209,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
 
     this.isLoading = true;
     try {
-      const res = await this.gemini.compareMessage(this.selectedPlans, this.messages, this.activeProfile);
+      // Pass history EXCLUDING the current trigger message, matching send() pattern
+      const history = this.messages.slice(0, -1);
+      const res = await this.gemini.compareMessage(this.selectedPlans, history, this.activeProfile);
 
       const rows = [
         { label: 'Monthly premium', values: this.selectedPlans.map(p => p.premium) },
@@ -193,7 +232,11 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
 
       if (res.chips?.length) this.chips = res.chips;
     } catch (e) {
-      this.messages.push({ role: 'assistant', content: "Sorry, couldn't run the comparison. Try again?" });
+      console.error('[ChatbotPage] compareMessage failed:', e);
+      this.messages.push({
+        role: 'assistant',
+        content: "Sorry, couldn't run the comparison. Try again?"
+      });
     }
 
     this.isLoading = false;
@@ -208,6 +251,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   async showFitReason(card: CompareCard, planId: string) {
     const fit = card.fitScores?.find(f => f.planId === planId);
     if (!fit) return;
+
     const alert = await this.alertCtrl.create({
       header: `${fit.score}% Fit`,
       message: fit.reason,
@@ -216,77 +260,136 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     await alert.present();
   }
 
+  // ─────────────────────────────────────────────────────────
+  // Summary & PDF
+  // ─────────────────────────────────────────────────────────
+
   async downloadSummary() {
     if (this.messages.length === 0) return;
+
     this.isGeneratingSummary = true;
     try {
       const summaryText = await this.gemini.generateSummary(this.messages);
       this.buildPDF(summaryText);
     } catch (e) {
-      console.error('Summary generation failed', e);
+      console.error('[ChatbotPage] Summary generation failed:', e);
+      await this.showErrorAlert('Could not generate summary. Please try again.');
     }
     this.isGeneratingSummary = false;
   }
 
-  buildPDF(summaryText: string) {
+  private async showErrorAlert(message: string) {
+    const alert = await this.alertCtrl.create({
+      header: 'Oops',
+      message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  private buildPDF(summaryText: string) {
     const doc = new jsPDF();
-    const margin = 16;
-    const maxWidth = doc.internal.pageSize.getWidth() - margin * 2;
+    const maxWidth = doc.internal.pageSize.getWidth() - PDF_MARGIN * 2;
     let y = 20;
 
+    // Header
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.setTextColor(30);
-    doc.text('Cova Insurance Summary', margin, y);
+    doc.text('Cova Insurance Summary', PDF_MARGIN, y);
     y += 8;
 
+    // Meta
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(150);
-    doc.text(`Generated on ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })}`, margin, y);
+    doc.text(
+      `Generated on ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      PDF_MARGIN, y
+    );
     y += 4;
-
-    doc.text(`Prepared for: ${this.activeProfile.name}, ${this.activeProfile.age}`, margin, y);
+    doc.text(`Prepared for: ${this.activeProfile.name}, ${this.activeProfile.age}`, PDF_MARGIN, y);
     y += 10;
 
+    // Divider
     doc.setDrawColor(220);
-    doc.line(margin, y, doc.internal.pageSize.getWidth() - margin, y);
+    doc.line(PDF_MARGIN, y, doc.internal.pageSize.getWidth() - PDF_MARGIN, y);
     y += 10;
 
+    // Body
     doc.setTextColor(30);
     const lines = summaryText.split('\n');
 
-    lines.forEach(line => {
+    for (const line of lines) {
       const trimmed = line.trim();
-      if (!trimmed) { y += 4; return; }
+      if (!trimmed) {
+        y += 4;
+        continue;
+      }
+
+      // Page break check before drawing
+      if (y > PDF_USABLE_HEIGHT) {
+        doc.addPage();
+        y = PDF_MARGIN;
+      }
 
       if (trimmed === trimmed.toUpperCase() && trimmed.length > 3) {
-        if (y > 260) { doc.addPage(); y = 20; }
+        // Section header
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(124, 92, 191);
-        doc.text(trimmed, margin, y);
+        doc.text(trimmed, PDF_MARGIN, y);
         y += 7;
+
         doc.setDrawColor(220);
-        doc.line(margin, y, doc.internal.pageSize.getWidth() - margin, y);
+        doc.line(PDF_MARGIN, y, doc.internal.pageSize.getWidth() - PDF_MARGIN, y);
         y += 5;
         doc.setTextColor(30);
       } else {
+        // Body text
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(11);
         doc.setTextColor(60);
-        const wrapped = doc.splitTextToSize(trimmed, maxWidth);
-        if (y + wrapped.length * 6 > 270) { doc.addPage(); y = 20; }
-        doc.text(wrapped, margin, y);
-        y += wrapped.length * 6 + 1;
-      }
-    });
 
+        const wrapped = doc.splitTextToSize(trimmed, maxWidth);
+        const blockHeight = wrapped.length * 6;
+
+        // Page break if this block won't fit
+        if (y + blockHeight > PDF_USABLE_HEIGHT) {
+          doc.addPage();
+          y = PDF_MARGIN;
+        }
+
+        doc.text(wrapped, PDF_MARGIN, y);
+        y += blockHeight + 1;
+      }
+    }
+
+    // Footer disclaimer
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(180);
-    doc.text('This summary was generated by Cova and is for reference purposes only. Please consult a Prudential advisor before making any financial decisions.', margin, 285, { maxWidth });
+    doc.text(
+      'This summary was generated by Cova and is for reference purposes only. Please consult a Prudential advisor before making any financial decisions.',
+      PDF_MARGIN, 285, { maxWidth }
+    );
 
-    doc.save(`cova-summary-${this.activeProfile.name.toLowerCase()}.pdf`);
+    doc.save(`cova-summary-${this.activeProfile.name.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Utilities
+  // ─────────────────────────────────────────────────────────
+
+  scrollToBottom() {
+    try {
+      this.messagesEnd.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    } catch {
+      // Element not yet rendered
+    }
+  }
+
+  nowTime() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 }
