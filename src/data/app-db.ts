@@ -11,6 +11,12 @@ export interface UserRecord {
   password: string;
   lifeStage?: string;
   riskAppetite?: 'low' | 'medium' | 'high';
+  monthlyIncome?: string;
+  employmentStatus?: string;
+  dependents?: number;
+  financialPriorities?: string[];
+  planningHorizon?: string;
+  preferredContact?: 'chat' | 'email' | 'phone';
   createdAt: string;
 }
 
@@ -49,6 +55,12 @@ const seedUsers: UserRecord[] = [
     password: '123456',
     lifeStage: 'Young Family',
     riskAppetite: 'medium',
+    monthlyIncome: 'S$6,000 - S$10,000',
+    employmentStatus: 'Employed',
+    dependents: 2,
+    financialPriorities: ['Medical protection', 'Family protection'],
+    planningHorizon: '10+ years',
+    preferredContact: 'chat',
     createdAt: new Date('2026-07-01T09:00:00.000Z').toISOString()
   },
   {
@@ -171,6 +183,12 @@ export function registerUser(input: {
   password: string;
   lifeStage?: string;
   riskAppetite?: 'low' | 'medium' | 'high';
+  monthlyIncome?: string;
+  employmentStatus?: string;
+  dependents?: number;
+  financialPriorities?: string[];
+  planningHorizon?: string;
+  preferredContact?: 'chat' | 'email' | 'phone';
 }): { ok: true; user: UserRecord } | { ok: false; message: string } {
   const users = getUsers();
   const normalizedEmail = input.email.trim().toLowerCase();
@@ -187,6 +205,12 @@ export function registerUser(input: {
     password: input.password,
     lifeStage: input.lifeStage,
     riskAppetite: input.riskAppetite,
+    monthlyIncome: input.monthlyIncome,
+    employmentStatus: input.employmentStatus,
+    dependents: input.dependents,
+    financialPriorities: input.financialPriorities,
+    planningHorizon: input.planningHorizon,
+    preferredContact: input.preferredContact,
     createdAt: new Date().toISOString()
   };
 

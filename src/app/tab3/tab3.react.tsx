@@ -41,7 +41,7 @@ import {
 } from '../../data/app-db';
 
 type Role = 'customer' | 'consultant';
-type CustomerView = 'home' | 'chatbot' | 'proposal' | 'compare' | 'policies';
+type CustomerView = 'home' | 'journey' | 'chatbot' | 'proposal' | 'compare' | 'policies';
 type ConsultantView = 'dashboard' | 'clients' | 'profile' | 'analytics' | 'recommendations';
 
 interface PolicyCard {
@@ -84,6 +84,23 @@ interface UpcomingAppointment {
 	time: string;
 	channel: string;
 	status: 'Confirmed' | 'Rescheduled';
+}
+
+interface JourneyStep {
+	id: string;
+	title: string;
+	label: string;
+	detail: string;
+	accent: string;
+	action?: string;
+	view?: CustomerView;
+	log?: {
+		type: TimelineRecord['type'];
+		channel: TimelineRecord['channel'];
+		title: string;
+		detail: string;
+		policyOptions?: string[];
+	};
 }
 
 const customerPolicies: PolicyCard[] = [
@@ -269,6 +286,113 @@ const reasoningPanel = [
 	},
 ];
 
+const journeySteps: JourneyStep[] = [
+	{
+		id: 'notifications',
+		title: 'Notifications',
+		label: 'Alert',
+		detail: 'A meeting reminder and unread timeline update are waiting for review.',
+		accent: '#5b257c',
+		action: 'Open timeline',
+		view: 'home',
+		log: {
+			type: 'consultation',
+			channel: 'system',
+			title: 'Notification tray opened',
+			detail: 'Customer reviewed the latest reminder and pending timeline items.',
+		},
+	},
+	{
+		id: 'reschedule',
+		title: 'Reschedule Meeting',
+		label: 'Meeting',
+		detail: 'Choose a new date and keep the consultant session in sync.',
+		accent: '#74409a',
+		action: 'Manage booking',
+		view: 'home',
+	},
+	{
+		id: 'update',
+		title: 'Update',
+		label: 'Journey',
+		detail: 'Track wellness, policy status, and the latest client activity at a glance.',
+		accent: '#8f67af',
+		action: 'View journey',
+		view: 'journey',
+	},
+	{
+		id: 'summary',
+		title: 'Meeting Summary',
+		label: 'Consultation',
+		detail: 'A concise recap of the consultant discussion, priorities, and next actions.',
+		accent: '#6c3a90',
+		action: 'Open summary',
+		view: 'proposal',
+		log: {
+			type: 'consultation',
+			channel: 'meeting',
+			title: 'Meeting summary reviewed',
+			detail: 'Customer opened the meeting summary and next-step checklist.',
+		},
+	},
+	{
+		id: 'transcript',
+		title: 'Chat Transcript',
+		label: 'AI Chat',
+		detail: 'The original chat thread is preserved for continued questions and refinement.',
+		accent: '#4a1e66',
+		action: 'Continue chat',
+		view: 'chatbot',
+		log: {
+			type: 'aichat',
+			channel: 'ai-chat',
+			title: 'Chat transcript reviewed',
+			detail: 'Customer revisited the original AI chat transcript.',
+		},
+	},
+	{
+		id: 'why',
+		title: 'Why This Plan?',
+		label: 'Recommendation',
+		detail: 'Explain the match score, benefit fit, and trade-offs behind the recommendation.',
+		accent: '#5b257c',
+		action: 'See reasoning',
+		view: 'chatbot',
+		log: {
+			type: 'proposal',
+			channel: 'direct-message',
+			title: 'Why-this-plan section opened',
+			detail: 'Customer explored the recommendation reasoning and fit summary.',
+			policyOptions: ['PRUShield + PRUExtra Plus'],
+		},
+	},
+	{
+		id: 'deep-dive',
+		title: 'Deep Dive Analysis',
+		label: 'Analysis',
+		detail: 'Compare coverage depth, gap analysis, and premium trade-offs in detail.',
+		accent: '#74409a',
+		action: 'Review analysis',
+		view: 'compare',
+	},
+	{
+		id: 'application',
+		title: 'Application Sent',
+		label: 'Submission',
+		detail: 'The completed application is ready to submit with a status recap.',
+		accent: '#8f67af',
+		action: 'Send application',
+		view: 'policies',
+		log: {
+			type: 'document',
+			channel: 'email',
+			title: 'Application sent',
+			detail: 'Customer sent the application after reviewing the full recommendation path.',
+			policyOptions: ['Enhanced HealthShield Plan'],
+		},
+	},
+];
+
 function cx(...classes: Array<string | false | undefined>): string {
 	return classes.filter(Boolean).join(' ');
 }
@@ -341,6 +465,7 @@ export function Tab3ReactApp(): React.JSX.Element {
 
 	const customerTabs: Array<{ id: CustomerView; label: string; icon: React.JSX.Element }> = [
 		{ id: 'home', label: 'Interaction Timeline', icon: <ChartPie size={16} /> },
+		{ id: 'journey', label: 'Journey Flow', icon: <Sparkles size={16} /> },
 		{ id: 'chatbot', label: 'AI Chatbot', icon: <Bot size={16} /> },
 		{ id: 'proposal', label: 'Current Proposal', icon: <FileText size={16} /> },
 		{ id: 'compare', label: 'Policy Comparison', icon: <ShieldCheck size={16} /> },
@@ -479,6 +604,16 @@ export function Tab3ReactApp(): React.JSX.Element {
 		setUnreadCount(getUnreadTimelineCountForUser(activeUser));
 	};
 
+	const activateJourneyStep = (step: JourneyStep) => {
+		if (step.log) {
+			addCustomerTimelineTouchpoint(step.log);
+		}
+
+		if (step.view) {
+			setCustomerView(step.view);
+		}
+	};
+
 	const startReschedule = (appointment: UpcomingAppointment) => {
 		setEditingAppointmentId(appointment.id);
 		setPendingAppointmentDate(appointment.date);
@@ -583,6 +718,10 @@ export function Tab3ReactApp(): React.JSX.Element {
 								>
 									Talk to AI
 									<ChevronRight size={16} />
+								</button>
+								<button type="button" className="ghost" onClick={() => setCustomerView('journey')}>
+									<Sparkles size={16} />
+									Open Journey Flow
 								</button>
 							</article>
 
@@ -705,6 +844,56 @@ export function Tab3ReactApp(): React.JSX.Element {
 									Sign & Accept Proposal
 								</button>
 							</article>
+						</div>
+					)}
+
+					{customerView === 'journey' && (
+						<div className="content-stack">
+							<article className="panel journey-intro">
+								<div>
+									<p className="kicker">Proposal Journey</p>
+									<h2>From Notification to Application</h2>
+									<p>
+										This view condenses the attached multi-screen flow into one guided path so the customer can move through alerts, meetings, analysis, and submission without leaving Tab 3.
+									</p>
+								</div>
+								<button type="button" className="primary" onClick={() => setCustomerView('proposal')}>
+									Open Proposal
+									<ChevronRight size={16} />
+								</button>
+							</article>
+
+							<div className="journey-grid">
+								{journeySteps.map((step, index) => (
+									<article className="journey-screen" key={step.id} style={{ ['--step-accent' as any]: step.accent }}>
+										<div className="journey-screen-head">
+											<span className="journey-index">{index + 1}</span>
+											<span className="journey-label">{step.label}</span>
+										</div>
+										<h3>{step.title}</h3>
+										<p>{step.detail}</p>
+										<div className="journey-mock">
+											<div className="journey-mock-topbar">
+												<span />
+												<span />
+												<span />
+											</div>
+											<div className="journey-mock-body">
+												<div className="journey-mock-card">
+													<small>{step.label}</small>
+													<strong>{step.title}</strong>
+													<p>{step.detail}</p>
+												</div>
+												<div className="journey-mock-badge">{step.action ?? 'Open'}</div>
+											</div>
+										</div>
+										<button type="button" className="ghost full" onClick={() => activateJourneyStep(step)}>
+											{step.action ?? 'Open step'}
+											<ChevronRight size={14} />
+										</button>
+									</article>
+								))}
+							</div>
 						</div>
 					)}
 

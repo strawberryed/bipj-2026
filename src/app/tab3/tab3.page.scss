@@ -175,6 +175,10 @@
   color: #341963;
 }
 
+.panel h2 {
+  font-size: 1.38rem;
+}
+
 .panel p {
   margin: 6px 0 0;
   color: #5b3d8e;
@@ -260,6 +264,11 @@
   display: inline-flex;
   gap: 8px;
   align-items: center;
+}
+
+.ghost.full {
+  width: 100%;
+  justify-content: center;
 }
 
 .prompt-banner {
@@ -392,6 +401,136 @@
 .proposal-card {
   display: grid;
   gap: 12px;
+}
+
+.journey-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.journey-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.journey-screen {
+  --step-accent: #5b257c;
+  border: 1px solid var(--brand-border);
+  border-top: 4px solid var(--step-accent);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcf8ff 100%);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 10px 24px rgba(74, 30, 102, 0.08);
+}
+
+.journey-screen h3 {
+  margin: 0;
+  color: #341963;
+  font-size: 1.05rem;
+}
+
+.journey-screen p {
+  margin: 0;
+  color: #5b3d8e;
+  line-height: 1.45;
+}
+
+.journey-screen-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.journey-index,
+.journey-label,
+.journey-mock-badge {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.journey-index {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: var(--step-accent);
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.journey-label {
+  padding: 6px 10px;
+  background: #f0e7f8;
+  color: var(--brand-purple);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.journey-mock {
+  border: 1px solid var(--brand-border);
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.journey-mock-topbar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, rgba(91, 37, 124, 0.1), rgba(143, 103, 175, 0.05));
+}
+
+.journey-mock-topbar span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--step-accent);
+  opacity: 0.7;
+}
+
+.journey-mock-body {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.journey-mock-card {
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(91, 37, 124, 0.94), rgba(116, 64, 154, 0.92));
+  color: #ffffff;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.journey-mock-card small {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.8;
+}
+
+.journey-mock-card strong {
+  font-size: 1rem;
+}
+
+.journey-mock-card p {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.9rem;
+}
+
+.journey-mock-badge {
+  justify-self: start;
+  background: #efe4f7;
+  color: var(--brand-purple);
+  font-size: 0.78rem;
+  padding: 6px 10px;
 }
 
 .proposal-hero {
@@ -867,6 +1006,10 @@
     grid-template-columns: 1fr;
   }
 
+  .journey-grid {
+    grid-template-columns: 1fr;
+  }
+
   .prompt-banner,
   .panel.bright {
     align-items: flex-start;
@@ -919,6 +1062,11 @@
 
   .proposal-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .journey-intro {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .timeline-event {

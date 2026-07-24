@@ -152,6 +152,43 @@
 	margin-bottom: 4px;
 }
 
+.priority-wrap {
+	margin: 2px 0 12px;
+	padding: 12px;
+	border: 1px solid #e4d7f8;
+	border-radius: 14px;
+	background: #fdfbff;
+
+	p {
+		margin: 0 0 10px;
+		font-size: 0.92rem;
+		color: #6a5098;
+		font-weight: 600;
+	}
+}
+
+.priority-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.priority-chip {
+	border: 1px solid #dac7fb;
+	background: #f4ecff;
+	color: #5f4297;
+	border-radius: 999px;
+	padding: 8px 12px;
+	font-size: 0.82rem;
+	font-weight: 600;
+}
+
+.priority-chip.active {
+	background: #6f3ccf;
+	border-color: #6f3ccf;
+	color: #ffffff;
+}
+
 .auth-switch {
 	margin: 4px 0 12px;
 	font-size: 0.92rem;

@@ -24,6 +24,20 @@ export class Tab4Page implements OnInit {
   password = '';
   lifeStage = 'Young Family';
   riskAppetite: 'low' | 'medium' | 'high' = 'medium';
+  monthlyIncome = '';
+  employmentStatus = '';
+  dependents = 0;
+  planningHorizon = '';
+  preferredContact: 'chat' | 'email' | 'phone' = 'chat';
+  financialPriorities: string[] = [];
+
+  readonly priorityOptions = [
+    'Medical protection',
+    'Family protection',
+    'Critical illness',
+    'Retirement planning',
+    'Wealth accumulation'
+  ];
 
   errorMessage = '';
   successMessage = '';
@@ -38,6 +52,12 @@ export class Tab4Page implements OnInit {
   }
 
   setMode(mode: 'login' | 'create') {
+    if (this.role === 'consultant' && mode === 'create') {
+      this.errorMessage = 'Consultant sign up is disabled. Consultants can only log in.';
+      this.successMessage = '';
+      return;
+    }
+
     this.mode = mode;
     this.errorMessage = '';
     this.successMessage = '';
@@ -45,8 +65,22 @@ export class Tab4Page implements OnInit {
 
   setRole(role: UserRole) {
     this.role = role;
+
+    if (role === 'consultant') {
+      this.mode = 'login';
+    }
+
     this.errorMessage = '';
     this.successMessage = '';
+  }
+
+  togglePriority(priority: string) {
+    if (this.financialPriorities.includes(priority)) {
+      this.financialPriorities = this.financialPriorities.filter(item => item !== priority);
+      return;
+    }
+
+    this.financialPriorities = [...this.financialPriorities, priority];
   }
 
   submit(modeOverride?: 'login' | 'create') {
@@ -70,6 +104,12 @@ export class Tab4Page implements OnInit {
     }
 
     if (this.mode === 'create') {
+      if (this.role !== 'customer') {
+        this.errorMessage = 'Sign up is only available for customers.';
+        this.successMessage = '';
+        return;
+      }
+
       const name = this.name.trim();
       if (!name) {
         this.errorMessage = 'Please enter your name.';
@@ -77,13 +117,31 @@ export class Tab4Page implements OnInit {
         return;
       }
 
+      if (!this.monthlyIncome || !this.employmentStatus || !this.planningHorizon) {
+        this.errorMessage = 'Please complete income, employment status, and planning horizon.';
+        this.successMessage = '';
+        return;
+      }
+
+      if (this.financialPriorities.length === 0) {
+        this.errorMessage = 'Please select at least one financial priority.';
+        this.successMessage = '';
+        return;
+      }
+
       const created = registerUser({
-        role: this.role,
+        role: 'customer',
         name,
         email,
         password,
-        lifeStage: this.role === 'customer' ? this.lifeStage : undefined,
-        riskAppetite: this.role === 'customer' ? this.riskAppetite : undefined,
+        lifeStage: this.lifeStage,
+        riskAppetite: this.riskAppetite,
+        monthlyIncome: this.monthlyIncome,
+        employmentStatus: this.employmentStatus,
+        dependents: this.dependents,
+        financialPriorities: this.financialPriorities,
+        planningHorizon: this.planningHorizon,
+        preferredContact: this.preferredContact,
       });
 
       if (!created.ok) {
@@ -92,13 +150,10 @@ export class Tab4Page implements OnInit {
         return;
       }
 
-      const signedIn = loginUser(email, password);
-      if (signedIn.ok) {
-        this.successMessage = 'Account created and logged in.';
-        this.errorMessage = '';
-        this.refreshSession();
-        this.router.navigateByUrl('/tabs/tab3');
-      }
+      this.successMessage = 'Account created. Please log in with your new credentials.';
+      this.errorMessage = '';
+      this.mode = 'login';
+      this.password = '';
 
       return;
     }
@@ -113,11 +168,11 @@ export class Tab4Page implements OnInit {
     this.errorMessage = '';
     this.successMessage = `Welcome back, ${loggedIn.user.name}.`;
     this.refreshSession();
-    this.router.navigateByUrl('/tabs/tab3');
+    this.router.navigateByUrl('/tabs/tab1');
   }
 
   goToWorkspace() {
-    this.router.navigateByUrl('/tabs/tab3');
+    this.router.navigateByUrl('/tabs/tab1');
   }
 
   logout() {
