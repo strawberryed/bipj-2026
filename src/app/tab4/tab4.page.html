@@ -1,165 +1,172 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>Profile</ion-title>
-  </ion-toolbar>
+	<ion-toolbar>
+		<ion-title>Profile Access</ion-title>
+	</ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="profile-page ion-padding">
-  <div class="profile-shell">
-    <section class="session-card" *ngIf="activeUser; else authCard">
-      <h2>Active Session</h2>
-      <p><strong>Name:</strong> {{ activeUser.name }}</p>
-      <p><strong>Email:</strong> {{ activeUser.email }}</p>
-      <p><strong>Role:</strong> {{ activeUser.role | titlecase }}</p>
-      <p *ngIf="activeUser.role === 'customer' && activeUser.lifeStage"><strong>Life stage:</strong> {{ activeUser.lifeStage }}</p>
-      <p *ngIf="activeUser.role === 'customer' && activeUser.riskAppetite"><strong>Risk appetite:</strong> {{ activeUser.riskAppetite | titlecase }}</p>
+<ion-content [fullscreen]="true" class="tab4-page auth-only-page">
+	<section class="auth-shell" *ngIf="!currentUser; else signedInTemplate">
+		<div class="auth-hero">
+			<p class="eyebrow">Secure entry</p>
+			<h1>Tab 4 is login only</h1>
+			<p>
+				Sign up and log in here, then continue all notifications, meetings, chat continuity, and consultant approvals in Tab 3.
+			</p>
+		</div>
 
-      <div class="action-grid">
-        <ion-button expand="block" (click)="goToWorkspace()">Open Personalized Workspace</ion-button>
-        <ion-button expand="block" fill="outline" (click)="logout()">Logout</ion-button>
-      </div>
-    </section>
+		<ion-card class="auth-card role-card" *ngIf="!selectedRole; else authFormCard">
+			<ion-card-header>
+				<ion-card-subtitle>Choose role</ion-card-subtitle>
+				<ion-card-title>Select how you want to enter</ion-card-title>
+			</ion-card-header>
+			<ion-card-content>
+				<div class="role-stack">
+					<button type="button" class="role-option customer" (click)="selectRole('customer')">
+						<span class="role-label">Customer</span>
+						<span class="helper-copy">Login or sign up as a user</span>
+					</button>
+					<button type="button" class="role-option consultant" (click)="selectRole('consultant')">
+						<span class="role-label">Consultant</span>
+						<span class="helper-copy">Login to review customer requests</span>
+					</button>
+				</div>
+			</ion-card-content>
+		</ion-card>
 
-    <ng-template #authCard>
-      <section class="auth-card compact">
-        <p class="kicker">Welcome</p>
-        <h2>Choose Account Type</h2>
+		<ng-template #authFormCard>
+			<ion-card class="auth-card" [class.customer-card]="selectedRole === 'customer'" [class.consultant-card]="selectedRole === 'consultant'">
+				<ion-card-header>
+					<ion-card-subtitle>{{ selectedRole === 'customer' ? 'Customer access' : 'Consultant access' }}</ion-card-subtitle>
+					<ion-card-title>
+						{{ selectedRole === 'customer' ? (authView === 'login' ? 'Log in to your portal' : 'Sign up as a user') : 'Log in to consultant approvals' }}
+					</ion-card-title>
+				</ion-card-header>
+				<ion-card-content>
+					<div class="auth-head-actions">
+						<button type="button" class="ghost-btn" (click)="backToRoleSelect()">Change Role</button>
+						<div class="auth-toggle" *ngIf="selectedRole === 'customer'">
+							<button type="button" [class.active]="authView === 'login'" (click)="setAuthView('login')">Login</button>
+							<button type="button" [class.active]="authView === 'signup'" (click)="setAuthView('signup')">Sign Up</button>
+						</div>
+					</div>
 
-        <div class="role-split">
-          <button type="button" class="split-card" [class.active]="role === 'customer'" (click)="setRole('customer')">
-            <span class="split-illustration"><ion-icon name="person-outline"></ion-icon></span>
-            <span class="split-title">Customer</span>
-            <span class="split-copy">Sign up and personalize your profile</span>
-          </button>
+					<div class="form-stack" *ngIf="selectedRole === 'customer' && authView === 'login'">
+						<label>
+							<span>Email</span>
+							<input type="email" [(ngModel)]="customerLogin.email" />
+						</label>
+						<label>
+							<span>Password</span>
+							<input type="password" [(ngModel)]="customerLogin.password" />
+						</label>
+						<button type="button" class="primary-btn purple" (click)="loginAs('customer')">Log In as Customer</button>
+						<p class="helper-copy">Demo: customer@demo.com / 123456</p>
+					</div>
 
-          <button type="button" class="split-card" [class.active]="role === 'consultant'" (click)="setRole('consultant')">
-            <span class="split-illustration"><ion-icon name="briefcase-outline"></ion-icon></span>
-            <span class="split-title">Consultant</span>
-            <span class="split-copy">Login only with consultant account</span>
-          </button>
-        </div>
+					<div class="form-stack" *ngIf="selectedRole === 'consultant'">
+						<label>
+							<span>Email</span>
+							<input type="email" [(ngModel)]="consultantLogin.email" />
+						</label>
+						<label>
+							<span>Password</span>
+							<input type="password" [(ngModel)]="consultantLogin.password" />
+						</label>
+						<button type="button" class="primary-btn blue" (click)="loginAs('consultant')">Log In as Consultant</button>
+						<p class="helper-copy">Demo: consultant@demo.com / 123456</p>
+					</div>
 
-        <p class="role-note" *ngIf="role === 'customer'">Customer flow: complete sign up, then log in to enter Tab 1.</p>
-        <p class="role-note" *ngIf="role === 'consultant'">Consultant flow: login only. Sign up is disabled.</p>
+					<ng-template [ngIf]="selectedRole === 'customer' && authView === 'signup'">
+						<div class="form-stack">
+							<label>
+								<span>Full name</span>
+								<input type="text" [(ngModel)]="signupModel.name" />
+							</label>
+							<label>
+								<span>Email</span>
+								<input type="email" [(ngModel)]="signupModel.email" />
+							</label>
+							<div class="two-col">
+								<label>
+									<span>Password</span>
+									<input type="password" [(ngModel)]="signupModel.password" />
+								</label>
+								<label>
+									<span>Confirm password</span>
+									<input type="password" [(ngModel)]="signupModel.confirmPassword" />
+								</label>
+							</div>
+							<div class="two-col">
+								<label>
+									<span>Life stage</span>
+									<input type="text" [(ngModel)]="signupModel.lifeStage" />
+								</label>
+								<label>
+									<span>Monthly income</span>
+									<input type="text" [(ngModel)]="signupModel.monthlyIncome" />
+								</label>
+							</div>
+							<div class="two-col">
+								<label>
+									<span>Employment status</span>
+									<input type="text" [(ngModel)]="signupModel.employmentStatus" />
+								</label>
+								<label>
+									<span>Dependents</span>
+									<input type="number" min="0" [(ngModel)]="signupModel.dependents" />
+								</label>
+							</div>
+							<div class="two-col">
+								<label>
+									<span>Risk appetite</span>
+									<select [(ngModel)]="signupModel.riskAppetite">
+										<option value="low">Low</option>
+										<option value="medium">Medium</option>
+										<option value="high">High</option>
+									</select>
+								</label>
+								<label>
+									<span>Preferred contact</span>
+									<select [(ngModel)]="signupModel.preferredContact">
+										<option value="chat">Chat</option>
+										<option value="email">Email</option>
+										<option value="phone">Phone</option>
+									</select>
+								</label>
+							</div>
+							<label>
+								<span>Financial priorities</span>
+								<input type="text" [(ngModel)]="signupModel.financialPriorities" placeholder="Comma separated priorities" />
+							</label>
+							<label>
+								<span>Planning horizon</span>
+								<input type="text" [(ngModel)]="signupModel.planningHorizon" />
+							</label>
+							<button type="button" class="primary-btn purple" (click)="signUpCustomer()">Create Customer Account</button>
+						</div>
+					</ng-template>
+				</ion-card-content>
+			</ion-card>
+		</ng-template>
 
-        <p class="selection-gate" *ngIf="!role">Select Customer or Consultant to continue.</p>
+		<p class="status-banner" *ngIf="authMessage">{{ authMessage }}</p>
+	</section>
 
-        <ion-item lines="none" class="input-item" *ngIf="mode === 'create' && role">
-          <ion-icon name="person-outline" slot="start"></ion-icon>
-          <ion-input [(ngModel)]="name" placeholder="Full name"></ion-input>
-        </ion-item>
-
-        <ion-item lines="none" class="input-item" *ngIf="role">
-          <ion-icon name="mail-outline" slot="start"></ion-icon>
-          <ion-input type="email" [(ngModel)]="email" placeholder="you@example.com"></ion-input>
-        </ion-item>
-
-        <ion-item lines="none" class="input-item" *ngIf="role">
-          <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
-          <ion-input type="password" [(ngModel)]="password" placeholder="Password"></ion-input>
-          <button type="button" class="forgot-link" slot="end">Forgot?</button>
-        </ion-item>
-
-        <div class="extra-customer" *ngIf="mode === 'create' && role === 'customer'">
-          <ion-item lines="none" class="input-item">
-            <ion-icon name="people-outline" slot="start"></ion-icon>
-            <ion-select [(ngModel)]="lifeStage" interface="popover">
-              <ion-select-option value="Student">Student</ion-select-option>
-              <ion-select-option value="Young Professional">Young Professional</ion-select-option>
-              <ion-select-option value="Young Family">Young Family</ion-select-option>
-              <ion-select-option value="Mid-Career">Mid-Career</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item lines="none" class="input-item">
-            <ion-icon name="cash-outline" slot="start"></ion-icon>
-            <ion-select [(ngModel)]="monthlyIncome" interface="popover" placeholder="Monthly income">
-              <ion-select-option value="Below S$3,000">Below S$3,000</ion-select-option>
-              <ion-select-option value="S$3,000 - S$6,000">S$3,000 - S$6,000</ion-select-option>
-              <ion-select-option value="S$6,000 - S$10,000">S$6,000 - S$10,000</ion-select-option>
-              <ion-select-option value="Above S$10,000">Above S$10,000</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item lines="none" class="input-item">
-            <ion-icon name="briefcase-outline" slot="start"></ion-icon>
-            <ion-select [(ngModel)]="employmentStatus" interface="popover" placeholder="Employment status">
-              <ion-select-option value="Student">Student</ion-select-option>
-              <ion-select-option value="Employed">Employed</ion-select-option>
-              <ion-select-option value="Self-employed">Self-employed</ion-select-option>
-              <ion-select-option value="Not currently employed">Not currently employed</ion-select-option>
-              <ion-select-option value="Retired">Retired</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item lines="none" class="input-item">
-            <ion-icon name="people-circle-outline" slot="start"></ion-icon>
-            <ion-input
-              type="number"
-              min="0"
-              [(ngModel)]="dependents"
-              placeholder="Number of dependents"
-            ></ion-input>
-          </ion-item>
-
-          <ion-item lines="none" class="input-item">
-            <ion-icon name="time-outline" slot="start"></ion-icon>
-            <ion-select [(ngModel)]="planningHorizon" interface="popover" placeholder="Planning horizon">
-              <ion-select-option value="1-3 years">1-3 years</ion-select-option>
-              <ion-select-option value="3-5 years">3-5 years</ion-select-option>
-              <ion-select-option value="5-10 years">5-10 years</ion-select-option>
-              <ion-select-option value="10+ years">10+ years</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item lines="none" class="input-item">
-            <ion-icon name="bar-chart-outline" slot="start"></ion-icon>
-            <ion-select [(ngModel)]="riskAppetite" interface="popover">
-              <ion-select-option value="low">Low</ion-select-option>
-              <ion-select-option value="medium">Medium</ion-select-option>
-              <ion-select-option value="high">High</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <div class="priority-wrap">
-            <p>Financial Priorities</p>
-            <div class="priority-grid">
-              <button
-                type="button"
-                class="priority-chip"
-                *ngFor="let priority of priorityOptions"
-                [class.active]="financialPriorities.includes(priority)"
-                (click)="togglePriority(priority)"
-              >
-                {{ priority }}
-              </button>
-            </div>
-          </div>
-
-          <ion-item lines="none" class="input-item">
-            <ion-icon name="chatbubble-ellipses-outline" slot="start"></ion-icon>
-            <ion-select [(ngModel)]="preferredContact" interface="popover" placeholder="Preferred contact method">
-              <ion-select-option value="chat">In-app chat</ion-select-option>
-              <ion-select-option value="email">Email</ion-select-option>
-              <ion-select-option value="phone">Phone call</ion-select-option>
-            </ion-select>
-          </ion-item>
-        </div>
-
-        <p class="error-text" *ngIf="errorMessage">{{ errorMessage }}</p>
-        <p class="success-text" *ngIf="successMessage">{{ successMessage }}</p>
-
-        <div class="auth-switch" *ngIf="role">
-          <span *ngIf="mode === 'login' && role === 'customer'">No account? <button type="button" (click)="setMode('create')">Sign up</button></span>
-          <span *ngIf="mode === 'create'">Have an account? <button type="button" (click)="setMode('login')">Login</button></span>
-        </div>
-
-        <ion-button expand="block" *ngIf="role" (click)="submit()">
-          {{ mode === 'login' ? 'Login' : 'Sign Up' }}
-        </ion-button>
-
-        <p class="hint" *ngIf="role">Demo login: customer@demo.com / 123456 or consultant@demo.com / 123456</p>
-      </section>
-    </ng-template>
-  </div>
+	<ng-template #signedInTemplate>
+		<section class="auth-shell signed-in-shell">
+			<ion-card class="auth-card customer-card">
+				<ion-card-header>
+					<ion-card-subtitle>Signed in</ion-card-subtitle>
+					<ion-card-title>{{ currentUser?.name }}</ion-card-title>
+				</ion-card-header>
+				<ion-card-content>
+					<p class="helper-copy">Tab 3 now contains the customer and consultant workspace.</p>
+					<div class="signed-in-actions">
+						<button type="button" class="primary-btn purple" (click)="openWorkspace()">Open Tab 3 Workspace</button>
+						<button type="button" class="ghost-btn" (click)="logout()">Log Out</button>
+					</div>
+				</ion-card-content>
+			</ion-card>
+		</section>
+	</ng-template>
 </ion-content>

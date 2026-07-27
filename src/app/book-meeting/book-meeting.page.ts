@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { BookingService } from '../services/booking';
 
@@ -24,26 +25,33 @@ export class BookMeetingPage implements OnInit {
 
   selectedAdvisor: any = null;
   selectedSlot: any = null;
+  selectedDate: string = '';
+  recommendedAdvisorName = '';
 
-  constructor(private bookingService: BookingService, private router: Router) { }
+  constructor(private bookingService: BookingService, private router: Router, private route: ActivatedRoute) { }
 
   ngOnInit() {
-    this.selectedAdvisor = this.advisors[0]; // Default to the first advisor
+    this.route.queryParams.subscribe(params => {
+      this.recommendedAdvisorName = (params['recommendedAdvisor'] || '').toString().toUpperCase();
+      const matchedAdvisor = this.advisors.find(advisor => advisor.name === this.recommendedAdvisorName);
+      this.selectedAdvisor = matchedAdvisor || this.advisors[0];
+    });
   }
 
   selectAdvisor(advisor: any) { this.selectedAdvisor = advisor; }
   selectSlot(slot: any) { this.selectedSlot = slot; }
 
   confirmBooking() {
-    if (this.selectedAdvisor && this.selectedSlot) {
+    if (this.selectedAdvisor && this.selectedSlot && this.selectedDate) {
       this.bookingService.setBooking({
         consultantName: this.selectedAdvisor.name,
         consultantTitle: this.selectedAdvisor.title,
+        bookingDate: this.selectedDate,
         timeSlot: this.selectedSlot.time,
         type: this.selectedSlot.duration
       });
 
-      alert(' Meeting Booked Successfully!');
+      alert('Meeting Booked Successfully!');
       this.router.navigate(['/tabs/tab1']); // Returns directly to your dashboard tab
     }
   }

@@ -18,11 +18,19 @@ export interface UserRecord {
   planningHorizon?: string;
   preferredContact?: 'chat' | 'email' | 'phone';
   createdAt: string;
+  hasSeenOnboarding?: boolean;
 }
 
 export interface SessionRecord {
   userId: string;
   loggedInAt: string;
+}
+
+export interface ChatHistoryEntry {
+  role: 'user' | 'assistant';
+  content: string;
+  blocks?: unknown;
+  compareCard?: unknown;
 }
 
 export interface TimelineRecord {
@@ -38,12 +46,59 @@ export interface TimelineRecord {
   readBy: string[];
 }
 
+export interface MeetingRecord {
+  id: string;
+  customerId: string;
+  consultantId: string;
+  consultantName: string;
+  consultantTitle: string;
+  specialty: string;
+  date: string;
+  time: string;
+  channel: string;
+  status: 'confirmed' | 'change-pending';
+  updatedAt: string;
+}
+
+export interface MeetingChangeRequestRecord {
+  id: string;
+  meetingId: string;
+  customerId: string;
+  consultantId: string;
+  proposedDate: string;
+  proposedTime: string;
+  proposedSlots?: Array<{ date: string; time: string }>;
+  reason: string;
+  guidanceOptions: string[];
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: string;
+  resolvedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+}
+
+export interface ProposalAcceptanceRecord {
+  id: string;
+  customerId: string;
+  consultantId: string;
+  policyName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: string;
+  resolvedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+}
+
 const DB_KEY = 'bipj_local_db_v1';
 const SESSION_KEY = 'bipj_local_session_v1';
 
 interface LocalDatabase {
   users: UserRecord[];
   timeline: TimelineRecord[];
+  meetings: MeetingRecord[];
+  meetingChanges: MeetingChangeRequestRecord[];
+  proposalAcceptances: ProposalAcceptanceRecord[];
+  chatHistory: Record<string, ChatHistoryEntry[]>;
 }
 
 const seedUsers: UserRecord[] = [
@@ -136,6 +191,22 @@ const seedTimeline: TimelineRecord[] = [
   }
 ];
 
+const seedMeetings: MeetingRecord[] = [
+  {
+    id: 'm-seed-1',
+    customerId: 'u-customer-demo',
+    consultantId: 'u-consultant-demo',
+    consultantName: 'Subhash Raj',
+    consultantTitle: 'Senior Protection Consultant',
+    specialty: 'Health Protection Review',
+    date: '2026-07-25',
+    time: '15:00',
+    channel: 'Video consultation',
+    status: 'confirmed',
+    updatedAt: new Date('2026-07-20T10:00:00.000Z').toISOString()
+  }
+];
+
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
 
@@ -152,10 +223,19 @@ function saveDatabase(db: LocalDatabase): void {
 
 function getDatabase(): LocalDatabase {
   initDatabase();
-  const db = safeParse<LocalDatabase>(localStorage.getItem(DB_KEY), { users: [], timeline: [] });
+  const db = safeParse<Partial<LocalDatabase>>(localStorage.getItem(DB_KEY), {});
+
+  const chatHistory = db.chatHistory && typeof db.chatHistory === 'object' && !Array.isArray(db.chatHistory)
+    ? db.chatHistory
+    : {};
+
   return {
     users: Array.isArray(db.users) ? db.users : [],
     timeline: Array.isArray(db.timeline) ? db.timeline : [],
+    meetings: Array.isArray(db.meetings) ? db.meetings : [],
+    meetingChanges: Array.isArray(db.meetingChanges) ? db.meetingChanges : [],
+    proposalAcceptances: Array.isArray(db.proposalAcceptances) ? db.proposalAcceptances : [],
+    chatHistory,
   };
 }
 
@@ -163,17 +243,35 @@ export function initDatabase(): void {
   const db = safeParse<Partial<LocalDatabase> | null>(localStorage.getItem(DB_KEY), null);
 
   if (!db || !Array.isArray(db.users)) {
-    saveDatabase({ users: [...seedUsers], timeline: [...seedTimeline] });
+    saveDatabase({
+      users: [...seedUsers],
+      timeline: [...seedTimeline],
+      meetings: [...seedMeetings],
+      meetingChanges: [],
+      proposalAcceptances: [],
+      chatHistory: {}
+    });
     return;
   }
 
   const timeline = Array.isArray(db.timeline) && db.timeline.length > 0 ? db.timeline : [...seedTimeline];
-  saveDatabase({ users: db.users, timeline });
+  const meetings = Array.isArray(db.meetings) && db.meetings.length > 0 ? db.meetings : [...seedMeetings];
+  const meetingChanges = Array.isArray(db.meetingChanges) ? db.meetingChanges : [];
+  const proposalAcceptances = Array.isArray(db.proposalAcceptances) ? db.proposalAcceptances : [];
+  const chatHistory = db.chatHistory && typeof db.chatHistory === 'object' && !Array.isArray(db.chatHistory)
+    ? db.chatHistory
+    : {};
+
+  saveDatabase({ users: db.users, timeline, meetings, meetingChanges, proposalAcceptances, chatHistory });
 }
 
 export function getUsers(): UserRecord[] {
   const db = getDatabase();
   return db.users;
+}
+
+export function getCustomers(): UserRecord[] {
+  return getUsers().filter(user => user.role === 'customer');
 }
 
 export function registerUser(input: {
@@ -215,8 +313,21 @@ export function registerUser(input: {
   };
 
   const db = getDatabase();
-  saveDatabase({ users: [...users, user], timeline: db.timeline });
+  saveDatabase({ ...db, users: [...users, user] });
   return { ok: true, user };
+}
+
+export function getUserById(userId: string): UserRecord | null {
+  return getUsers().find(user => user.id === userId) ?? null;
+}
+
+export function markOnboardingSeen(userId: string): void {
+  const db = getDatabase();
+  const userIndex = db.users.findIndex(u => u.id === userId);
+  if (userIndex >= 0) {
+    db.users[userIndex].hasSeenOnboarding = true;
+    saveDatabase(db);
+  }
 }
 
 export function getTimelineEvents(): TimelineRecord[] {
@@ -266,6 +377,246 @@ export function addTimelineEvent(input: {
   return event;
 }
 
+export function getMeetingsForUser(user: UserRecord): MeetingRecord[] {
+  const meetings = [...getDatabase().meetings];
+
+  if (user.role === 'customer') {
+    return meetings
+      .filter(meeting => meeting.customerId === user.id)
+      .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+  }
+
+  return meetings
+    .filter(meeting => meeting.consultantId === user.id)
+    .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+}
+
+export function getMeetingChangeRequestsForCustomer(customerId: string): MeetingChangeRequestRecord[] {
+  return [...getDatabase().meetingChanges]
+    .filter(request => request.customerId === customerId)
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+}
+
+export function getPendingMeetingChangesForConsultant(consultantId: string): MeetingChangeRequestRecord[] {
+  const pending = [...getDatabase().meetingChanges]
+    .filter(request => request.status === 'pending');
+
+  const consultantScoped = pending.filter(request => request.consultantId === consultantId);
+  if (consultantScoped.length > 0) {
+    return consultantScoped.sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  }
+
+  // Fallback for demo/single-consultant sessions where historical records may carry a stale consultant id.
+  return pending.sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+}
+
+export function requestMeetingChange(input: {
+  meetingId: string;
+  customerId: string;
+  proposedDate: string;
+  proposedTime: string;
+  proposedSlots?: Array<{ date: string; time: string }>;
+  reason: string;
+  guidanceOptions: string[];
+}): { ok: true; request: MeetingChangeRequestRecord } | { ok: false; message: string } {
+  const db = getDatabase();
+  const slots = (input.proposedSlots ?? [{ date: input.proposedDate, time: input.proposedTime }])
+    .map(slot => ({ date: slot.date.trim(), time: slot.time.trim() }))
+    .filter(slot => slot.date.length > 0 && slot.time.length > 0);
+
+  if (slots.length === 0) {
+    return { ok: false, message: 'Select at least one proposed date and time.' };
+  }
+
+  const primarySlot = slots[0];
+  const selectedGuidance = input.guidanceOptions
+    .map(option => option.trim())
+    .filter(option => option.length > 0);
+
+  if (selectedGuidance.length === 0) {
+    return { ok: false, message: 'Select at least one guiding option so consultant can review context.' };
+  }
+
+  const meeting = db.meetings.find(record => record.id === input.meetingId && record.customerId === input.customerId);
+
+  if (!meeting) {
+    return { ok: false, message: 'Meeting not found for this customer.' };
+  }
+
+  const existingPending = db.meetingChanges.find(request => request.meetingId === input.meetingId && request.status === 'pending');
+  if (existingPending) {
+    return { ok: false, message: 'A meeting change is already pending consultant approval.' };
+  }
+
+  const request: MeetingChangeRequestRecord = {
+    id: `mc-${Date.now()}`,
+    meetingId: meeting.id,
+    customerId: input.customerId,
+    consultantId: meeting.consultantId,
+    proposedDate: primarySlot.date,
+    proposedTime: primarySlot.time,
+    proposedSlots: slots,
+    reason: input.reason.trim(),
+    guidanceOptions: selectedGuidance,
+    status: 'pending',
+    requestedAt: new Date().toISOString()
+  };
+
+  const meetings: MeetingRecord[] = db.meetings.map(record =>
+    record.id === meeting.id
+      ? { ...record, status: 'change-pending' as const, updatedAt: new Date().toISOString() }
+      : record
+  );
+
+  const customer = getUserById(input.customerId);
+  const timelineEvent: TimelineRecord = {
+    id: `t-${Date.now() + 1}`,
+    customerId: input.customerId,
+    consultantId: meeting.consultantId,
+    type: 'consultation',
+    channel: 'meeting',
+    title: 'Meeting change request submitted',
+    detail: `${customer?.name ?? 'Customer'} requested ${slots.map(slot => `${slot.date} ${slot.time}`).join(' / ')}. Reason: ${input.reason.trim()}.`,
+    policyOptions: selectedGuidance,
+    createdAt: new Date().toISOString(),
+    readBy: [input.customerId],
+  };
+
+  saveDatabase({
+    ...db,
+    meetings,
+    meetingChanges: [request, ...db.meetingChanges],
+    timeline: [timelineEvent, ...db.timeline]
+  });
+
+  return { ok: true, request };
+}
+
+export function approveMeetingChange(requestId: string, consultantId: string): { ok: true; request: MeetingChangeRequestRecord } | { ok: false; message: string } {
+  const db = getDatabase();
+  const request = db.meetingChanges.find(record => record.id === requestId);
+  const actingUser = getUserById(consultantId);
+  const canActAsConsultant = !!actingUser && actingUser.role === 'consultant';
+
+  if (!request || !canActAsConsultant) {
+    return { ok: false, message: 'Meeting change request not found for this consultant.' };
+  }
+
+  if (request.status !== 'pending') {
+    return { ok: false, message: 'This meeting change has already been processed.' };
+  }
+
+  const meeting = db.meetings.find(record => record.id === request.meetingId);
+  if (!meeting) {
+    return { ok: false, message: 'Original meeting could not be found.' };
+  }
+
+  const approvedRequest: MeetingChangeRequestRecord = {
+    ...request,
+    status: 'approved',
+    reviewedBy: consultantId,
+    resolvedAt: new Date().toISOString(),
+  };
+
+  const meetings: MeetingRecord[] = db.meetings.map(record =>
+    record.id === meeting.id
+      ? {
+          ...record,
+          date: request.proposedDate,
+          time: request.proposedTime,
+          status: 'confirmed' as const,
+          updatedAt: new Date().toISOString()
+        }
+      : record
+  );
+
+  const meetingChanges = db.meetingChanges.map(record => record.id === requestId ? approvedRequest : record);
+  const consultant = getUserById(consultantId);
+  const timelineEvent: TimelineRecord = {
+    id: `t-${Date.now() + 2}`,
+    customerId: request.customerId,
+    consultantId,
+    type: 'consultation',
+    channel: 'meeting',
+    title: 'Meeting change approved',
+    detail: `${consultant?.name ?? 'Consultant'} approved the new slot for ${request.proposedDate} at ${request.proposedTime}.`,
+    policyOptions: request.guidanceOptions,
+    createdAt: new Date().toISOString(),
+    readBy: [consultantId],
+  };
+
+  saveDatabase({
+    ...db,
+    meetings,
+    meetingChanges,
+    timeline: [timelineEvent, ...db.timeline]
+  });
+
+  return { ok: true, request: approvedRequest };
+}
+
+export function rejectMeetingChange(input: {
+  requestId: string;
+  consultantId: string;
+  rejectionReason?: string;
+}): { ok: true; request: MeetingChangeRequestRecord } | { ok: false; message: string } {
+  const db = getDatabase();
+  const request = db.meetingChanges.find(record => record.id === input.requestId);
+  const actingUser = getUserById(input.consultantId);
+  const canActAsConsultant = !!actingUser && actingUser.role === 'consultant';
+
+  if (!request || !canActAsConsultant) {
+    return { ok: false, message: 'Meeting change request not found for this consultant.' };
+  }
+
+  if (request.status !== 'pending') {
+    return { ok: false, message: 'This meeting change has already been processed.' };
+  }
+
+  const meeting = db.meetings.find(record => record.id === request.meetingId);
+  if (!meeting) {
+    return { ok: false, message: 'Original meeting could not be found.' };
+  }
+
+  const rejectedRequest: MeetingChangeRequestRecord = {
+    ...request,
+    status: 'rejected',
+    reviewedBy: input.consultantId,
+    rejectionReason: input.rejectionReason?.trim() || 'Consultant kept the original slot.',
+    resolvedAt: new Date().toISOString(),
+  };
+
+  const meetings: MeetingRecord[] = db.meetings.map(record =>
+    record.id === meeting.id
+      ? { ...record, status: 'confirmed' as const, updatedAt: new Date().toISOString() }
+      : record
+  );
+
+  const meetingChanges = db.meetingChanges.map(record => record.id === input.requestId ? rejectedRequest : record);
+  const consultant = getUserById(input.consultantId);
+  const timelineEvent: TimelineRecord = {
+    id: `t-${Date.now() + 3}`,
+    customerId: request.customerId,
+    consultantId: input.consultantId,
+    type: 'consultation',
+    channel: 'meeting',
+    title: 'Meeting change rejected',
+    detail: `${consultant?.name ?? 'Consultant'} rejected the requested slot for ${request.proposedDate} at ${request.proposedTime}. ${rejectedRequest.rejectionReason}`,
+    policyOptions: request.guidanceOptions,
+    createdAt: new Date().toISOString(),
+    readBy: [input.consultantId],
+  };
+
+  saveDatabase({
+    ...db,
+    meetings,
+    meetingChanges,
+    timeline: [timelineEvent, ...db.timeline]
+  });
+
+  return { ok: true, request: rejectedRequest };
+}
+
 export function markTimelineRead(userId: string, eventIds?: string[]): void {
   const db = getDatabase();
   const idSet = eventIds ? new Set(eventIds) : null;
@@ -288,6 +639,201 @@ export function markTimelineRead(userId: string, eventIds?: string[]): void {
 export function getUnreadTimelineCountForUser(user: UserRecord, customerId?: string): number {
   const events = getTimelineEventsForUser(user, customerId);
   return events.filter(event => !event.readBy.includes(user.id)).length;
+}
+
+export function getProposalAcceptanceRequestsForCustomer(customerId: string): ProposalAcceptanceRecord[] {
+  return [...getDatabase().proposalAcceptances]
+    .filter(request => request.customerId === customerId)
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+}
+
+export function getPendingProposalAcceptancesForConsultant(consultantId: string): ProposalAcceptanceRecord[] {
+  const pending = [...getDatabase().proposalAcceptances]
+    .filter(request => request.status === 'pending');
+
+  const consultantScoped = pending.filter(request => request.consultantId === consultantId);
+  if (consultantScoped.length > 0) {
+    return consultantScoped.sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  }
+
+  return pending.sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+}
+
+export function requestProposalAcceptance(input: {
+  customerId: string;
+  policyName: string;
+  consultantId?: string;
+}): { ok: true; request: ProposalAcceptanceRecord } | { ok: false; message: string } {
+  const db = getDatabase();
+  const policyName = input.policyName.trim();
+
+  if (!policyName) {
+    return { ok: false, message: 'Policy name is required before sending acceptance.' };
+  }
+
+  const meetingConsultantId = db.meetings.find(meeting => meeting.customerId === input.customerId)?.consultantId;
+  const consultantId = input.consultantId ?? meetingConsultantId ?? 'u-consultant-demo';
+
+  const existingPending = db.proposalAcceptances.find(request =>
+    request.customerId === input.customerId &&
+    request.policyName.toLowerCase() === policyName.toLowerCase() &&
+    request.status === 'pending'
+  );
+
+  if (existingPending) {
+    return { ok: false, message: 'This proposal is already pending consultant approval.' };
+  }
+
+  const request: ProposalAcceptanceRecord = {
+    id: `pa-${Date.now()}`,
+    customerId: input.customerId,
+    consultantId,
+    policyName,
+    status: 'pending',
+    requestedAt: new Date().toISOString(),
+  };
+
+  const customer = getUserById(input.customerId);
+  const timelineEvent: TimelineRecord = {
+    id: `t-${Date.now() + 4}`,
+    customerId: input.customerId,
+    consultantId,
+    type: 'proposal',
+    channel: 'direct-message',
+    title: 'Proposal acceptance sent for consultant approval',
+    detail: `${customer?.name ?? 'Customer'} signed and accepted ${policyName}. Waiting for consultant approval.`,
+    policyOptions: [policyName],
+    createdAt: new Date().toISOString(),
+    readBy: [input.customerId],
+  };
+
+  saveDatabase({
+    ...db,
+    proposalAcceptances: [request, ...db.proposalAcceptances],
+    timeline: [timelineEvent, ...db.timeline],
+  });
+
+  return { ok: true, request };
+}
+
+export function approveProposalAcceptance(requestId: string, consultantId: string): { ok: true; request: ProposalAcceptanceRecord } | { ok: false; message: string } {
+  const db = getDatabase();
+  const request = db.proposalAcceptances.find(record => record.id === requestId);
+  const actingUser = getUserById(consultantId);
+  const canActAsConsultant = !!actingUser && actingUser.role === 'consultant';
+
+  if (!request || !canActAsConsultant) {
+    return { ok: false, message: 'Proposal acceptance request not found for this consultant.' };
+  }
+
+  if (request.status !== 'pending') {
+    return { ok: false, message: 'This proposal acceptance has already been processed.' };
+  }
+
+  const approvedRequest: ProposalAcceptanceRecord = {
+    ...request,
+    status: 'approved',
+    reviewedBy: consultantId,
+    resolvedAt: new Date().toISOString(),
+  };
+
+  const proposalAcceptances = db.proposalAcceptances.map(record => record.id === requestId ? approvedRequest : record);
+  const consultant = getUserById(consultantId);
+  const timelineEvent: TimelineRecord = {
+    id: `t-${Date.now() + 5}`,
+    customerId: request.customerId,
+    consultantId,
+    type: 'proposal',
+    channel: 'direct-message',
+    title: 'Proposal accepted and approved',
+    detail: `${consultant?.name ?? 'Consultant'} approved ${request.policyName} for final processing.`,
+    policyOptions: [request.policyName],
+    createdAt: new Date().toISOString(),
+    readBy: [consultantId],
+  };
+
+  saveDatabase({
+    ...db,
+    proposalAcceptances,
+    timeline: [timelineEvent, ...db.timeline],
+  });
+
+  return { ok: true, request: approvedRequest };
+}
+
+export function rejectProposalAcceptance(input: {
+  requestId: string;
+  consultantId: string;
+  rejectionReason?: string;
+}): { ok: true; request: ProposalAcceptanceRecord } | { ok: false; message: string } {
+  const db = getDatabase();
+  const request = db.proposalAcceptances.find(record => record.id === input.requestId);
+  const actingUser = getUserById(input.consultantId);
+  const canActAsConsultant = !!actingUser && actingUser.role === 'consultant';
+
+  if (!request || !canActAsConsultant) {
+    return { ok: false, message: 'Proposal acceptance request not found for this consultant.' };
+  }
+
+  if (request.status !== 'pending') {
+    return { ok: false, message: 'This proposal acceptance has already been processed.' };
+  }
+
+  const rejectedRequest: ProposalAcceptanceRecord = {
+    ...request,
+    status: 'rejected',
+    reviewedBy: input.consultantId,
+    rejectionReason: input.rejectionReason?.trim() || 'Consultant requested updates before final acceptance.',
+    resolvedAt: new Date().toISOString(),
+  };
+
+  const proposalAcceptances = db.proposalAcceptances.map(record => record.id === input.requestId ? rejectedRequest : record);
+  const consultant = getUserById(input.consultantId);
+  const timelineEvent: TimelineRecord = {
+    id: `t-${Date.now() + 6}`,
+    customerId: request.customerId,
+    consultantId: input.consultantId,
+    type: 'proposal',
+    channel: 'direct-message',
+    title: 'Proposal acceptance rejected',
+    detail: `${consultant?.name ?? 'Consultant'} rejected ${request.policyName}. ${rejectedRequest.rejectionReason}`,
+    policyOptions: [request.policyName],
+    createdAt: new Date().toISOString(),
+    readBy: [input.consultantId],
+  };
+
+  saveDatabase({
+    ...db,
+    proposalAcceptances,
+    timeline: [timelineEvent, ...db.timeline],
+  });
+
+  return { ok: true, request: rejectedRequest };
+}
+
+export function getChatHistory(userId?: string): ChatHistoryEntry[] {
+  const key = userId ?? 'guest';
+  return getDatabase().chatHistory[key] ?? [];
+}
+
+export function saveChatHistory(userId: string | undefined, messages: ChatHistoryEntry[]): void {
+  const key = userId ?? 'guest';
+  const db = getDatabase();
+  saveDatabase({
+    ...db,
+    chatHistory: {
+      ...db.chatHistory,
+      [key]: messages,
+    }
+  });
+}
+
+export function clearChatHistory(userId?: string): void {
+  const key = userId ?? 'guest';
+  const db = getDatabase();
+  const chatHistory = { ...db.chatHistory };
+  delete chatHistory[key];
+  saveDatabase({ ...db, chatHistory });
 }
 
 export function loginUser(email: string, password: string): { ok: true; user: UserRecord } | { ok: false; message: string } {

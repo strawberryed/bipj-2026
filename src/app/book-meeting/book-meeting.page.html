@@ -18,6 +18,7 @@
     <div class="advisor-card" 
          *ngFor="let advisor of advisors" 
          [class.active-card]="selectedAdvisor?.name === advisor.name"
+         [class.recommended-card]="advisor.name === recommendedAdvisorName"
          (click)="selectAdvisor(advisor)">
       <ion-avatar>
         <img [src]="advisor.avatar" alt="advisor avatar" />
@@ -25,9 +26,22 @@
       <div class="advisor-info">
         <h3>{{ advisor.name }}</h3>
         <p>{{ advisor.title }}</p>
+        <span class="recommended-badge" *ngIf="advisor.name === recommendedAdvisorName">Recommended for you</span>
       </div>
     </div>
   </div>
+
+  <h2 class="section-title ion-margin-top">SELECT DATE</h2>
+  
+  <ion-item class="date-picker-item" lines="none">
+    <ion-label position="stacked">Preferred Meeting Date</ion-label>
+    <ion-input 
+      type="date" 
+      [(ngModel)]="selectedDate"
+      placeholder="Choose a date"
+      class="date-input">
+    </ion-input>
+  </ion-item>
 
   <h2 class="section-title ion-margin-top">AVAILABLE SLOTS</h2>
   
@@ -54,7 +68,7 @@
 
   <ion-button expand="block" 
               class="confirm-booking-btn" 
-              [disabled]="!selectedAdvisor || !selectedSlot"
+              [disabled]="!selectedAdvisor || !selectedSlot || !selectedDate"
               (click)="confirmBooking()">
     CONFIRM BOOKING {{ selectedAdvisor ? '– ' + selectedAdvisor.name : '' }}
   </ion-button>

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { BookingService, BookingDetails } from '../services/booking';
 import { Observable } from 'rxjs';
+import { getCurrentUser } from '../../data/app-db';
 
 @Component({
   selector: 'app-tab1',
@@ -12,14 +13,18 @@ export class Tab1Page implements OnInit {
   todayDate: Date = new Date();
   activeBooking$: Observable<BookingDetails | null>;
   isDetailsModalOpen: boolean = false;
+  currentUserName = 'Orange Tan';
 
   constructor(private bookingService: BookingService) { 
     this.activeBooking$ = this.bookingService.currentBooking$;
   }
 
   ngOnInit() {
-    // Optionally refresh the date when the component initializes
-    this.todayDate = new Date();
+    this.refreshViewModel();
+  }
+
+  ionViewWillEnter() {
+    this.refreshViewModel();
   }
 
   openDetailsModal() { this.isDetailsModalOpen = true; }
@@ -31,6 +36,11 @@ export class Tab1Page implements OnInit {
       this.closeDetailsModal();
       alert('Booking cancelled successfully without penalties.');
     }
+  }
+
+  private refreshViewModel() {
+    this.todayDate = new Date();
+    this.currentUserName = getCurrentUser()?.name ?? 'Orange Tan';
   }
 
 }

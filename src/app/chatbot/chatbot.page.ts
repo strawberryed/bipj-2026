@@ -4,6 +4,7 @@ import { POLICIES, PLANS, Plan } from '../../data/policies';
 import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
 import { DEMO_PROFILES, DEFAULT_PROFILE_ID, DemoProfile } from '../../data/demoProfiles';
+import { addTimelineEvent, clearChatHistory, getChatHistory, getCurrentUser, saveChatHistory } from '../../data/app-db';
 
 @Component({
   selector: 'app-chatbot',
@@ -32,6 +33,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   currentCategoryLabel = 'Health Protection';
 
   private lastMessageCount = 0;
+  private currentUser = getCurrentUser();
 
   constructor(
     private gemini: GeminiService,
@@ -41,6 +43,12 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   ngOnInit() {
     this.chips = [...this.activeProfile.defaultChips];
     this.loadChat();
+
+    const seedPrompt = localStorage.getItem('bipj_chat_seed_prompt_v1')?.trim();
+    if (seedPrompt) {
+      localStorage.removeItem('bipj_chat_seed_prompt_v1');
+      void this.send(seedPrompt);
+    }
   }
 
   ngAfterViewChecked() {
@@ -54,12 +62,12 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   // We keep one conversation regardless of which demo profile is active; only the
   // AI's responses (fit scores, personalization) change based on activeProfile.
   saveChat() {
-    localStorage.setItem('chatbot_history', JSON.stringify(this.messages));
+    saveChatHistory(this.currentUser?.id, this.messages);
   }
 
   loadChat() {
-    const saved = localStorage.getItem('chatbot_history');
-    this.messages = saved ? JSON.parse(saved) : [];
+    this.currentUser = getCurrentUser();
+    this.messages = getChatHistory(this.currentUser?.id) as Message[];
   }
 
   scrollToBottom() {
@@ -84,6 +92,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   async send(text?: string) {
     const message = (text ?? this.inputText).trim();
     if (!message || this.isLoading) return;
+
+    const isFirstPrompt = this.messages.length === 0;
 
     this.inputText = '';
     this.isLoading = true;
@@ -114,13 +124,26 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     }
 
     this.isLoading = false;
+
+    if (isFirstPrompt && this.currentUser?.role === 'customer') {
+      addTimelineEvent({
+        customerId: this.currentUser.id,
+        consultantId: 'u-consultant-demo',
+        type: 'aichat',
+        channel: 'ai-chat',
+        title: 'AI conversation resumed',
+        detail: `${this.currentUser.name} continued the saved AI conversation from Tab 4.`,
+        readBy: [this.currentUser.id],
+      });
+    }
+
     this.saveChat();
   }
 
   reset() {
     this.messages = [];
     this.chips = [...this.activeProfile.defaultChips];
-    localStorage.removeItem('chatbot_history');
+    clearChatHistory(this.currentUser?.id);
   }
 
   openCompare() { this.isCompareOpen = true; }

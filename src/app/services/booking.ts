@@ -4,6 +4,7 @@ import { BehaviorSubject } from 'rxjs';
 export interface BookingDetails {
   consultantName: string;
   consultantTitle: string;
+  bookingDate: string;
   timeSlot: string;
   type: string;
 }
