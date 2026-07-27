@@ -15,55 +15,50 @@
     </ion-avatar>
   </div>
 
-  <ion-card class="brief-card">
-    <ion-card-header>
-      <div class="brief-title-container">
-        <span class="brief-subtitle">Today's Brief</span>
-        <ion-badge color="light" class="insights-badge">Insights</ion-badge>
+  <div class="brief-card">
+    <div class="brief-title-container">
+      <span class="brief-subtitle">Today's Brief</span>
+      <ion-badge class="insights-badge">Insights</ion-badge>
+    </div>
+
+    <h2 class="main-card-title">Your coverage has 3 gaps to review today</h2>
+
+    <div class="brief-item">
+      <ion-icon name="star-outline" class="brief-icon"></ion-icon>
+      <div>
+        <h3>RECOMMENDED</h3>
+        <p>2 better plans found that covers more of your bill</p>
       </div>
-      <ion-card-title class="main-card-title">
-        Your coverage has 3 gaps to review today
-      </ion-card-title>
-    </ion-card-header>
+    </div>
 
-    <ion-card-content>
-      <ion-item lines="none" class="brief-item">
-        <ion-icon name="star-outline" slot="start" class="brief-icon"></ion-icon>
-        <ion-label>
-          <h3>RECOMMENDED</h3>
-          <p>2 better plans found that covers more of your bill</p>
-        </ion-label>
-      </ion-item>
+    <div class="brief-item">
+      <ion-icon name="alert-circle-outline" class="brief-icon"></ion-icon>
+      <div>
+        <h3>COVERAGE GAP</h3>
+        <p>Basic plan can only cover 40% of your healthcare bill</p>
+      </div>
+    </div>
 
-      <ion-item lines="none" class="brief-item">
-        <ion-icon name="alert-circle-outline" slot="start" class="brief-icon"></ion-icon>
-        <ion-label>
-          <h3>COVERAGE GAP</h3>
-          <p>Basic plan can only cover 40% of your healthcare bill</p>
-        </ion-label>
-      </ion-item>
+    <div class="brief-item">
+      <ion-icon name="time-outline" class="brief-icon"></ion-icon>
+      <div>
+        <h3>EXPIRING POLICY</h3>
+        <p>1,200 Lifepoints expiring by 31 Dec</p>
+      </div>
+    </div>
 
-      <ion-item lines="none" class="brief-item">
-        <ion-icon name="time-outline" slot="start" class="brief-icon"></ion-icon>
-        <ion-label>
-          <h3>EXPIRING POLICY</h3>
-          <p>1,200 Lifepoints expiring by 31 Dec</p>
-        </ion-label>
-      </ion-item>
-    </ion-card-content>
-  </ion-card>
-
-  <div class="dashboard-booking-container" *ngIf="activeBooking$ | async as booking">
-    <h2 class="section-title">UPCOMING MEETING</h2>
-    <div class="dashboard-booking-card" (click)="openDetailsModal()">
-      <div class="card-left-strip"></div>
-      <div class="card-main-content">
-        <div class="card-header-row">
-          <ion-icon name="calendar-outline"></ion-icon>
-          <span>Today at {{ booking.timeSlot }} ({{ booking.type }})</span>
-        </div>
+    <div class="embedded-meeting-card" *ngIf="activeBooking$ | async as booking" (click)="openDetailsModal()">
+      <div class="meeting-header">
+        <ion-icon name="calendar-number-outline"></ion-icon>
+        <span>UPCOMING CONSULTATION</span>
+      </div>
+      <div class="meeting-body">
         <h3>With {{ booking.consultantName }}</h3>
-        <p class="tap-hint">Tap to view details or cancel</p>
+        <p>Today at {{ booking.timeSlot }} — {{ booking.type }}</p>
+      </div>
+      <div class="meeting-footer">
+        <span>Tap card to view details or manage slot</span>
+        <ion-icon name="chevron-forward-outline"></ion-icon>
       </div>
     </div>
   </div>
@@ -79,25 +74,67 @@
         </ion-toolbar>
       </ion-header>
 
-      <ion-content class="ion-padding ion-text-center" *ngIf="activeBooking$ | async as booking">
-        <div class="modal-body-details">
-          <ion-icon name="time-outline" class="big-modal-icon"></ion-icon>
+      <ion-content class="ion-padding" *ngIf="activeBooking$ | async as booking">
+        <div class="modal-body-details ion-text-center">
+          <ion-icon name="checkmark-circle-outline" class="big-modal-icon success-color"></ion-icon>
           <h2>Confirmed Session</h2>
           <h3 class="consultant-highlight">{{ booking.consultantName }}</h3>
           <p class="title-sub">{{ booking.consultantTitle }}</p>
+
+          <div class="logistics-box ion-margin-vertical">
+            <p class="logistics-text">
+              <ion-icon name="call-outline"></ion-icon>
+              {{ booking.consultantName }} will call you directly at <strong>+65 9123 4567</strong> at the selected
+              time.
+            </p>
+            <a class="edit-phone-link" (click)="goToProfile()">Verify or Change Number</a>
+          </div>
 
           <div class="detail-pill ion-margin-vertical">
             <strong>{{ booking.timeSlot }}</strong> — {{ booking.type }}
           </div>
 
+          <ion-accordion-group class="ion-margin-vertical custom-accordion">
+            <ion-accordion value="ai-summary">
+              <ion-item slot="header" lines="none">
+                <ion-icon name="analytics-outline" slot="start" class="accordion-icon"></ion-icon>
+                <ion-label>Shared AI Insights Summary</ion-label>
+              </ion-item>
+              <div class="ion-padding accordion-content ion-text-left" slot="content">
+                <p class="summary-intro">The following profile points from your Cova AI session have been synced with
+                  your advisor:</p>
+                <ul>
+                  <li>Identified Gaps: <strong>Benefits optimisation & Health</strong></li>
+                  <li>Budget Constraints: <strong>Looking to save up to 20% on premiums</strong></li>
+                  <li>Priority Interest: <strong>Switching group health plans</strong></li>
+                </ul>
+              </div>
+            </ion-accordion>
+          </ion-accordion-group>
+
+          <div class="notes-container ion-text-left ion-margin-vertical">
+            <label class="input-label">Add Notes / Topics to Focus On:</label>
+            <ion-textarea placeholder="e.g., I want to focus on hospitalisation plans specifically..." fill="outline"
+              rows="3" [autoGrow]="true" [(ngModel)]="userNotes" (ionBlur)="saveNotesChange()">
+            </ion-textarea>
+            <span class="save-indicator">Changes auto-save on blur</span>
+          </div>
+
           <p class="penalty-free-notice">
             <ion-icon name="shield-checkmark-outline"></ion-icon>
-            This presentation testing slot can be cancelled without penalties.
+            This presentation testing slot can be altered without penalties.
           </p>
 
-          <ion-button expand="block" color="danger" class="cancel-session-btn" (click)="handleCancellation()">
-            CANCEL BOOKING
-          </ion-button>
+          <div class="action-footer-buttons">
+            <ion-button expand="block" fill="outline" class="reschedule-btn" (click)="rescheduleBooking(booking)">
+              RESCHEDULE TIME SLOT
+            </ion-button>
+
+            <ion-button expand="block" color="danger" fill="clear" class="cancel-session-btn"
+              (click)="handleCancellation()">
+              Cancel Appointment
+            </ion-button>
+          </div>
         </div>
       </ion-content>
     </ng-template>
@@ -150,3 +187,4 @@
       </ion-col>
     </ion-row>
   </ion-grid>
+</ion-content>

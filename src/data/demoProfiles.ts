@@ -108,4 +108,4 @@ export const DEMO_PROFILES: DemoProfile[] = [
     }
 ];
 
-export const DEFAULT_PROFILE_ID = 'profile1';
+export const DEFAULT_PROFILE_ID = 'profile3';

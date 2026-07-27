@@ -44,19 +44,23 @@
 
   <div class="consultant-list-container">
 
-    <ion-item lines="none" class="consultant-item" detail="true" (click)="goToBooking()">
-      <ion-avatar slot="start" class="consultant-avatar">
-        <img src="assets/sarah.jpg" alt="Sarah Lim" />
-      </ion-avatar>
-      <ion-label>
-        <h3>SARAH LIM</h3>
-        <p class="role-text">Financial and Health Advisor</p>
-        <div class="tag-container">
-          <ion-badge class="custom-badge text-purple">Health</ion-badge>
-          <ion-badge class="custom-badge text-purple">Benefits optimisation</ion-badge>
-        </div>
-      </ion-label>
-    </ion-item>
+    <div class="protected-row" (click)="isPaidUser ? goToBooking() : upgradeUser()">
+      <ion-item lines="none" class="consultant-item" [detail]="isPaidUser">
+        <ion-avatar slot="start" class="consultant-avatar">
+          <img src="assets/sarah.jpg" alt="Brandon" />
+        </ion-avatar>
+        <ion-label>
+          <h3>SARAH LIM</h3>
+          <p class="role-text">Financial and Health Advisor</p>
+          <div class="tag-container">
+            <ion-badge class="custom-badge text-purple">Health</ion-badge>
+            <ion-badge class="custom-badge text-purple">Benefits optimisation</ion-badge>
+          </div>
+        </ion-label>
+      </ion-item>
+      <div class="center-lock-overlay" *ngIf="!isPaidUser">
+      </div>
+    </div>
 
     <div class="protected-row" (click)="isPaidUser ? goToBooking() : upgradeUser()">
       <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">

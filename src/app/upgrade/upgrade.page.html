@@ -13,49 +13,57 @@
     <p class="subtitle">Select the upgrades you want and checkout when you're ready</p>
   </div>
 
-  <h2 class="section-title">AVAILABLE UPGRADES</h2>
+  <div class="upgrades-section-container">
+    <h2 class="section-title">AVAILABLE UPGRADES</h2>
 
-  <ion-card class="payment-card purple-card" [class.selected-card]="isReportSelected">
-    <ion-card-content>
-      <div class="card-header-layout">
-        <div class="icon-square">
+    <div class="upgrade-item-card" [class.selected-card]="isSummarySelected">
+      <div class="card-left">
+        <div class="icon-badge">
           <ion-icon name="download-outline"></ion-icon>
         </div>
-        <div class="card-titles">
-          <h3>PROFILE & NEEDS REPORT</h3>
-          <h2>DOWNLOAD YOUR FULL AI SUMMARY</h2>
+        <div class="card-info">
+          <span class="category-tag">PROFILE & NEEDS REPORT</span>
+          <h3>DOWNLOAD YOUR FULL AI SUMMARY</h3>
+          <ul>
+            <li>Full PDF export of your coverage analysis</li>
+            <li>Shareable link valid for 30 days</li>
+          </ul>
         </div>
-        <ion-checkbox slot="end" [(ngModel)]="isReportSelected" (ionChange)="updateTotal()"></ion-checkbox>
       </div>
-      
-      <ul class="feature-list paid-list">
-        <li>Full PDF export of your coverage analysis</li>
-        <li>Shareable link valid for 30 days</li>
-      </ul>
-      <div class="price-tag">$5.00</div>
-    </ion-card-content>
-  </ion-card>
+      <div class="card-right">
+        <ion-checkbox 
+          [(ngModel)]="isSummarySelected" 
+          (ionChange)="calculateCartTotal()">
+        </ion-checkbox>
+        <span class="price-tag">$5.00</span>
+      </div>
+    </div>
 
-  <ion-card class="payment-card purple-card ion-margin-top" [class.selected-card]="isConsultantSelected">
-    <ion-card-content>
-      <div class="card-header-layout">
-        <div class="icon-square">
+    <div class="card-separator"></div>
+
+    <div class="upgrade-item-card" [class.selected-card]="isConsultantSelected">
+      <div class="card-left">
+        <div class="icon-badge">
           <ion-icon name="person-add-outline"></ion-icon>
         </div>
-        <div class="card-titles">
-          <h3>CONSULTANT CONNECTION</h3>
-          <h2>MATCH AND CONNECT WITH A CONSULTANT</h2>
+        <div class="card-info">
+          <span class="category-tag">CONSULTANT CONNECTION</span>
+          <h3>MATCH AND CONNECT WITH A CONSULTANT</h3>
+          <ul>
+            <li>Match with a verified financial consultant</li>
+            <li>Book a 30-min video or phone call session</li>
+          </ul>
         </div>
-        <ion-checkbox slot="end" [(ngModel)]="isConsultantSelected" (ionChange)="updateTotal()"></ion-checkbox>
       </div>
-      
-      <ul class="feature-list paid-list">
-        <li>Match with a verified financial consultant</li>
-        <li>Book a 30-min video or phone call session</li>
-      </ul>
-      <div class="price-tag">$10.00</div>
-    </ion-card-content>
-  </ion-card>
+      <div class="card-right">
+        <ion-checkbox 
+          [(ngModel)]="isConsultantSelected" 
+          (ionChange)="calculateCartTotal()">
+        </ion-checkbox>
+        <span class="price-tag">$10.00</span>
+      </div>
+    </div>
+  </div>
 </ion-content>
 
 <ion-footer class="ion-no-border" *ngIf="cartTotal > 0">

@@ -1,6 +1,3 @@
-// src/data/policies.ts
-// Policy data sourced from PruCanvas prototype
-
 export interface Plan {
   id: string;
   name: string;

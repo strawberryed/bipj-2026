@@ -1,213 +1,218 @@
 .checkout-page {
+  --background: #ffffff;
+
+  ion-content {
     --background: #ffffff;
+    --color: #111111;
+  }
 
-    .header-section {
-        h1 {
-            font-family: 'Georgia', serif;
-            font-style: italic;
-            font-size: 2rem;
-            margin-bottom: 6px;
-            color: #111;
-        }
-
-        .subtitle {
-            color: #666;
-            font-size: 0.95rem;
-        }
+  .header-section {
+    h1 {
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      font-size: 2rem;
+      margin-bottom: 6px;
+      color: #111111;
     }
 
-    .section-title {
-        font-size: 0.95rem;
-        font-weight: bold;
-        color: #000;
-        margin: 24px 0 12px 0;
-        letter-spacing: 0.3px;
+    .subtitle {
+      color: #666666;
+      font-size: 0.95rem;
+    }
+  }
+
+  .section-title {
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #000000;
+    margin: 24px 0 12px 0;
+    letter-spacing: 0.3px;
+  }
+
+  // Layout for order summary rows
+  .summary-box {
+    background: #e5e5ea;
+    border-radius: 6px; // Updated to 6px
+    overflow: hidden;
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
     }
 
-    // Layout for order summary rows
-    .summary-box {
-        background: #e5e5ea;
-        border-radius: 12px;
-        overflow: hidden;
+    .item-row {
+      border-bottom: 1px solid #d1d1d6;
 
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 16px;
-        }
-
-        .item-row {
-            border-bottom: 1px solid #d1d1d6;
-
-            .row-left {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .icon-container {
-                background: #ffffff;
-                padding: 6px;
-                border-radius: 6px;
-                display: flex;
-                align-items: center;
-                font-size: 1.2rem;
-                color: #333;
-            }
-
-            .item-name {
-                font-size: 0.9rem;
-                color: #111;
-            }
-
-            .item-price {
-                font-size: 0.9rem;
-                color: #333;
-            }
-        }
-
-        .total-row {
-            background: #d1d1d6;
-            font-weight: bold;
-
-            .total-label {
-                font-size: 0.95rem;
-                color: #111;
-            }
-
-            .total-price {
-                font-size: 1rem;
-                color: #000;
-            }
-        }
-    }
-
-    // Payment inputs and forms layout
-    .card-brands {
-        display: flex;
-        gap: 8px;
-
-        .brand-chip {
-            --background: #e5e5ea;
-            --color: #333;
-            font-size: 0.75rem;
-            font-weight: bold;
-            margin: 0;
-            border-radius: 8px;
-            padding: 6px 14px;
-
-            &.active-chip {
-                --background: #d1d1d6;
-            }
-        }
-    }
-
-    .payment-form {
-        .input-group {
-            margin-bottom: 14px;
-
-            label {
-                display: block;
-                font-size: 0.85rem;
-                color: #333;
-                margin-bottom: 6px;
-            }
-
-            .custom-input {
-                --background: #e5e5ea;
-                --padding-start: 12px;
-                --padding-end: 12px;
-                border-radius: 4px;
-                color: #000;
-                font-size: 0.95rem;
-                height: 44px;
-            }
-        }
-
-        .pay-btn {
-            --background: #d1b3e4; // Lavender matching design borders
-            --color: #000000;
-            --border-radius: 0px; // Edge to edge styled button strip
-            --box-shadow: none;
-            font-weight: bold;
-            font-size: 1.1rem;
-            height: 48px;
-            margin: 24px 0 0 0;
-        }
-
-        .payment-form {
-
-            // Highlights input borders in soft red when user types bad or empty data
-            .custom-input.invalid-input {
-                border: 1px solid #eb445a;
-                border-radius: 4px;
-            }
-
-            // Red text helper notices under inputs
-            .error-msg {
-                color: #eb445a;
-                font-size: 0.75rem;
-                margin-top: 4px;
-                font-weight: 500;
-            }
-
-            // Visual style state overlay styling for disabled submission buttons
-            .pay-btn[disabled] {
-                opacity: 0.5;
-            }
-        }
-
-    }
-
-    // Styled Sandbox Notice Banner at top
-    .sandbox-balance-banner {
-        background: #fff8e1;
-        border: 1px dashed #ffb300;
-        padding: 12px;
-        border-radius: 8px;
+      .row-left {
         display: flex;
         align-items: center;
         gap: 12px;
-        color: #b78103;
+      }
+
+      .icon-container {
+        background: #ffffff;
+        padding: 6px;
+        border-radius: 6px; // Kept 6px
+        display: flex;
+        align-items: center;
+        font-size: 1.2rem;
+        color: #333333;
+      }
+
+      .item-name {
         font-size: 0.9rem;
-        margin-bottom: 20px;
+        color: #111111;
+      }
 
-        ion-icon {
-            font-size: 1.5rem;
-        }
-
-        .sandbox-hint {
-            margin: 2px 0 0 0;
-            font-size: 0.75rem;
-            color: #8c6200;
-            font-family: monospace;
-        }
+      .item-price {
+        font-size: 0.9rem;
+        color: #333333;
+      }
     }
 
-    // Interactive NETS QR Box Container
-    .nets-sim-box {
-        background: #f4f4f7;
-        padding: 32px 20px;
-        border-radius: 12px;
-        border: 1px solid #e5e5ea;
+    .total-row {
+      background: #d1d1d6;
+      font-weight: bold;
 
-        .nets-instructions {
-            font-size: 0.85rem;
-            color: #555555;
-            margin-bottom: 20px;
-        }
+      .total-label {
+        font-size: 0.95rem;
+        color: #111111;
+      }
 
-        .qr-placeholder {
-            font-size: 8rem;
-            color: #111111;
-        }
+      .total-price {
+        font-size: 1rem;
+        color: #000000;
+      }
+    }
+  }
 
-        .nets-btn {
-            --background: #009688; // Professional corporate green accents for NETS themes
-            --color: white;
-            margin-top: 24px;
+  // Payment inputs and forms layout
+  .card-brands {
+    display: flex;
+    gap: 8px;
+
+    .brand-chip {
+      --background: #e5e5ea;
+      --color: #333333;
+      --border-radius: 6px; // Updated to 6px
+      border-radius: 6px; // Updated to 6px
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin: 0;
+      padding: 6px 14px;
+
+      &.active-chip {
+        --background: #d1d1d6;
+      }
+    }
+  }
+
+  .payment-form {
+    .input-group {
+      margin-bottom: 14px;
+
+      label {
+        display: block;
+        font-size: 0.85rem;
+        color: #333333;
+        margin-bottom: 6px;
+      }
+
+      .custom-input {
+        --background: #e5e5ea;
+        --padding-start: 12px;
+        --padding-end: 12px;
+        --border-radius: 6px; // Sets internal shadow DOM radius for Ionic
+        border-radius: 6px; // Sets container radius
+        overflow: hidden;
+        color: #000000;
+        font-size: 0.95rem;
+        height: 44px;
+
+        // Highlights input borders in soft red when invalid
+        &.invalid-input {
+          border: 1px solid #eb445a;
+          border-radius: 6px; // Updated to 6px
         }
+      }
+
+      // Red text helper notices under inputs
+      .error-msg {
+        color: #eb445a;
+        font-size: 0.75rem;
+        margin-top: 4px;
+        font-weight: 500;
+      }
     }
 
+    .pay-btn {
+      --background: #d1b3e4; // Lavender matching design borders
+      --color: #000000;
+      --border-radius: 6px; // Sets Ionic button border radius
+      border-radius: 6px;
+      --box-shadow: none;
+      font-weight: bold;
+      font-size: 1.1rem;
+      height: 48px;
+      margin: 24px 0 0 0;
+
+      &[disabled] {
+        opacity: 0.5;
+      }
+    }
+  }
+
+  // Styled Sandbox Notice Banner at top
+  .sandbox-balance-banner {
+    background: #fff8e1;
+    border: 1px dashed #ffb300;
+    padding: 12px;
+    border-radius: 6px; // Updated to 6px
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #b78103;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+
+    ion-icon {
+      font-size: 1.5rem;
+    }
+
+    .sandbox-hint {
+      margin: 2px 0 0 0;
+      font-size: 0.75rem;
+      color: #8c6200;
+      font-family: monospace;
+    }
+  }
+
+  // Interactive NETS QR Box Container
+  .nets-sim-box {
+    background: #f4f4f7;
+    padding: 32px 20px;
+    border-radius: 6px; // Updated to 6px
+    border: 1px solid #e5e5ea;
+
+    .nets-instructions {
+      font-size: 0.85rem;
+      color: #555555;
+      margin-bottom: 20px;
+    }
+
+    .qr-placeholder {
+      font-size: 8rem;
+      color: #111111;
+    }
+
+    .nets-btn {
+      --background: #009688; // Professional corporate green accents for NETS themes
+      --color: white;
+      --border-radius: 6px; // Updated to 6px
+      border-radius: 6px;
+      margin-top: 24px;
+    }
+  }
 }
