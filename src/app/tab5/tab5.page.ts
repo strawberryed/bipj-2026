@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
-import { ProfileService } from '../services/profile.service';
+import { ProfileService } from '../tab5/profile.service';
 import { AlertController } from '@ionic/angular';
 
 @Component({
