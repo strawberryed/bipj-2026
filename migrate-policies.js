@@ -1,20 +1,34 @@
-export interface Plan {
-  id: string;
-  name: string;
-  category: string;
-  filterCategory: 'life' | 'ci' | 'health' | 'wealth';
-  filterPremium: 'under50' | '50to100' | 'above100';
-  filterCoverage: 'protection' | 'health' | 'savings';
-  premium: string;
-  description: string;
-  covered: string[];
-  notCovered: string[];
-  bestFor: string[];
-  risks: string[];
-  considerations: string[];
-}
+// migrate-policies.js
+//
+// ONE-TIME SCRIPT — run this once from your terminal to upload your
+// existing plan data into Firestore. NOT part of the Angular app itself.
+//
+// Setup:
+//   1. npm install firebase-admin --save-dev
+//   2. In Firebase Console → Project Settings → Service Accounts →
+//      "Generate new private key" → save the downloaded JSON as
+//      serviceAccountKey.json in your project root (DO NOT commit this
+//      file — add it to .gitignore immediately).
+//   3. Run: node migrate-policies.js
+//
+// This writes one document per plan into the "plans" collection,
+// using each plan's own "id" field (e.g. "p1") as the Firestore
+// document ID — so PolicyDataService.getPlanById() can look it up
+// directly by ID without a query.
 
-export const PLANS: Plan[] = [
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const serviceAccount = require('./serviceAccountKey.json');
+
+initializeApp({
+  credential: cert(serviceAccount)
+});
+
+const db = getFirestore();
+
+// Paste your full PLANS array from data/policies.ts here.
+// (Populated below with the 13 plans currently in that file.)
+const PLANS = [
   {
     id: 'p1',
     name: 'PRUVital Cover',
@@ -30,14 +44,14 @@ export const PLANS: Plan[] = [
     risks: [
       'No cash value — premiums paid are not recoverable if policy lapses',
       'Optional CI add-on only covers 5 conditions — very limited critical illness protection',
-      'Pre-existing conditions are fully excluded — existing health issues won\'t be covered',
+      "Pre-existing conditions are fully excluded — existing health issues won't be covered",
       'Coverage amount may become insufficient as family and financial responsibilities grow',
       'Suicide exclusion in first year means no payout if this occurs early in the policy'
     ],
     considerations: [
       'If you have pre-existing conditions, check carefully what is excluded before buying',
-      'If you need comprehensive CI coverage, this plan\'s optional add-on may not be enough',
-      'If you want a savings or investment component, this plan has none — premiums don\'t build value',
+      "If you need comprehensive CI coverage, this plan's optional add-on may not be enough",
+      "If you want a savings or investment component, this plan has none — premiums don't build value",
       'Review coverage amount regularly as your income and dependents increase'
     ]
   },
@@ -63,7 +77,7 @@ export const PLANS: Plan[] = [
     considerations: [
       'If you need coverage beyond the term period, plan ahead for renewal or replacement',
       'Not suitable if you want permanent lifelong protection',
-      'If you\'re older or have health issues at renewal, premiums may increase substantially',
+      "If you're older or have health issues at renewal, premiums may increase substantially",
       'Consider pairing with a savings plan since this plan builds no cash value'
     ]
   },
@@ -81,7 +95,7 @@ export const PLANS: Plan[] = [
     bestFor: ['Those with CI family history', 'Smokers', 'Mid-career individuals'],
     risks: [
       'Higher premiums compared to basic life plans — cost may be a concern for tight budgets',
-      'Pre-existing conditions are excluded — if you already have a CI condition it won\'t be covered',
+      "Pre-existing conditions are excluded — if you already have a CI condition it won't be covered",
       'High-risk activities like extreme sports may be excluded without additional riders',
       'Whole life component means long-term premium commitment',
       'Policy may lapse if premiums are not kept up, losing all coverage and accumulated value'
@@ -115,7 +129,7 @@ export const PLANS: Plan[] = [
     considerations: [
       'If you have pre-existing conditions, understand the waiting period before coverage kicks in',
       'Self-employed individuals should note there is no employer medical backup if this plan lapses',
-      'Maternity coverage requires an additional rider — plan ahead if you\'re considering starting a family',
+      "Maternity coverage requires an additional rider — plan ahead if you're considering starting a family",
       'Understand the difference between what PRUShield covers vs what PRUExtra adds on top'
     ]
   },
@@ -139,8 +153,8 @@ export const PLANS: Plan[] = [
       'Long lock-in period means funds are not easily accessible in emergencies'
     ],
     considerations: [
-      'This plan is purely for savings — you still need a separate health and life protection plan',
-      'Only commit to this if you\'re confident you won\'t need the money before maturity',
+      "This plan is purely for savings — you still need a separate health and life protection plan",
+      "Only commit to this if you're confident you won't need the money before maturity",
       'Understand the difference between guaranteed and non-guaranteed returns before signing',
       'Compare the effective interest rate against other savings options like SSBs or fixed deposits'
     ]
@@ -169,7 +183,7 @@ export const PLANS: Plan[] = [
       'Only suitable if you understand and are comfortable with investment risk',
       'Not a guaranteed savings plan — returns depend entirely on market performance',
       'You need to actively choose and monitor your investment funds',
-      'Consider whether a simpler savings plan better suits your risk appetite',
+      "Consider whether a simpler savings plan better suits your risk appetite",
       'Ensure you have separate emergency funds since this is a long-term investment'
     ]
   },
@@ -187,14 +201,14 @@ export const PLANS: Plan[] = [
     bestFor: ['Those wanting multi-claim CI protection', 'Parents protecting children', 'Anyone with elevated health risk'],
     risks: [
       '90-day waiting period — no CI claims can be made in the first 90 days of the policy',
-      'Pre-existing conditions are excluded — existing CI conditions won\'t be covered',
+      "Pre-existing conditions are excluded — existing CI conditions won't be covered",
       'Not all critical illnesses are covered — review the full conditions list carefully',
       'Premiums increase with age — long-term affordability should be considered',
       'Multiple claims reduce the overall benefit pool available for future claims'
     ],
     considerations: [
       'Review the full list of covered conditions to ensure your key concerns are included',
-      'The 90-day waiting period means you\'re not immediately protected after purchase',
+      "The 90-day waiting period means you're not immediately protected after purchase",
       'If you have pre-existing health conditions, check exactly what will be excluded',
       'Parents should note the juvenile conditions benefit when considering this for family protection'
     ]
@@ -213,8 +227,8 @@ export const PLANS: Plan[] = [
     bestFor: ['Early diagnosis advocates', 'Those with family history of CI', 'Health-conscious individuals'],
     risks: [
       'Only covers 36 conditions — narrower than broader CI plans covering 100+ conditions',
-      'Pre-existing conditions are excluded — existing health issues won\'t trigger a payout',
-      'Standard exclusions apply — read the policy document carefully for what\'s excluded',
+      "Pre-existing conditions are excluded — existing health issues won't trigger a payout",
+      "Standard exclusions apply — read the policy document carefully for what's excluded",
       'Early-stage payout may be lower than advanced-stage plans',
       'Conditions not on the covered list will not result in any payout regardless of severity'
     ],
@@ -273,7 +287,7 @@ export const PLANS: Plan[] = [
     considerations: [
       'Good starting point but likely needs to be supplemented with CI and health coverage later',
       'The fixed coverage amount may not keep up with your growing financial responsibilities',
-      'If you anticipate needing to adjust your coverage, this plan\'s limited flexibility may be a constraint',
+      "If you anticipate needing to adjust your coverage, this plan's limited flexibility may be a constraint",
       'Treat the small cash value as a bonus rather than a savings strategy'
     ]
   },
@@ -323,7 +337,7 @@ export const PLANS: Plan[] = [
       'Long commitment required to realise full benefit — not suitable for short-term savers'
     ],
     considerations: [
-      'Only commit if you\'re confident you can maintain premiums for the full term',
+      "Only commit if you're confident you can maintain premiums for the full term",
       'Understand clearly which portions of returns are guaranteed vs non-guaranteed',
       'This plan has no CI or disability coverage — additional protection plans are needed',
       'The 3-year cash payout cycle suits those who want periodic liquidity from their savings'
@@ -346,21 +360,30 @@ export const PLANS: Plan[] = [
       'If your base health plan lapses, this rider may also lapse',
       'Outpatient and GP visits are not covered — only inpatient hospitalisation benefits',
       'Cosmetic and dental procedures are excluded',
-      'Coverage scope is limited to what the base plan covers — won\'t fill gaps outside base plan scope'
+      "Coverage scope is limited to what the base plan covers — won't fill gaps outside base plan scope"
     ],
     considerations: [
       'You must already have a qualifying base health plan — confirm compatibility before purchasing',
       'If your base plan changes or lapses, this booster is affected too',
-      'Good for reducing out-of-pocket hospitalisation costs but doesn\'t cover outpatient needs',
+      "Good for reducing out-of-pocket hospitalisation costs but doesn't cover outpatient needs",
       'Review whether the additional premium is worth it based on your hospitalisation risk profile'
     ]
-  },
+  }
 ];
 
-// Grouped by filterCategory for easy lookup in gemini.service.ts
-export const POLICIES: Record<string, Plan[]> = {
-  life:   PLANS.filter(p => p.filterCategory === 'life'),
-  ci:     PLANS.filter(p => p.filterCategory === 'ci'),
-  health: PLANS.filter(p => p.filterCategory === 'health'),
-  wealth: PLANS.filter(p => p.filterCategory === 'wealth'),
-};
+async function migrate() {
+  console.log(`Uploading ${PLANS.length} plans to Firestore...`);
+
+  for (const plan of PLANS) {
+    await db.collection('plans').doc(plan.id).set(plan);
+    console.log(`  ✓ ${plan.id} — ${plan.name}`);
+  }
+
+  console.log('Done. All plans uploaded to the "plans" collection.');
+  process.exit(0);
+}
+
+migrate().catch(err => {
+  console.error('Migration failed:', err);
+  process.exit(1);
+});

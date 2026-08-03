@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Plan, POLICIES, PLANS } from '../../data/policies';
+import { PolicyDataService, Plan } from './policy-data';
 import { UserProfile } from './user-profile';
 
 // ─────────────────────────────────────────────────────────────
@@ -92,7 +92,10 @@ export class GeminiService {
 
   private apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${environment.geminiApiKey}`;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private policyData: PolicyDataService
+  ) { }
 
   // ─────────────────────────────────────────────────────────
   // HELPERS: Sanitization & Validation
@@ -113,7 +116,8 @@ export class GeminiService {
   }
 
   /**
-   * Validates any planCard blocks against the real PLANS list before they
+   * Validates any planCard blocks against real plan data (via
+   * PolicyDataService) before they
    * ever reach the UI. If the model hallucinates a planId that doesn't
    * exist, downgrade that block to plain text instead of shipping a card
    * that would show no data when tapped.
@@ -121,7 +125,7 @@ export class GeminiService {
   private sanitizeBlocks(blocks: ReplyBlock[]): ReplyBlock[] {
     return blocks.map(block => {
       if (block.type === 'planCard') {
-        const exists = PLANS.some(p => p.id === block.planId);
+        const exists = this.policyData.getPlans().some(p => p.id === block.planId);
         if (!exists) {
           console.warn('[GeminiService] Invalid planId in planCard block, downgrading to text:', block.planId);
           return { type: 'text', content: block.blurb } as ReplyBlock;
@@ -343,7 +347,7 @@ If a field is "Not specified", don't guess — acknowledge the gap or ask a clar
     }
 
     const category = this.detectCategory(userMessage);
-    const relevantPolicies = POLICIES[category] ?? [];
+    const relevantPolicies = this.policyData.getPolicies()[category] ?? [];
 
     const systemPrompt = `
 ${GUARD_PROMPT}

@@ -1,7 +1,7 @@
 import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit } from '@angular/core';
 import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gemini.service';
 import { UserProfile, UserProfileService } from '../services/user-profile';
-import { POLICIES, PLANS, Plan } from '../../data/policies';
+import { PolicyDataService, Plan } from '../services/policy-data';
 import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
 
@@ -63,17 +63,27 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   isPlanDetailOpen = false;
   selectedPlanDetail: Plan | null = null;
 
+  // True while policy data is being fetched from Firestore on first load.
+  isPolicyDataLoading = true;
+
   private lastMessageCount = 0;
 
   constructor(
     private gemini: GeminiService,
     private profileService: UserProfileService,
+    private policyData: PolicyDataService,
     private alertCtrl: AlertController
   ) { }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.profile = this.profileService.getProfile();
     this.loadChat();
+
+    // Policy data loads once and is cached in-memory afterward (see
+    // PolicyDataService) — this only actually hits Firestore on the
+    // very first load of the app session.
+    await this.policyData.ensureLoaded();
+    this.isPolicyDataLoading = false;
   }
 
   ngAfterViewChecked() {
@@ -162,12 +172,12 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   closeCompare() { this.isCompareOpen = false; }
 
   /**
-   * Looks up full plan details from local PLANS data — never trusts
+   * Looks up full plan details via PolicyDataService — never trusts
    * anything the AI wrote beyond the planId reference, so the modal
    * always shows real, accurate figures.
    */
   getPlanById(planId: string): Plan | undefined {
-    return PLANS.find(p => p.id === planId);
+    return this.policyData.getPlanById(planId);
   }
 
   openPlanDetail(planId: string) {
@@ -191,7 +201,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
 
   get currentPlans(): Plan[] {
     const key = CATEGORY_MAP[this.currentCategoryLabel];
-    return POLICIES[key] ?? [];
+    return this.policyData.getPolicies()[key] ?? [];
   }
 
   togglePlan(plan: Plan) {
