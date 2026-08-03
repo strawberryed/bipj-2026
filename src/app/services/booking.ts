@@ -4,6 +4,7 @@ import { BehaviorSubject } from 'rxjs';
 export interface Booking {
   consultantName: string;
   consultantTitle: string;
+  bookingDate: string;
   timeSlot: string;
   type: string;
   notes?: string; // Added optional notes support

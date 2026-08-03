@@ -1,0 +1,47 @@
+<ion-header [translucent]="true">
+	<ion-toolbar>
+		<ion-title>Welcome</ion-title>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="customer-onboarding-page">
+	<section class="onboarding-shell ion-padding">
+		<div class="onboarding-hero">
+			<p class="eyebrow">Personalized for you</p>
+			<h1>Recommended Plans & Consultant</h1>
+			<p class="hero-copy">Based on your profile, here are tailored plans and a matched consultant to help you get started.</p>
+		</div>
+
+		<div class="recommendation-container">
+			<h2 class="section-title">RECOMMENDED PLANS</h2>
+			<div class="plan-list">
+				<div class="plan-card" *ngFor="let plan of recommendedPlans">
+					<p class="plan-name">{{ plan.name }}</p>
+					<p class="helper-copy">{{ plan.reason }}</p>
+				</div>
+			</div>
+
+			<h2 class="section-title ion-margin-top">YOUR MATCHED CONSULTANT</h2>
+			<div class="consultant-card" *ngIf="recommendedConsultant">
+				<div class="consultant-header">
+					<p class="consultant-name">{{ recommendedConsultant.name }}</p>
+					<p class="helper-copy">{{ recommendedConsultant.title }}</p>
+				</div>
+				<div class="chip-list">
+					<span class="specialty-badge" *ngFor="let specialty of recommendedConsultant.specialties">
+						{{ specialty }}
+					</span>
+				</div>
+			</div>
+
+			<div class="action-buttons ion-margin-top">
+				<button type="button" class="primary-btn purple" (click)="startBookingMeeting()">
+					Start Booking Meeting
+				</button>
+				<button type="button" class="ghost-btn" (click)="proceedToWorkspace()">
+					Skip to Workspace
+				</button>
+			</div>
+		</div>
+	</section>
+</ion-content>

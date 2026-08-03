@@ -19,6 +19,21 @@
     border: 2px solid #bfa3d4;
   }
 
+  .recommended-card {
+    box-shadow: 0 0 0 2px rgba(91, 37, 124, 0.12);
+  }
+
+  .recommended-badge {
+    display: inline-flex;
+    margin-top: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f3e8fc;
+    color: #5b257c;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
   .slots-grid {
     margin: 0 -4px;
     .slot-col { padding: 4px; }
@@ -62,5 +77,27 @@
     --color: #111;
     --border-radius: 8px;
     font-weight: bold;
+  }
+
+  .date-picker-item {
+    --padding-start: 0;
+    --padding-end: 0;
+    --inner-padding-end: 0;
+    margin-bottom: 16px;
+  }
+
+  .date-input {
+    border: 2px solid #d9dce7;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #f8f9fb;
+    font-size: 0.95rem;
+    color: #111;
+    --padding-start: 12px;
+  }
+
+  .date-input:focus {
+    border-color: #5b257c;
+    background: #fdfcff;
   }
 }

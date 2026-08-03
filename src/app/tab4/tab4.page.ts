@@ -1,135 +1,188 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import {
-  UserRole,
-  getCurrentUser,
-  initDatabase,
-  loginUser,
-  logoutUser,
-  registerUser,
+	getCurrentUser,
+	initDatabase,
+	loginUser,
+	logoutUser,
+	registerUser,
+	UserRecord,
 } from '../../data/app-db';
 
+type CustomerAuthView = 'login' | 'signup';
+type AuthRole = 'customer' | 'consultant' | null;
+
 @Component({
-  selector: 'app-tab4',
-  templateUrl: './tab4.page.html',
-  styleUrls: ['./tab4.page.scss'],
-  standalone: false,
+	selector: 'app-tab4',
+	templateUrl: './tab4.page.html',
+	styleUrls: ['./tab4.page.scss'],
+	standalone: false,
 })
-export class Tab4Page implements OnInit {
-  mode: 'login' | 'create' = 'login';
+export class Tab4Page implements OnInit, OnDestroy {
+	authView: CustomerAuthView = 'login';
+	selectedRole: AuthRole = null;
+	currentUser: UserRecord | null = null;
+	authMessage = '';
 
-  role: UserRole | null = null;
-  name = '';
-  email = '';
-  password = '';
-  lifeStage = 'Young Family';
-  riskAppetite: 'low' | 'medium' | 'high' = 'medium';
+	customerLogin = {
+		email: 'customer@demo.com',
+		password: '123456',
+	};
 
-  errorMessage = '';
-  successMessage = '';
+	consultantLogin = {
+		email: 'consultant@demo.com',
+		password: '123456',
+	};
 
-  activeUser = getCurrentUser();
+	signupModel = {
+		name: '',
+		email: '',
+		password: '',
+		confirmPassword: '',
+		lifeStage: 'Young Family',
+		riskAppetite: 'medium' as 'low' | 'medium' | 'high',
+		monthlyIncome: '',
+		employmentStatus: '',
+		dependents: 0,
+		financialPriorities: 'Medical protection, Family protection',
+		planningHorizon: '10+ years',
+		preferredContact: 'chat' as 'chat' | 'email' | 'phone',
+	};
 
-  constructor(private router: Router) { }
+	private refreshTimer: number | null = null;
+	private readonly handleStorageChange = () => this.refreshPortal();
 
-  ngOnInit() {
-    initDatabase();
-    this.refreshSession();
-  }
+	constructor(private router: Router) {}
 
-  setMode(mode: 'login' | 'create') {
-    this.mode = mode;
-    this.errorMessage = '';
-    this.successMessage = '';
-  }
+	get isCustomer(): boolean {
+		return this.currentUser?.role === 'customer';
+	}
 
-  setRole(role: UserRole) {
-    this.role = role;
-    this.errorMessage = '';
-    this.successMessage = '';
-  }
+	get isConsultant(): boolean {
+		return this.currentUser?.role === 'consultant';
+	}
 
-  submit(modeOverride?: 'login' | 'create') {
-    if (modeOverride) {
-      this.mode = modeOverride;
-    }
+	ngOnInit(): void {
+		initDatabase();
+		this.refreshPortal();
+		this.refreshTimer = window.setInterval(() => this.refreshPortal(), 1500);
+		window.addEventListener('storage', this.handleStorageChange);
+	}
 
-    if (!this.role) {
-      this.errorMessage = 'Please choose Customer or Consultant first.';
-      this.successMessage = '';
-      return;
-    }
+	ngOnDestroy(): void {
+		if (this.refreshTimer !== null) {
+			window.clearInterval(this.refreshTimer);
+		}
 
-    const email = this.email.trim();
-    const password = this.password.trim();
+		window.removeEventListener('storage', this.handleStorageChange);
+	}
 
-    if (!email || !password) {
-      this.errorMessage = 'Please enter email and password.';
-      this.successMessage = '';
-      return;
-    }
+	setAuthView(view: CustomerAuthView): void {
+		this.authView = view;
+		if (view === 'signup') {
+			this.selectedRole = 'customer';
+		}
+		this.authMessage = '';
+	}
 
-    if (this.mode === 'create') {
-      const name = this.name.trim();
-      if (!name) {
-        this.errorMessage = 'Please enter your name.';
-        this.successMessage = '';
-        return;
-      }
+	selectRole(role: Exclude<AuthRole, null>): void {
+		this.selectedRole = role;
+		if (role === 'consultant') {
+			this.authView = 'login';
+		}
+		this.authMessage = '';
+	}
 
-      const created = registerUser({
-        role: this.role,
-        name,
-        email,
-        password,
-        lifeStage: this.role === 'customer' ? this.lifeStage : undefined,
-        riskAppetite: this.role === 'customer' ? this.riskAppetite : undefined,
-      });
+	backToRoleSelect(): void {
+		this.selectedRole = null;
+		this.authView = 'login';
+		this.authMessage = '';
+	}
 
-      if (!created.ok) {
-        this.errorMessage = created.message;
-        this.successMessage = '';
-        return;
-      }
+	signUpCustomer(): void {
+		const priorities = this.signupModel.financialPriorities
+			.split(',')
+			.map(item => item.trim())
+			.filter(Boolean);
 
-      const signedIn = loginUser(email, password);
-      if (signedIn.ok) {
-        this.successMessage = 'Account created and logged in.';
-        this.errorMessage = '';
-        this.refreshSession();
-        this.router.navigateByUrl('/tabs/tab3');
-      }
+		if (!this.signupModel.name.trim() || !this.signupModel.email.trim() || !this.signupModel.password) {
+			this.authMessage = 'Complete name, email, and password before signing up.';
+			return;
+		}
 
-      return;
-    }
+		if (this.signupModel.password !== this.signupModel.confirmPassword) {
+			this.authMessage = 'Passwords do not match.';
+			return;
+		}
 
-    const loggedIn = loginUser(email, password);
-    if (!loggedIn.ok) {
-      this.errorMessage = loggedIn.message;
-      this.successMessage = '';
-      return;
-    }
+		const result = registerUser({
+			role: 'customer',
+			name: this.signupModel.name,
+			email: this.signupModel.email,
+			password: this.signupModel.password,
+			lifeStage: this.signupModel.lifeStage,
+			riskAppetite: this.signupModel.riskAppetite,
+			monthlyIncome: this.signupModel.monthlyIncome,
+			employmentStatus: this.signupModel.employmentStatus,
+			dependents: this.signupModel.dependents,
+			financialPriorities: priorities,
+			planningHorizon: this.signupModel.planningHorizon,
+			preferredContact: this.signupModel.preferredContact,
+		});
 
-    this.errorMessage = '';
-    this.successMessage = `Welcome back, ${loggedIn.user.name}.`;
-    this.refreshSession();
-    this.router.navigateByUrl('/tabs/tab3');
-  }
+		if (!result.ok) {
+			this.authMessage = result.message;
+			return;
+		}
 
-  goToWorkspace() {
-    this.router.navigateByUrl('/tabs/tab3');
-  }
+		this.authView = 'login';
+		this.customerLogin.email = result.user.email;
+		this.customerLogin.password = this.signupModel.password;
+		this.signupModel = {
+			...this.signupModel,
+			name: '',
+			email: '',
+			password: '',
+			confirmPassword: '',
+			monthlyIncome: '',
+			employmentStatus: '',
+			financialPriorities: 'Medical protection, Family protection',
+		};
+		this.authMessage = 'Account created. Proceed to customer login.';
+	}
 
-  logout() {
-    logoutUser();
-    this.refreshSession();
-    this.password = '';
-    this.successMessage = 'Logged out successfully.';
-    this.errorMessage = '';
-  }
+	loginAs(role: 'customer' | 'consultant'): void {
+		const credentials = role === 'customer' ? this.customerLogin : this.consultantLogin;
+		const result = loginUser(credentials.email, credentials.password);
 
-  private refreshSession() {
-    this.activeUser = getCurrentUser();
-  }
+		if (!result.ok) {
+			this.authMessage = result.message;
+			return;
+		}
 
+		if (result.user.role !== role) {
+			logoutUser();
+			this.authMessage = `This account belongs to a ${result.user.role}. Use the correct login panel.`;
+			return;
+		}
+
+		this.authMessage = '';
+		this.refreshPortal();
+		this.router.navigateByUrl('/customer-onboarding');
+	}
+
+	openWorkspace(): void {
+		this.router.navigateByUrl('/tabs/tab3');
+	}
+
+	logout(): void {
+		logoutUser();
+		this.currentUser = null;
+		this.selectedRole = null;
+		this.authMessage = 'Signed out.';
+	}
+
+	private refreshPortal(): void {
+		this.currentUser = getCurrentUser();
+	}
 }

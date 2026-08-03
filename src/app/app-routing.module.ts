@@ -4,11 +4,20 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 const routes: Routes = [
   {
     path: '',
+    redirectTo: 'tab4',
+    pathMatch: 'full'
+  },
+  {
+    path: 'tabs',
     loadChildren: () => import('./tabs/tabs.module').then(m => m.TabsPageModule)
   },
   {
     path: 'tab4',
     loadChildren: () => import('./tab4/tab4.module').then( m => m.Tab4PageModule)
+  },
+  {
+      path: 'tab5',
+      loadChildren: () => import('./tab5/tab5.module').then(m => m.Tab5PageModule)
   },
   {
     path: 'connect-consultant',
@@ -21,9 +30,14 @@ const routes: Routes = [
   {
     path: 'checkout-page',
     loadChildren: () => import('./checkout-page/checkout-page.module').then( m => m.CheckoutPageModule)
-  },  {
+  },
+  {
     path: 'book-meeting',
     loadChildren: () => import('./book-meeting/book-meeting.module').then( m => m.BookMeetingPageModule)
+  },
+  {
+    path: 'customer-onboarding',
+    loadChildren: () => import('./customer-onboarding/customer-onboarding.module').then( m => m.CustomerOnboardingPageModule)
   }
 
 

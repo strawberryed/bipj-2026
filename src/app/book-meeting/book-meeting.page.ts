@@ -26,6 +26,8 @@ export class BookMeetingPage implements OnInit {
 
   selectedAdvisor: any = null;
   selectedSlot: any = null;
+  selectedDate: string = '';
+  recommendedAdvisorName = '';
 
   constructor(private bookingService: BookingService, private router: Router, private toastController: ToastController, private route: ActivatedRoute) { }
 
@@ -33,7 +35,8 @@ export class BookMeetingPage implements OnInit {
     this.selectedAdvisor = this.advisors[0]; // Default to the first advisor
 
     this.route.queryParams.subscribe(params => {
-      const inboundAdvisorName = params['advisorName'];
+      this.recommendedAdvisorName = (params['recommendedAdvisor'] || '').toString().toUpperCase();
+      const inboundAdvisorName = params['advisorName'] || this.recommendedAdvisorName;
 
       if (inboundAdvisorName) {
         // Find matching object reference array elements
@@ -69,10 +72,11 @@ export class BookMeetingPage implements OnInit {
       }
 
       confirmBooking() {
-        if (this.selectedAdvisor && this.selectedSlot) {
+        if (this.selectedAdvisor && this.selectedSlot && this.selectedDate) {
           this.bookingService.setBooking({
             consultantName: this.selectedAdvisor.name,
             consultantTitle: this.selectedAdvisor.title,
+            bookingDate: this.selectedDate,
             timeSlot: this.selectedSlot.time,
             type: this.selectedSlot.duration
           });
