@@ -5,12 +5,6 @@
       <span class="title-mono"> Cova</span>
     </ion-title>
     <ion-buttons slot="end">
-      <ion-select [(ngModel)]="activeProfile" (ngModelChange)="switchProfile($event.id)" interface="popover"
-        class="profile-select">
-        <ion-select-option *ngFor="let p of demoProfiles" [value]="p">
-          {{ p.name }}, {{ p.age }}
-        </ion-select-option>
-      </ion-select>
       <ion-button fill="clear" (click)="downloadSummary()" *ngIf="messages.length > 0" [disabled]="isGeneratingSummary">
         <ion-icon [name]="isGeneratingSummary ? 'hourglass-outline' : 'download-outline'"></ion-icon>
       </ion-button>
@@ -30,7 +24,7 @@
     <!-- Welcome message -->
     <div class="msg-row bot">
       <div class="bubble">
-        Hi {{ activeProfile.name }}! I'm <strong>Cova</strong>, your Prudential insurance assistant.
+        Hi! I'm <strong>Cova</strong>, your Prudential insurance assistant.
         Ask me anything about your coverage or to simplify any policy terms.
       </div>
     </div>
@@ -110,13 +104,31 @@
                 {{ block.content }}
               </div>
 
+              <!-- Plan card block (tappable) -->
+              <div class="block-plan-card" *ngIf="block.type === 'planCard'" (click)="openPlanDetail(block['planId'])">
+                <div class="plan-card-header">
+                  <span class="plan-card-name">{{ getPlanById(block['planId'])?.name }}</span>
+                  <ion-icon name="chevron-forward-outline"></ion-icon>
+                </div>
+                <div class="plan-card-premium">{{ getPlanById(block['planId'])?.premium }}</div>
+                <div class="plan-card-blurb">{{ block['blurb'] }}</div>
+              </div>
+
+
             </ng-container>
           </div>
 
           <!-- Simple plain text -->
           <ng-template #simpleBubble>
-            <div class="bubble">{{ msg.content }}</div>
+            <div class="bubble">
+              {{ msg.content }}
+              <div class="follow-up-question" *ngIf="msg.followUpQuestion">
+                <ion-icon name="help-circle-outline"></ion-icon>
+                <span>{{ msg.followUpQuestion }}</span>
+              </div>
+            </div>
           </ng-template>
+
 
           <span class="msg-time">{{ nowTime() }}</span>
         </div>
@@ -144,8 +156,9 @@
 <!-- Input bar -->
 <ion-footer class="ion-no-border">
   <div class="input-bar">
-    <ion-button fill="clear" (click)="openCompare()">
-      <ion-icon name="git-compare-outline"></ion-icon> </ion-button>
+    <ion-button fill="clear" (click)="openCompare()" [disabled]="isPolicyDataLoading">
+      <ion-icon name="git-compare-outline"></ion-icon>
+    </ion-button>
     <ion-input [(ngModel)]="inputText" placeholder="Ask anything..." (keyup.enter)="send()" class="input-field">
     </ion-input>
     <ion-button fill="clear" (click)="send()" [disabled]="!inputText.trim()">
@@ -153,6 +166,79 @@
     </ion-button>
   </div>
 </ion-footer>
+<!-- Policy plan detail modal -->
+<ion-modal [isOpen]="isPlanDetailOpen" (didDismiss)="closePlanDetail()" [breakpoints]="[0, 0.8]"
+  [initialBreakpoint]="0.8">
+  <ng-template>
+    <ion-header class="plan-modal-header" *ngIf="selectedPlanDetail as plan">
+      <div class="plan-modal-topbar">
+        <div>
+          <div class="plan-modal-title">{{ plan.name }}</div>
+          <div class="plan-modal-subtitle">{{ plan.description }}</div>
+        </div>
+        <button class="plan-modal-close" (click)="closePlanDetail()">
+          <ion-icon name="close"></ion-icon>
+        </button>
+      </div>
+    </ion-header>
+
+    <ion-content class="plan-detail-content" *ngIf="selectedPlanDetail as plan">
+
+      <!-- Premium as its own grouped container, like "Transfer details" -->
+      <div class="plan-group">
+        <div class="plan-group-header">
+          <span>Premium</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-row-label">Monthly cost</span>
+          <span class="plan-row-value plan-row-value--accent">{{ plan.premium }}</span>
+        </div>
+      </div>
+
+      <!-- Covered -->
+      <div class="plan-group">
+        <div class="plan-group-header">
+          <span>Covered</span>
+        </div>
+        <div class="plan-row" *ngFor="let item of plan.covered">
+          <span class="plan-row-label">{{ item }}</span>
+        </div>
+      </div>
+
+      <!-- Not covered -->
+      <div class="plan-group">
+        <div class="plan-group-header">
+          <span>Not covered</span>
+        </div>
+        <div class="plan-row" *ngFor="let item of plan.notCovered">
+          <span class="plan-row-label">{{ item }}</span>
+        </div>
+      </div>
+
+      <!-- Best for -->
+      <div class="plan-group">
+        <div class="plan-group-header">
+          <span>Best for</span>
+        </div>
+        <div class="plan-row" *ngFor="let item of plan.bestFor">
+          <span class="plan-row-label">{{ item }}</span>
+        </div>
+      </div>
+
+      <!-- Things to consider -->
+      <div class="plan-group">
+        <div class="plan-group-header">
+          <span>Things to consider</span>
+        </div>
+        <div class="plan-row" *ngFor="let item of plan.considerations">
+          <span class="plan-row-label">{{ item }}</span>
+        </div>
+      </div>
+
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
 
 <!-- Compare sheet -->
 <ion-modal [isOpen]="isCompareOpen" (didDismiss)="closeCompare()" [breakpoints]="[0, 0.6]" [initialBreakpoint]="0.6">

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { BookingService, Booking } from '../services/booking';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -19,7 +19,9 @@ export class Tab1Page implements OnInit {
 
   userNotes: string = '';
 
-  constructor(private bookingService: BookingService, private router: Router) { 
+  constructor(private bookingService: BookingService, 
+    private router: Router,
+    private cdr: ChangeDetectorRef) { 
     this.activeBooking$ = this.bookingService.activeBooking$.pipe(
       tap(booking => {
         if (booking) {
@@ -44,9 +46,11 @@ export class Tab1Page implements OnInit {
 
   openDetailsModal() { 
     this.isDetailsModalOpen = true; 
+    this.cdr.detectChanges();
   }
   closeDetailsModal() { 
     this.isDetailsModalOpen = false; 
+    this.cdr.detectChanges();
   }
 
   saveNotesChange() {
@@ -59,9 +63,7 @@ export class Tab1Page implements OnInit {
   }
 
   rescheduleBooking(currentBooking: Booking) {
-    this.closeDetailsModal();
-    
-    // We navigate to Tab4 and pass query params to pre-select the active advisor automatically!
+    this.closeDetailsModal(); 
     this.router.navigate(['/book-meeting'], { 
       queryParams: { 
         reschedule: true,
@@ -70,8 +72,9 @@ export class Tab1Page implements OnInit {
     });
   }
 
+
   handleCancellation() {
     this.bookingService.clearBooking();
-    this.closeDetailsModal();
+    this.isDetailsModalOpen = false; // Forces modal close
   }
 }

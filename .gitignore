@@ -69,5 +69,8 @@ testem.log
 .DS_Store
 Thumbs.db
 
+
+#api/backend
 src/environments/environment.ts
 src/environments/environment.prod.ts
+serviceAccountKey.json
