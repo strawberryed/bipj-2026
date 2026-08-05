@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Optional } from '@angular/core';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 
 export interface Plan {
@@ -24,7 +24,7 @@ export class PolicyDataService {
   private loaded = false;
   private loadingPromise: Promise<void> | null = null;
 
-  constructor(private firestore: Firestore) { }
+  constructor(@Optional() private firestore: Firestore | null) { }
 
   /**
    * Fetches all plans from Firestore if not already cached. Safe to call
@@ -34,9 +34,17 @@ export class PolicyDataService {
     if (this.loaded) return;
     if (this.loadingPromise) return this.loadingPromise;
 
+    if (!this.firestore) {
+      this.loaded = true;
+      console.warn('[PolicyDataService] Firebase is not configured; no remote plans were loaded.');
+      return;
+    }
+
+    const firestore = this.firestore;
+
     this.loadingPromise = (async () => {
       try {
-        const snapshot = await getDocs(collection(this.firestore, 'plans'));
+        const snapshot = await getDocs(collection(firestore, 'plans'));
         this.plans = snapshot.docs.map(doc => doc.data() as Plan);
         this.loaded = true;
       } catch (err) {

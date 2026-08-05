@@ -1,13 +1,13 @@
-.tab3-react-host {
+.tab3-angular-host {
   --background: linear-gradient(180deg, #f7f2ff 0%, #fdfcff 40%, #ffffff 100%);
 }
 
-.tab3-react-host #reactHost {
+.tab3-angular-host {
   min-height: 100%;
   width: 100%;
 }
 
-.tab3-react-shell {
+.tab3-angular-shell {
   --brand-purple: #5b257c;
   --brand-purple-strong: #4a1e66;
   --brand-purple-mid: #74409a;
@@ -27,7 +27,7 @@
   box-sizing: border-box;
 }
 
-.tab3-react-shell.consultant-theme {
+.tab3-angular-shell.consultant-theme {
   --brand-purple: #175fc4;
   --brand-purple-strong: #134895;
   --brand-purple-mid: #2b7fe0;
@@ -1163,7 +1163,7 @@
 }
 
 @media (max-width: 760px) {
-  .tab3-react-shell {
+  .tab3-angular-shell {
     padding: 14px;
   }
 
