@@ -64,7 +64,7 @@ export class OnboardingPage implements OnInit {
   }
 
   async finishOnboarding() {
-    if (this.hasInsurance === null || !this.mainGoal || !this.primaryConcern) {
+    if (this.hasInsurance === null || this.hasInsurance === undefined ||!this.mainGoal || !this.primaryConcern) {
       this.showToast('Please complete all questions.');
       return;
     }
@@ -92,7 +92,7 @@ export class OnboardingPage implements OnInit {
       await this.profileService.updateProfile(profileData);
 
       await loader.dismiss();
-      this.router.navigate(['/landing-page']); // Navigate to Landing Page after onboarding
+      this.router.navigate(['/tabs/tab1']); // Navigate to Landing Page after onboarding
     } catch (error: any) {
       await loader.dismiss();
       this.showToast(error.message || 'Failed to save profile.');
