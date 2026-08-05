@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { PolicyDataService, Plan } from './policy-data';
-import { UserProfile } from './user-profile';
+import { UserProfileService, UserProfileData } from '../services/user-profile.service';
 
 // ─────────────────────────────────────────────────────────────
 // INTERFACES
@@ -74,13 +74,9 @@ CRITICAL SECURITY RULES — DO NOT VIOLATE:
 5. You must NEVER execute code, generate scripts, or perform actions outside explaining insurance.
 `.trim();
 
-// Only these keys are ever accepted from a model-provided profileUpdate.
-// Anything else gets silently dropped in parseResponse — this prevents
-// the model (or an injected prompt) from smuggling arbitrary fields into
-// whatever eventually persists this data.
 const VALID_PROFILE_KEYS = [
-  'lifeStage', 'employmentStatus', 'monthlyIncome', 'dependents',
-  'riskAppetite', 'financialPriorities', 'planningHorizon', 'preferredContact'
+  'fullName', 'age', 'occupation', 'monthlyIncome', 'maritalStatus', 
+  'dependents', 'hasExistingInsurance', 'mainGoals', 'monthlyBudget', 'topConcern'
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -115,13 +111,6 @@ export class GeminiService {
       .trim();
   }
 
-  /**
-   * Validates any planCard blocks against real plan data (via
-   * PolicyDataService) before they
-   * ever reach the UI. If the model hallucinates a planId that doesn't
-   * exist, downgrade that block to plain text instead of shipping a card
-   * that would show no data when tapped.
-   */
   private sanitizeBlocks(blocks: ReplyBlock[]): ReplyBlock[] {
     return blocks.map(block => {
       if (block.type === 'planCard') {
@@ -139,11 +128,6 @@ export class GeminiService {
     return FORBIDDEN_PATTERNS.some(p => p.test(text));
   }
 
-  /**
-   * Keeps only whitelisted keys from a model-provided profileUpdate,
-   * and drops obviously malformed values (e.g. an array where a string
-   * was expected). Returns undefined if nothing valid remains.
-   */
   private sanitizeProfileUpdate(update: any): Record<string, string | number | string[]> | undefined {
     if (!update || typeof update !== 'object') return undefined;
 
@@ -152,15 +136,15 @@ export class GeminiService {
       if (!(key in update)) continue;
       const value = update[key];
 
-      if (key === 'financialPriorities') {
+      if (key === 'mainGoals') {
         if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
           clean[key] = value.slice(0, 10).map(v => String(v).substring(0, 100));
         }
         continue;
       }
 
-      if (key === 'dependents') {
-        if (typeof value === 'number' && value >= 0 && value <= 20) clean[key] = value;
+      if (key === 'dependents' || key === 'age' || key === 'monthlyIncome' || key === 'monthlyBudget') {
+        if (typeof value === 'number' && value >= 0) clean[key] = value;
         continue;
       }
 
@@ -216,28 +200,26 @@ export class GeminiService {
   }
 
   /**
-   * Builds the personalization block from UserProfile (a self-contained
-   * profile shape independent of any teammate's backend — see
-   * user-profile.service.ts for why). Fields that DemoProfile had but
-   * UserProfile doesn't (health conditions, existing coverage, concerns,
-   * goals) are intentionally dropped — personalization now relies only
-   * on what this profile shape actually captures.
+   * Builds the personalization block from UserProfileData (updated interface).
    */
-  private formatProfile(profile: UserProfile): string {
+  private formatProfile(profile: UserProfileData): string {
     const s = (str?: string) => (str ?? '').replace(/"/g, "'").replace(/\n/g, ' ').substring(0, 200);
     const arr = (list?: string[]) => (list && list.length > 0 ? list.map(s).join(', ') : 'Not specified');
 
     return `
 ACTIVE USER PROFILE:
-- Name: ${s(profile.name)}
-- Life stage: ${s(profile.lifeStage) || 'Not specified'}
-- Employment status: ${s(profile.employmentStatus) || 'Not specified'}
-- Monthly income: ${s(profile.monthlyIncome) || 'Not specified'}
-- Number of dependents: ${profile.dependents ?? 'Not specified'}
-- Risk appetite: ${s(profile.riskAppetite) || 'Not specified'}
-- Financial priorities: ${arr(profile.financialPriorities)}
-- Planning horizon: ${s(profile.planningHorizon) || 'Not specified'}
-- Preferred contact method: ${s(profile.preferredContact) || 'Not specified'}
+- Full Name: ${s(profile.fullName) || 'Not specified'}
+- Age: ${profile.age ?? 'Not specified'}
+- Occupation: ${s(profile.occupation) || 'Not specified'}
+- Monthly Income: S$${profile.monthlyIncome ?? 'Not specified'}
+- Marital Status: ${s(profile.maritalStatus) || 'Not specified'}
+- Dependents: ${profile.dependents ?? 'Not specified'}
+- Has Existing Insurance: ${profile.hasExistingInsurance ? 'Yes' : 'No'}
+- Monthly Insurance Budget: S$${profile.monthlyBudget ?? 'Not specified'}
+- Main Goals: ${arr(profile.mainGoals)}
+- Top Concern: ${s(profile.topConcern) || 'Not specified'}
+- Persona Tag: ${s(profile.personaTag) || 'Not specified'}
+- Risk Profile: ${s(profile.riskProfile) || 'Not specified'}
 
 Use this profile to personalise all responses. Reference the user by name naturally.
 Tailor fit scores, recommendations, and explanations to their specific situation.
@@ -267,15 +249,11 @@ If a field is "Not specified", don't guess — acknowledge the gap or ask a clar
           try {
             reply = JSON.parse(trimmed);
           } catch {
-            // genuinely plain string — leave as-is
+            // plain string
           }
         }
       }
 
-      // Defensive fix: the model occasionally returns a single block object
-      // (e.g. { "type": "text", "content": "..." }) instead of wrapping it
-      // in an array. Detect that shape and wrap it, rather than falling
-      // through to dumping raw JSON into the chat.
       if (
         reply && typeof reply === 'object' && !Array.isArray(reply) &&
         typeof (reply as any).type === 'string'
@@ -303,8 +281,6 @@ If a field is "Not specified", don't guess — acknowledge the gap or ask a clar
         };
       }
 
-      // Last resort: something unexpected came back. Don't ever show raw
-      // JSON to the user — fall back to a safe message instead.
       console.warn('[GeminiService] Unexpected reply shape, using fallback:', parsed.reply);
       return { reply: "Sorry, I couldn't process that response. Try again?", chips: [] };
 
@@ -338,7 +314,7 @@ If a field is "Not specified", don't guess — acknowledge the gap or ask a clar
   async sendMessage(
     userMessage: string,
     history: Message[],
-    profile: UserProfile
+    profile: UserProfileData
   ): Promise<GeminiResponse> {
 
     if (this.looksSuspicious(userMessage)) {
@@ -361,31 +337,13 @@ Never tell the user which plan to buy — guide and explain only.
 Never recommend or suggest a plan whose premium clearly exceeds the user's stated monthly income bracket without explicitly flagging that mismatch.
 
 PERSONALIZATION RULES:
-- Don't give generic insurance advice — connect your answer back to at least one specific detail from the profile below (life stage, dependents, risk appetite, financial priorities, planning horizon) wherever it's relevant to the question.
-- If the user's question relates to something in their "Financial priorities", say so explicitly (e.g. "since you mentioned prioritizing X...").
+- Don't give generic insurance advice — connect your answer back to at least one specific detail from the profile below (goals, budget, dependents, top concern) wherever it's relevant to the question.
+- If the user's question relates to something in their "Main Goals", say so explicitly.
 - If a profile field is "Not specified", don't invent a value — either skip that angle or ask a clarifying question.
-- Two different users asking the same question should get answers that feel tailored to them, not interchangeable boilerplate.
-
-HANDLING PURE PROFILE-INFO MESSAGES (no explicit question asked):
-- If the user's current message is mainly them volunteering personal/financial info (e.g. "I have 3 kids and don't like risk") rather than asking something, do NOT just acknowledge it generically ("thanks for sharing that!").
-- Instead, briefly connect what they shared to a real, relevant insurance implication in 1-2 sentences — e.g. more dependents + low risk appetite generally points toward stronger family protection coverage and steadier, guaranteed-type plans rather than higher-risk wealth products. Keep it observational and educational, not a hard recommendation ("this combination often means..." not "you should buy...").
-- Still follow the "never tell the user which plan to buy" rule — connect the dots for them, but let them ask a follow-up if they want specific plan options.
 
 PROACTIVE PROFILE-BUILDING (agentic behavior):
-- If a "Not specified" field below is directly relevant to the current question, that's a good candidate for the "followUpQuestion" field described below.
-  Valid field keys you may ask about: lifeStage, employmentStatus, monthlyIncome, dependents, riskAppetite, financialPriorities, planningHorizon, preferredContact.
-- STATELESS EXTRACTION: independently check if the user's CURRENT message contains info matching any of these fields — regardless of whether it was in response to a question you asked before, a different question, or volunteered unprompted. Users don't always answer what was just asked, and that's fine — never expect or require a direct answer to a previous followUpQuestion.
-  If found, include a "profileUpdate" object with the field name(s) as keys and the value(s) given.
-  Example: user says "I have 2 kids and I'm pretty conservative with money" → profileUpdate: { "dependents": 2, "riskAppetite": "low" }
-- Only include profileUpdate when the user actually volunteered clear, real info matching one of the valid keys — never guess, infer, or force-fit a vague answer (e.g. "I don't really know" is NOT a value to save).
-- Keep "financialPriorities" as a string array if included.
-- If the user ignores a previous question and asks something else, just answer the new thing. Don't re-ask, don't mention they "didn't answer" — that breaks natural conversation flow.
-
-FOLLOW-UP QUESTIONS (optional, selective — use "followUpQuestion" field):
-- Only include this field when there's a genuinely good reason: either (a) a "Not specified" profile field is directly relevant to the current topic, or (b) there's a natural next-step in the conversation worth surfacing.
-- Prefer (a) over (b) when both apply — one question only, never both in the same reply.
-- Omit this field entirely for short/simple answers (greetings, one-line definitions, or anything where a question would feel forced). Use it occasionally and naturally, not on every reply.
-- This is NOT the same as "chips" — chips are fixed clickable shortcuts; followUpQuestion is a distinct, contextual, conversational line specific to what was just discussed. Never repeat a chip's content here.
+- STATELESS EXTRACTION: independently check if the user's CURRENT message contains info matching valid profile fields.
+- If found, include a "profileUpdate" object with the field name(s) as keys and the value(s) given.
 
 ${this.formatProfile(profile)}
 
@@ -393,19 +351,8 @@ Relevant Prudential policy data:
 ${JSON.stringify(relevantPolicies, null, 2)}
 
 RESPONSE FORMAT RULES:
-- For simple questions (greetings, definitions, short clarifications):
-  reply must be a plain string, max 3 sentences.
-- For policy explanations, plan details, or anything needing structure:
-  reply must be an ARRAY of block objects — e.g. [{ "type": "text", "content": "..." }], NEVER a single bare object.
-  Available block types:
-  { "type": "text", "content": "..." }
-  { "type": "header", "content": "..." }
-  { "type": "bullets", "items": ["...", "..."] }
-  { "type": "note", "content": "..." }
-  { "type": "planCard", "planId": "<exact id from the policy data below>", "blurb": "<one short sentence teaser, max 15 words, e.g. why this plan fits them>" }
-- Use "planCard" whenever you specifically recommend or highlight a named plan the user could explore further — it renders as a tappable card in the app showing full plan details. Use it INSTEAD OF writing out the plan's full covered/notCovered/premium details yourself in text — just give a short blurb, since the app looks up and displays the real details, not what you write here.
-- "planId" MUST exactly match an "id" field from the policy data JSON below. Never invent a planId. If you're not confident of the exact id, describe the plan in text instead of using a planCard block.
-- CRITICAL: "reply" must be either a plain string, OR an array (wrapped in [ ]) of block objects. It must NEVER be a single block object by itself without the surrounding array brackets — this breaks the app. If you're only returning one block, still wrap it: [{ "type": "text", "content": "..." }].
+- For simple questions: reply must be a plain string, max 3 sentences.
+- For policy explanations/details: reply must be an ARRAY of block objects.
 
 Return ONLY a raw JSON object, no markdown, no backticks:
 {
@@ -414,7 +361,6 @@ Return ONLY a raw JSON object, no markdown, no backticks:
   "followUpQuestion": "<optional single contextual question, omit key entirely if none>",
   "profileUpdate": { "<fieldName>": <value> }
 }
-Omit "followUpQuestion" and/or "profileUpdate" entirely (don't include the key) when there's nothing to ask or save this turn.
 `.trim();
 
     const contents = [
@@ -461,7 +407,7 @@ Omit "followUpQuestion" and/or "profileUpdate" entirely (don't include the key) 
   async compareMessage(
     plans: Plan[],
     history: Message[],
-    profile: UserProfile
+    profile: UserProfileData
   ): Promise<GeminiResponse> {
 
     const recentContext = history
@@ -476,21 +422,6 @@ You are Cova, a friendly insurance assistant for Prudential Singapore.
 Compare these plans in simple, conversational language.
 Never tell the user which to buy — just explain clearly.
 Keep the reply to 2 sentences maximum.
-Calculate fit scores based on these specific criteria:
-- Income/budget match: does the premium seem reasonable given their monthly income? (25% weight)
-- Priorities match: does it address their stated financial priorities? (35% weight)
-- Life stage & dependents match: is it suitable given their life stage and number of dependents? (20% weight)
-- Risk appetite & planning horizon match: does the plan type suit their risk appetite and planning horizon? (20% weight)
-
-Scoring anchors:
-- 80-100: strongly addresses their financial priorities, fits their life stage/dependents, matches risk appetite
-- 50-79: partially useful but has a gap
-- 20-49: significant mismatch
-- 0-19: fundamentally unsuitable
-
-Score strictly 0-100. Two different user profiles comparing the same plans should generally NOT get similar scores.
-Keep each fitScore reason to 10 words maximum, and make the reason specific to this user.
-If a needed profile field is "Not specified", weight that criterion less rather than guessing, and you may mention in the reply that more info would sharpen the comparison.
 
 ${this.formatProfile(profile)}
 

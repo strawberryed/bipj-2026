@@ -1,9 +1,10 @@
-import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit, OnDestroy } from '@angular/core';
 import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gemini.service';
-import { UserProfile, UserProfileService } from '../services/user-profile';
+import { UserProfileService, UserProfileData } from '../services/user-profile.service';
 import { PolicyDataService, Plan } from '../services/policy-data';
 import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -31,8 +32,6 @@ const DEFAULT_CHIPS = [
   'How much coverage do I need?'
 ];
 
-// Local chat history key — self-contained, same reasoning as
-// user-profile.service.ts. Swap this out once real chat storage is confirmed.
 const CHAT_STORAGE_KEY = 'cova_chat_history_v1';
 
 @Component({
@@ -41,11 +40,22 @@ const CHAT_STORAGE_KEY = 'cova_chat_history_v1';
   styleUrls: ['./chatbot.page.scss'],
   standalone: false,
 })
-export class ChatbotPage implements AfterViewChecked, OnInit {
+export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
 
-  profile: UserProfile = { id: 'guest', name: 'Guest' };
+  // Active user profile state from UserProfileService
+  profile: UserProfileData = {
+    fullName: 'Guest User',
+    age: 25,
+    occupation: 'Working Adult',
+    monthlyIncome: 3000,
+    maritalStatus: 'Single',
+    dependents: 0,
+    hasExistingInsurance: false,
+    mainGoals: ['Health Protection'],
+    monthlyBudget: 200
+  };
 
   messages: Message[] = [];
   inputText = '';
@@ -59,14 +69,15 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   categories = ['Health Protection', 'Life Protection', 'Critical Illness', 'Wealth Accumulation'];
   currentCategoryLabel = 'Health Protection';
 
-  // Plan detail modal (for tappable planCard blocks in AI replies)
+  // Plan detail modal
   isPlanDetailOpen = false;
   selectedPlanDetail: Plan | null = null;
 
-  // True while policy data is being fetched from Firestore on first load.
+  // Policy loading state
   isPolicyDataLoading = true;
 
   private lastMessageCount = 0;
+  private profileSub?: Subscription;
 
   constructor(
     private gemini: GeminiService,
@@ -76,14 +87,24 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   ) { }
 
   async ngOnInit() {
-    this.profile = this.profileService.getProfile();
     this.loadChat();
 
-    // Policy data loads once and is cached in-memory afterward (see
-    // PolicyDataService) — this only actually hits Firestore on the
-    // very first load of the app session.
+    // Subscribe to live user profile changes from Firestore via UserProfileService
+    this.profileSub = this.profileService.userProfile$.subscribe((data) => {
+      if (data) {
+        this.profile = { ...this.profile, ...data };
+      }
+    });
+
+    // Ensure policy data is ready
     await this.policyData.ensureLoaded();
     this.isPolicyDataLoading = false;
+  }
+
+  ngOnDestroy() {
+    if (this.profileSub) {
+      this.profileSub.unsubscribe();
+    }
   }
 
   ngAfterViewChecked() {
@@ -94,7 +115,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Chat Persistence (self-contained, see note on CHAT_STORAGE_KEY above)
+  // Chat Persistence
   // ─────────────────────────────────────────────────────────
 
   saveChat() {
@@ -116,10 +137,16 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   // Profile updates (agentic profile-building)
   // ─────────────────────────────────────────────────────────
 
-  private applyProfileUpdate(update?: Record<string, string | number | string[]>) {
+  private async applyProfileUpdate(update?: Record<string, string | number | string[]>) {
     if (!update) return;
-    this.profile = this.profileService.updateProfile(update);
-    console.log('[ChatbotPage] Profile updated:', update);
+
+    try {
+      // Persist updates to UserProfileService / Firestore
+      await this.profileService.updateProfile(update as Partial<UserProfileData>);
+      console.log('[ChatbotPage] Profile updated successfully:', update);
+    } catch (err) {
+      console.error('[ChatbotPage] Failed to save profile update:', err);
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -150,7 +177,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       this.messages.push(newMessage);
 
       if (res.chips?.length) this.chips = res.chips;
-      this.applyProfileUpdate(res.profileUpdate);
+      await this.applyProfileUpdate(res.profileUpdate);
 
     } catch (e) {
       console.error('[ChatbotPage] sendMessage failed:', e);
@@ -171,11 +198,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   openCompare() { this.isCompareOpen = true; }
   closeCompare() { this.isCompareOpen = false; }
 
-  /**
-   * Looks up full plan details via PolicyDataService — never trusts
-   * anything the AI wrote beyond the planId reference, so the modal
-   * always shows real, accurate figures.
-   */
   getPlanById(planId: string): Plan | undefined {
     return this.policyData.getPlanById(planId);
   }
@@ -249,7 +271,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       });
 
       if (res.chips?.length) this.chips = res.chips;
-      this.applyProfileUpdate(res.profileUpdate);
+      await this.applyProfileUpdate(res.profileUpdate);
     } catch (e) {
       console.error('[ChatbotPage] compareMessage failed:', e);
       this.messages.push({
@@ -311,6 +333,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     const maxWidth = doc.internal.pageSize.getWidth() - PDF_MARGIN * 2;
     let y = 20;
 
+    const userName = this.profile.fullName || 'User';
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.setTextColor(30);
@@ -325,7 +349,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       PDF_MARGIN, y
     );
     y += 4;
-    doc.text(`Prepared for: ${this.profile.name}`, PDF_MARGIN, y);
+    doc.text(`Prepared for: ${userName}`, PDF_MARGIN, y);
     y += 10;
 
     doc.setDrawColor(220);
@@ -384,7 +408,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       PDF_MARGIN, 285, { maxWidth }
     );
 
-    doc.save(`cova-summary-${this.profile.name.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+    doc.save(`cova-summary-${userName.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   }
 
   // ─────────────────────────────────────────────────────────

@@ -1,0 +1,65 @@
+<ion-content class="ion-padding custom-theme">
+  <div class="auth-container">
+    
+    <!-- Branding Header -->
+    <div class="brand-section">
+      <div class="logo-badge">
+        <ion-icon name="shield-checkmark"></ion-icon>
+      </div>
+      <h1>Cova</h1>
+      <p>{{ isSignUpMode ? 'Create an account to build your personalised profile.' : 'Welcome back! Log in to access your recommendations.' }}</p>
+    </div>
+
+    <!-- Auth Form -->
+    <div class="form-section">
+      
+      <!-- Full Name (Sign Up only) -->
+      <div class="input-card" *ngIf="isSignUpMode">
+        <ion-icon name="person-outline" class="field-icon"></ion-icon>
+        <div class="field-body">
+          <label>Full Name</label>
+          <ion-input type="text" [(ngModel)]="fullName" placeholder="e.g. Shaufin Muhammad"></ion-input>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="input-card">
+        <ion-icon name="mail-outline" class="field-icon"></ion-icon>
+        <div class="field-body">
+          <label>Email Address</label>
+          <ion-input type="email" [(ngModel)]="email" placeholder="name@example.com"></ion-input>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="input-card">
+        <ion-icon name="lock-closed-outline" class="field-icon"></ion-icon>
+        <div class="field-body">
+          <label>Password</label>
+          <ion-input type="password" [(ngModel)]="password" placeholder="••••••••"></ion-input>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <ion-button expand="block" class="primary-btn" (click)="handleAuth()">
+        {{ isSignUpMode ? 'Sign Up' : 'Log In' }}
+      </ion-button>
+
+      <!-- Mode Toggle Link -->
+      <div class="toggle-mode">
+        <p *ngIf="!isSignUpMode">
+          Don't have an account? <a (click)="toggleMode()">Sign Up</a>
+        </p>
+        <p *ngIf="isSignUpMode">
+          Already have an account? <a (click)="toggleMode()">Log In</a>
+        </p>
+      </div>
+
+    </div>
+
+    <p class="security-text">
+      <ion-icon name="lock-closed-outline"></ion-icon> Your information is safe with us.
+    </p>
+
+  </div>
+</ion-content>
