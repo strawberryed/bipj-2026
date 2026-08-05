@@ -1,10 +1,11 @@
 import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit, OnDestroy } from '@angular/core';
 import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gemini.service';
-import { UserProfileService, UserProfileData } from '../services/user-profile.service';
+import { UserProfileData, UserProfileService } from '../services/user-profile.service';
 import { PolicyDataService, Plan } from '../services/policy-data';
+import { ChatStorageService } from '../services/chat-storage.service';
+import { Subscription } from 'rxjs';
 import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
-import { Subscription } from 'rxjs';
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -25,14 +26,15 @@ const CATEGORY_MAP: Record<string, string> = {
   'Wealth Accumulation': 'wealth'
 };
 
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
 const DEFAULT_CHIPS = [
   'What does PRUShield cover?',
   'Do I need critical illness coverage?',
   'What is a deductible?',
   'How much coverage do I need?'
 ];
-
-const CHAT_STORAGE_KEY = 'cova_chat_history_v1';
 
 @Component({
   selector: 'app-chatbot',
@@ -43,19 +45,13 @@ const CHAT_STORAGE_KEY = 'cova_chat_history_v1';
 export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
-
-  // Active user profile state from UserProfileService
-  profile: UserProfileData = {
-    fullName: 'Guest User',
-    age: 25,
-    occupation: 'Working Adult',
-    monthlyIncome: 3000,
-    maritalStatus: 'Single',
-    dependents: 0,
-    hasExistingInsurance: false,
-    mainGoals: ['Health Protection'],
-    monthlyBudget: 200
-  };
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  isAuthReady = false;
+  // Current user's profile — kept in sync via userProfile$ subscription
+  // to teammate's UserProfileService (auth-scoped and Firestore-backed).
+  profile: UserProfileData = { fullName: 'Guest' };
+  currentUid: string | null = null;
+  private profileSub?: Subscription;
 
   messages: Message[] = [];
   inputText = '';
@@ -69,42 +65,47 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   categories = ['Health Protection', 'Life Protection', 'Critical Illness', 'Wealth Accumulation'];
   currentCategoryLabel = 'Health Protection';
 
-  // Plan detail modal
+  // Plan detail modal (for tappable planCard blocks in AI replies)
   isPlanDetailOpen = false;
   selectedPlanDetail: Plan | null = null;
 
-  // Policy loading state
+  // True while policy data is being fetched from Firestore on first load.
   isPolicyDataLoading = true;
 
   private lastMessageCount = 0;
-  private profileSub?: Subscription;
 
   constructor(
     private gemini: GeminiService,
     private profileService: UserProfileService,
     private policyData: PolicyDataService,
+    private chatStorage: ChatStorageService,
     private alertCtrl: AlertController
   ) { }
 
   async ngOnInit() {
-    this.loadChat();
+    // NEW: get UID immediately from auth state, not from the Firestore profile pipe
+    this.profileService.authUser$.subscribe(authUser => {
+      const uid = authUser?.uid ?? null;
+      const uidChanged = uid !== this.currentUid;
+      this.currentUid = uid;
+      this.isAuthReady = true;   // auth has resolved at least once
 
-    // Subscribe to live user profile changes from Firestore via UserProfileService
-    this.profileSub = this.profileService.userProfile$.subscribe((data) => {
-      if (data) {
-        this.profile = { ...this.profile, ...data };
+      if (uidChanged || (uid && this.messages.length === 0)) {
+        this.loadChat();         // drop the await; let it run in background
       }
     });
 
-    // Ensure policy data is ready
+    // Keep the existing profile subscription for name/avatar/etc.
+    this.profileSub = this.profileService.userProfile$.subscribe(profileData => {
+      this.profile = profileData ?? { fullName: 'Guest' };
+    });
+
     await this.policyData.ensureLoaded();
     this.isPolicyDataLoading = false;
   }
 
   ngOnDestroy() {
-    if (this.profileSub) {
-      this.profileSub.unsubscribe();
-    }
+    this.profileSub?.unsubscribe();
   }
 
   ngAfterViewChecked() {
@@ -115,37 +116,38 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Chat Persistence
+  // Chat Persistence (per-user Firestore subcollection via ChatStorageService)
   // ─────────────────────────────────────────────────────────
 
-  saveChat() {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.messages.slice(-MAX_HISTORY)));
+  /** Appends a single new message to the user's Firestore chat history. */
+  private async persistMessage(message: Message) {
+    await this.chatStorage.appendMessage(this.currentUid, message);
   }
 
-  loadChat() {
-    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
-    this.messages = saved ? JSON.parse(saved) : [];
+  /** Loads the user's chat history from Firestore into this.messages. */
+  async loadChat() {
+    this.messages = await this.chatStorage.loadChat(this.currentUid, MAX_HISTORY);
   }
 
-  reset() {
+  async reset() {
     this.messages = [];
     this.chips = [...DEFAULT_CHIPS];
-    localStorage.removeItem(CHAT_STORAGE_KEY);
+    await this.chatStorage.clearChat(this.currentUid);
   }
 
   // ─────────────────────────────────────────────────────────
   // Profile updates (agentic profile-building)
   // ─────────────────────────────────────────────────────────
 
-  private async applyProfileUpdate(update?: Record<string, string | number | string[]>) {
-    if (!update) return;
-
+  private async applyProfileUpdate(update?: Record<string, any>) {
+    if (!update || !this.currentUid) return;
     try {
-      // Persist updates to UserProfileService / Firestore
-      await this.profileService.updateProfile(update as Partial<UserProfileData>);
-      console.log('[ChatbotPage] Profile updated successfully:', update);
+      await this.profileService.updateProfile(update);
+      console.log('[ChatbotPage] Profile updated:', update);
+      // userProfile$ subscription above will fire and refresh this.profile
+      // automatically once Firestore emits the updated document.
     } catch (err) {
-      console.error('[ChatbotPage] Failed to save profile update:', err);
+      console.error('[ChatbotPage] Failed to persist profile update:', err);
     }
   }
 
@@ -157,9 +159,17 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     const message = (text ?? this.inputText).trim();
     if (!message || this.isLoading) return;
 
+    if (!this.currentUid) {
+      await this.showErrorAlert('Please log in to save chat history.');
+      return;
+    }
+
     this.inputText = '';
     this.isLoading = true;
-    this.messages.push({ role: 'user', content: message });
+
+    const userMsg: Message = { role: 'user', content: message };
+    this.messages.push(userMsg);
+    await this.persistMessage(userMsg);
 
     const history = this.messages.slice(0, -1);
 
@@ -175,20 +185,104 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       }
 
       this.messages.push(newMessage);
+      await this.persistMessage(newMessage);
 
       if (res.chips?.length) this.chips = res.chips;
       await this.applyProfileUpdate(res.profileUpdate);
 
     } catch (e) {
       console.error('[ChatbotPage] sendMessage failed:', e);
-      this.messages.push({
+      const errorMsg: Message = {
         role: 'assistant',
         content: "Sorry, something went wrong. Try again?"
-      });
+      };
+      this.messages.push(errorMsg);
+      await this.persistMessage(errorMsg);
     }
 
     this.isLoading = false;
-    this.saveChat();
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Document upload (policy document photo/PDF explanation)
+  // ─────────────────────────────────────────────────────────
+
+  triggerFileUpload() {
+    this.fileInput.nativeElement.click();
+  }
+
+  async onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // reset so selecting the same file again still fires change
+    if (!file) return;
+
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      await this.showErrorAlert('Please upload a JPG, PNG, WEBP image, or a PDF file.');
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      await this.showErrorAlert('File is too large. Please upload a file under 10MB.');
+      return;
+    }
+
+    const attachmentType: 'image' | 'pdf' = file.type === 'application/pdf' ? 'pdf' : 'image';
+
+    const uploadMsg: Message = {
+      role: 'user',
+      content: '',
+      attachment: { name: file.name, type: attachmentType }
+    };
+    this.messages.push(uploadMsg);
+    await this.persistMessage(uploadMsg);
+
+    this.isLoading = true;
+
+    try {
+      const base64Data = await this.fileToBase64(file);
+
+      const res = await this.gemini.analyzeDocument(base64Data, file.type, this.profile);
+
+      const newMessage: Message = Array.isArray(res.reply)
+        ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
+        : { role: 'assistant', content: res.reply as string };
+
+      if (res.followUpQuestion) {
+        newMessage.followUpQuestion = res.followUpQuestion;
+      }
+
+      this.messages.push(newMessage);
+      await this.persistMessage(newMessage);
+
+      if (res.chips?.length) this.chips = res.chips;
+      await this.applyProfileUpdate(res.profileUpdate);
+
+    } catch (e) {
+      console.error('[ChatbotPage] analyzeDocument failed:', e);
+      const errorMsg: Message = {
+        role: 'assistant',
+        content: "Sorry, I couldn't process that document. Try again?"
+      };
+      this.messages.push(errorMsg);
+      await this.persistMessage(errorMsg);
+    }
+
+    this.isLoading = false;
+  }
+
+  /** Converts a File to a raw base64 string (strips the data: URL prefix). */
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1] ?? '';
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   // ─────────────────────────────────────────────────────────
@@ -198,6 +292,11 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   openCompare() { this.isCompareOpen = true; }
   closeCompare() { this.isCompareOpen = false; }
 
+  /**
+   * Looks up full plan details via PolicyDataService — never trusts
+   * anything the AI wrote beyond the planId reference, so the modal
+   * always shows real, accurate figures.
+   */
   getPlanById(planId: string): Plan | undefined {
     return this.policyData.getPlanById(planId);
   }
@@ -245,7 +344,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.closeCompare();
 
     const names = this.selectedPlans.map(p => p.name).join(' and ');
-    this.messages.push({ role: 'user', content: `Compare ${names}` });
+    const userMsg: Message = { role: 'user', content: `Compare ${names}` };
+    this.messages.push(userMsg);
+    await this.persistMessage(userMsg);
 
     this.isLoading = true;
     try {
@@ -259,7 +360,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
         { label: 'Does not cover', values: this.selectedPlans.map(p => p.notCovered.join(', ')) }
       ];
 
-      this.messages.push({
+      const compareMsg: Message = {
         role: 'assistant',
         content: res.reply as string,
         compareCard: {
@@ -268,21 +369,24 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
           fitScores: res.fitScores
         },
         followUpQuestion: res.followUpQuestion
-      });
+      };
+      this.messages.push(compareMsg);
+      await this.persistMessage(compareMsg);
 
       if (res.chips?.length) this.chips = res.chips;
       await this.applyProfileUpdate(res.profileUpdate);
     } catch (e) {
       console.error('[ChatbotPage] compareMessage failed:', e);
-      this.messages.push({
+      const errorMsg: Message = {
         role: 'assistant',
         content: "Sorry, couldn't run the comparison. Try again?"
-      });
+      };
+      this.messages.push(errorMsg);
+      await this.persistMessage(errorMsg);
     }
 
     this.isLoading = false;
     this.selectedPlans = [];
-    this.saveChat();
   }
 
   getFitScore(card: CompareCard, planId: string): number {
@@ -333,8 +437,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     const maxWidth = doc.internal.pageSize.getWidth() - PDF_MARGIN * 2;
     let y = 20;
 
-    const userName = this.profile.fullName || 'User';
-
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.setTextColor(30);
@@ -349,7 +451,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       PDF_MARGIN, y
     );
     y += 4;
-    doc.text(`Prepared for: ${userName}`, PDF_MARGIN, y);
+    doc.text(`Prepared for: ${this.profile.fullName}`, PDF_MARGIN, y);
     y += 10;
 
     doc.setDrawColor(220);
@@ -408,7 +510,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       PDF_MARGIN, 285, { maxWidth }
     );
 
-    doc.save(`cova-summary-${userName.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+    doc.save(`cova-summary-${this.profile.fullName.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   }
 
   // ─────────────────────────────────────────────────────────

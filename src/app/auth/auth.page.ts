@@ -21,7 +21,7 @@ export class AuthPage {
     private router: Router,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController
-  ) {}
+  ) { }
 
   toggleMode() {
     this.isSignUpMode = !this.isSignUpMode;
@@ -51,11 +51,18 @@ export class AuthPage {
       } else {
         // --- LOG IN FLOW ---
         const user = await this.profileService.login(this.email, this.password);
+
+        // Wait for Firebase Auth to fully register the session before reading
+        // Firestore. Without this, isProfileComplete()'s Firestore read can fire
+        // under a not-yet-authenticated state and return false even when the doc
+        // exists with isOnboardingCompleted: true.
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         await loader.dismiss();
 
         const isComplete = await this.profileService.isProfileComplete(user.uid);
         if (isComplete) {
-          this.router.navigate(['/landing-page']);
+          this.router.navigate(['/tabs/tab1']);
         } else {
           this.showToast('No completed profile found. Please complete sign up.');
           this.router.navigate(['/onboarding']);

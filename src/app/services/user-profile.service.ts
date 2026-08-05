@@ -102,15 +102,15 @@ export class UserProfileService {
   return credential.user;
 }
 
-  // Check if current user has already completed onboarding
-  async isProfileComplete(uid: string): Promise < boolean > {
+  // Check if current user has already completed profile needs
+async isProfileComplete(uid: string): Promise<boolean> {
   const userDocRef = doc(this.firestore, `users/${uid}`);
   const snapshot = await getDoc(userDocRef);
-  if(snapshot.exists()) {
-  return !!snapshot.data()?.['isOnboardingCompleted'];
-}
-return false;
+  if (snapshot.exists()) {
+    return !!snapshot.data()?.['isProfileComplete'];  // ← matches Firestore
   }
+  return false;
+}
 
   // Save onboarding questionnaire data
   async saveOnboardingProfile(data: UserProfileData): Promise < void> {
