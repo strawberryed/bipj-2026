@@ -4,6 +4,12 @@ import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signO
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
+export interface ExistingPlan {
+  name: string;
+  insurer?: string;
+  notes?: string;
+}
+
 export interface UserProfileData {
   fullName: string;
   age?: number;
@@ -12,6 +18,7 @@ export interface UserProfileData {
   maritalStatus?: string;
   dependents?: number;
   hasExistingInsurance?: boolean;
+  existingPlans?: ExistingPlan[];
   mainGoals?: string[];
   monthlyBudget?: number;
   topConcern?: string;
@@ -70,20 +77,20 @@ export class UserProfileService {
     const userDocRef = doc(this.firestore, `users/${user.uid}`);
     await setDoc(userDocRef, data, { merge: true });
   }
-async getCurrentProfile(): Promise<UserProfileData | null> {
-  const user = this.auth.currentUser;
-  console.log('[getCurrentProfile] auth.currentUser:', user?.uid);
-  if (!user) {
-    console.log('[getCurrentProfile] No auth user, returning null');
-    return null;
+  async getCurrentProfile(): Promise<UserProfileData | null> {
+    const user = this.auth.currentUser;
+    console.log('[getCurrentProfile] auth.currentUser:', user?.uid);
+    if (!user) {
+      console.log('[getCurrentProfile] No auth user, returning null');
+      return null;
+    }
+
+    const userDocRef = doc(this.firestore, `users/${user.uid}`);
+    const snapshot = await getDoc(userDocRef);
+
+
+    return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
   }
-
-  const userDocRef = doc(this.firestore, `users/${user.uid}`);
-  const snapshot = await getDoc(userDocRef);
-
-
-  return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
-}
 
   // Get current logged-in user ID
   get currentUserId(): string | null {

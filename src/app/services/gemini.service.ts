@@ -84,7 +84,7 @@ CRITICAL SECURITY RULES — DO NOT VIOLATE:
 // not something the AI should ever write directly.
 const VALID_PROFILE_KEYS = [
   'age', 'occupation', 'monthlyIncome', 'maritalStatus', 'dependents',
-  'hasExistingInsurance', 'mainGoals', 'monthlyBudget', 'topConcern'
+  'hasExistingInsurance', 'existingPlans', 'mainGoals', 'monthlyBudget', 'topConcern'
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -157,6 +157,28 @@ export class GeminiService {
       if (key === 'mainGoals') {
         if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
           clean[key] = value.slice(0, 10).map(v => String(v).substring(0, 100));
+        }
+        continue;
+      }
+
+      if (key === 'existingPlans') {
+        if (Array.isArray(value)) {
+          const validPlans = value
+            .filter((p: any) => p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0)
+            .slice(0, 10)
+            .map((p: any) => {
+              // Omit optional fields entirely when empty rather than including
+              // them as undefined — Firestore rejects undefined values.
+              const cleanPlan: any = { name: String(p.name).substring(0, 100).trim() };
+              if (typeof p.insurer === 'string' && p.insurer.trim().length > 0) {
+                cleanPlan.insurer = String(p.insurer).substring(0, 100).trim();
+              }
+              if (typeof p.notes === 'string' && p.notes.trim().length > 0) {
+                cleanPlan.notes = String(p.notes).substring(0, 200).trim();
+              }
+              return cleanPlan;
+            });
+          if (validPlans.length > 0) clean[key] = validPlans;
         }
         continue;
       }
@@ -242,6 +264,18 @@ export class GeminiService {
     const money = (num?: number) => (num !== undefined && num !== null && num > 0 ? `S$${num.toLocaleString()}` : 'Not specified');
     const yn = (val?: boolean) => (val === true ? 'Yes' : val === false ? 'No' : 'Not specified');
 
+    // Format list of existing plans, if any
+    const existingPlansText = profile.existingPlans && profile.existingPlans.length > 0
+      ? profile.existingPlans
+          .map(p => {
+            const parts = [s(p.name)];
+            if (p.insurer) parts.push(`by ${s(p.insurer)}`);
+            if (p.notes) parts.push(`(${s(p.notes)})`);
+            return `  • ${parts.join(' ')}`;
+          })
+          .join('\n')
+      : '  • None specified';
+
     return `
 ACTIVE USER PROFILE:
 - Name: ${s(profile.fullName)}
@@ -252,12 +286,15 @@ ACTIVE USER PROFILE:
 - Monthly income: ${money(profile.monthlyIncome)}
 - Monthly budget for insurance: ${money(profile.monthlyBudget)}
 - Has existing insurance: ${yn(profile.hasExistingInsurance)}
+- Current plans:
+${existingPlansText}
 - Main goals: ${arr(profile.mainGoals)}
 - Top concern: ${s(profile.topConcern) || 'Not specified'}
 
 Use this profile to personalise all responses. Reference the user by name naturally.
 Tailor fit scores, recommendations, and explanations to their specific situation.
 If a field is "Not specified", don't guess — acknowledge the gap or ask a clarifying question instead of inventing details.
+When the user has existing plans listed, factor those in — avoid recommending duplicates or plans that overlap heavily with what they already have. Suggest coverage gaps instead.
 `.trim();
   }
 
@@ -602,6 +639,14 @@ IF IT IS A POLICY DOCUMENT:
 - If the profile below has relevant info (age, dependents, main goals, top concern, existing insurance), briefly note whether this document's coverage seems to align with or fall short of their situation — but do not state figures or coverage details you cannot actually read from the document. If text is unclear or partially unreadable, say so rather than guessing.
 - Never invent policy numbers, sums assured, or premium figures you cannot clearly read in the document. If a figure is unclear, say "I couldn't clearly read this figure — worth double-checking the original document."
 - Never tell the user which plan to buy — explain and inform only.
+
+EXTRACTING TO PROFILE (only when confident):
+- If the document clearly identifies itself as belonging to the current user (e.g. a policy certificate with a plan name and the user's identifying context), OR the user's accompanying note says this is their current policy, extract the plan and include it in profileUpdate.existingPlans.
+- Format: profileUpdate.existingPlans = [{ "name": "<plan name from document>", "insurer": "<insurer name if identifiable>", "notes": "<optional short context>" }]
+- Only include this when you can clearly identify BOTH the plan name AND that this is the user's own policy (not a brochure, marketing material, someone else's document, or a plan they're just researching).
+- If unsure, do NOT include existingPlans in profileUpdate — err on the side of not saving. It's better to skip a save than to add wrong data to the user's profile.
+- The chatbot app appends to their existing plans list; don't try to replace or clear existing entries.
+- Omit optional fields (insurer, notes) entirely if you can't identify them — do NOT include them as null or empty strings.
 
 ${this.formatProfile(profile)}
 

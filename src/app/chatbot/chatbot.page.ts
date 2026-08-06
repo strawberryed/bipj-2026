@@ -134,13 +134,12 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       return;
     }
 
+    // Only reset local UI state on version change — NEVER wipe Firestore
     const resetKey = `cova_chat_reset_${CHAT_RESET_VERSION}_${uid}`;
     if (!localStorage.getItem(resetKey)) {
       localStorage.setItem(resetKey, 'done');
       this.messages = [];
       this.chips = [...DEFAULT_CHIPS];
-      await this.chatStorage.clearChat(uid);
-      return;
     }
 
     await this.loadChat();
@@ -159,8 +158,23 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   private async applyProfileUpdate(update?: Record<string, any>) {
     if (!update || !this.currentUid) return;
     try {
-      await this.profileService.updateProfile(update);
-      console.log('[ChatbotPage] Profile updated:', update);
+      // Special-case existingPlans: Firestore merge treats arrays as scalars
+      // (replaces the whole array), but semantically the AI's extraction
+      // should ADD to the user's existing list, not replace it. So we merge
+      // manually here with a case-insensitive de-dupe on plan name.
+      const merged = { ...update };
+      if (Array.isArray(update['existingPlans'])) {
+        const freshProfile = await this.profileService.getCurrentProfile();
+        const currentPlans = freshProfile?.existingPlans ?? [];
+        const existingNames = new Set(currentPlans.map(p => p.name.toLowerCase().trim()));
+        const newPlans = update['existingPlans'].filter(
+          (p: any) => p?.name && !existingNames.has(p.name.toLowerCase().trim())
+        );
+        merged['existingPlans'] = [...currentPlans, ...newPlans];
+      }
+
+      await this.profileService.updateProfile(merged);
+      console.log('[ChatbotPage] Profile updated:', merged);
       // userProfile$ subscription above will fire and refresh this.profile
       // automatically once Firestore emits the updated document.
     } catch (err) {

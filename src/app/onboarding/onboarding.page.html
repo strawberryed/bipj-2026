@@ -108,7 +108,7 @@
           <label class="group-label">
             <ion-icon name="shield-checkmark-outline"></ion-icon> Do you currently have insurance?
           </label>
-          <ion-radio-group [(ngModel)]="hasInsurance">
+          <ion-radio-group [(ngModel)]="hasInsurance" (ngModelChange)="onHasInsuranceChange()">
             <ion-item lines="none" class="radio-item">
               <ion-label>Yes</ion-label>
               <ion-radio slot="end" [value]="true"></ion-radio>
@@ -118,6 +118,37 @@
               <ion-radio slot="end" [value]="false"></ion-radio>
             </ion-item>
           </ion-radio-group>
+        </div>
+
+        <!-- Existing insurance plans — only shown when hasInsurance is Yes. -->
+        <div class="field-group existing-plans-section" *ngIf="hasInsurance === true">
+          <ion-label class="field-label">
+            <ion-icon name="document-text-outline"></ion-icon> Your current plans
+          </ion-label>
+          <p class="field-help">Add each plan you currently hold. This helps Cova avoid recommending duplicates.</p>
+
+          <div class="existing-plan-row" *ngFor="let plan of existingPlans; let i = index; trackBy: trackByIndex">
+            <div class="existing-plan-header">
+              <span class="existing-plan-index">Plan {{ i + 1 }}</span>
+              <button type="button" class="existing-plan-remove" (click)="removeExistingPlan(i)">
+                <ion-icon name="close-outline"></ion-icon>
+              </button>
+            </div>
+            <ion-item lines="none" class="custom-input">
+              <ion-input [(ngModel)]="plan.name" placeholder="Plan name (e.g. PRUShield + PRUExtra)"></ion-input>
+            </ion-item>
+            <ion-item lines="none" class="custom-input">
+              <ion-input [(ngModel)]="plan.insurer" placeholder="Insurer (optional, e.g. Prudential)"></ion-input>
+            </ion-item>
+            <ion-item lines="none" class="custom-input">
+              <ion-input [(ngModel)]="plan.notes" placeholder="Notes (optional, e.g. through employer)"></ion-input>
+            </ion-item>
+          </div>
+
+          <button type="button" class="add-plan-btn" (click)="addExistingPlan()">
+            <ion-icon name="add-outline"></ion-icon>
+            <span>Add a plan</span>
+          </button>
         </div>
 
         <div class="field-group">

@@ -215,3 +215,117 @@ $bg-light: #f8f9fa;
     border-color: #e63946 !important;
     box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.15) !important;
 }
+
+/* ─────────────────────────────────────────────────────────
+   Existing Insurance Plans section (Step 2, conditional)
+   ───────────────────────────────────────────────────────── */
+
+.existing-plans-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.field-help {
+    font-size: 12px;
+    color: var(--body-text);
+    opacity: 0.7;
+    margin: -4px 0 12px 4px;
+    line-height: 1.4;
+}
+
+.existing-plan-row {
+    background: #faf8ff;
+    border: 1px solid rgba(124, 92, 191, 0.15);
+    border-radius: 10px;
+    padding: 12px 12px 6px;
+    margin-bottom: 10px;
+    transition: border-color 0.15s ease;
+
+    &:focus-within {
+        border-color: rgba(124, 92, 191, 0.4);
+    }
+
+    // Tighten the ion-item styling inside so it doesn't add its own extra padding
+    .custom-input {
+        --background: transparent;
+        --padding-start: 4px;
+        --inner-padding-end: 4px;
+        --min-height: 36px;
+        margin-bottom: 4px;
+
+        ion-input {
+            --padding-start: 0;
+            font-size: 13.5px;
+        }
+    }
+}
+
+.existing-plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 0 4px;
+}
+
+.existing-plan-index {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--section-title);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.existing-plan-remove {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--body-text);
+    opacity: 0.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s ease, background 0.15s ease;
+
+    ion-icon {
+        font-size: 18px;
+    }
+
+    &:hover {
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.05);
+    }
+}
+
+.add-plan-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 12px 14px;
+    background: transparent;
+    border: 1.5px dashed rgba(124, 92, 191, 0.35);
+    border-radius: 10px;
+    color: var(--brand-purple);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    ion-icon {
+        font-size: 16px;
+    }
+
+    &:hover {
+        background: rgba(124, 92, 191, 0.05);
+        border-color: rgba(124, 92, 191, 0.55);
+    }
+
+    &:active {
+        background: rgba(124, 92, 191, 0.1);
+    }
+}

@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { UserProfileService } from '../services/user-profile.service';
+import { UserProfileService, ExistingPlan } from '../services/user-profile.service';
 import { ToastController, LoadingController } from '@ionic/angular';
 import { updateCurrentLocalUserProfile } from '../../data/app-db';
 
@@ -31,9 +31,41 @@ export class OnboardingPage {
   monthlyBudget: number = 300;
   primaryConcern: string = '';
 
+  // Existing insurance plans — only shown when hasInsurance === true.
+  // Users can add multiple plans, each with plan name (required),
+  // insurer (optional), and freeform notes (optional).
+  existingPlans: ExistingPlan[] = [];
+
   // Validation Error States
   ageError: string = ''; // Stores inline error message for age
   readonly MINIMUM_AGE: number = 18;
+
+  // Helpers for the existing-plans dynamic list
+
+  addExistingPlan() {
+    if (this.existingPlans.length >= 10) {
+      this.showToast('You can add up to 10 plans.');
+      return;
+    }
+    this.existingPlans.push({ name: '', insurer: '', notes: '' });
+  }
+
+  removeExistingPlan(index: number) {
+    this.existingPlans.splice(index, 1);
+  }
+
+  // ngFor trackBy — keeps input focus stable when the array mutates
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  // Reset the list when the user flips hasInsurance to No,
+  // so we don't accidentally save stale entries.
+  onHasInsuranceChange() {
+    if (this.hasInsurance === false) {
+      this.existingPlans = [];
+    }
+  }
 
   nextStep() {
     // Reset errors
@@ -65,6 +97,28 @@ export class OnboardingPage {
       return;
     }
 
+    // Clean up existing plans: drop rows where the user added an entry
+    // but didn't fill in a name. For optional fields, OMIT them entirely
+    // when empty rather than setting them to undefined — Firestore rejects
+    // undefined values and setDoc will fail with an "invalid data" error.
+    const cleanedExistingPlans: ExistingPlan[] = this.hasInsurance
+      ? this.existingPlans
+        .map(p => {
+          const cleaned: ExistingPlan = { name: (p.name ?? '').trim() };
+          const insurer = (p.insurer ?? '').trim();
+          const notes = (p.notes ?? '').trim();
+          if (insurer) cleaned.insurer = insurer;
+          if (notes) cleaned.notes = notes;
+          return cleaned;
+        })
+        .filter(p => p.name.length > 0)
+      : [];
+
+    if (this.hasInsurance && cleanedExistingPlans.length === 0) {
+      this.showToast('Please add at least one plan, or select "No" for existing insurance.');
+      return;
+    }
+
     const loader = await this.loadingCtrl.create({
       message: 'Generating your profile...',
     });
@@ -82,6 +136,7 @@ export class OnboardingPage {
         monthlyIncome: Number(this.monthlyIncome),
         maritalStatus: this.maritalStatus,
         hasExistingInsurance: !!this.hasInsurance,
+        existingPlans: cleanedExistingPlans,
         mainGoals: [this.mainGoal],
         monthlyBudget: this.monthlyBudget,
         topConcern: this.primaryConcern
