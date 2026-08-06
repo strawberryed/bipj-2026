@@ -132,7 +132,7 @@ ion-content {
   background: $surface;
   border-radius: 18px 18px 18px 4px;
 
-  span {
+  span:not(.loading-label) {
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -147,8 +147,15 @@ ion-content {
       animation-delay: 0.4s;
     }
   }
-}
 
+  .loading-label {
+    margin-left: 6px;
+    font-size: 13px;
+    color: $text-muted;
+    font-style: italic;
+    white-space: nowrap;
+  }
+}
 @keyframes dot-bounce {
 
   0%,
@@ -787,5 +794,114 @@ ion-toolbar {
   ion-icon {
     font-size: 18px;
     flex-shrink: 0;
+  }
+}
+.loading-label {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 13px;
+  color: $text-muted;
+  vertical-align: middle;
+  font-style: italic;
+}
+ // Add these rules alongside your existing .fit-bar-fill and .fit-percent
+// rules in chatbot.page.scss. The three color classes apply to both the
+// bar fill (background) and the percent text label (color).
+
+.fit-bar-fill {
+  transition: background 0.3s ease;
+
+  &.fit-high {
+    background: #22c55e; // green — strong fit
+  }
+
+  &.fit-mid {
+    background: #f59e0b; // amber — partial fit, has a gap
+  }
+
+  &.fit-low {
+    background: #ef4444; // red — significant mismatch
+  }
+}
+
+.fit-percent {
+  transition: color 0.3s ease;
+
+  &.fit-high {
+    color: #16a34a; // slightly darker green so text has enough contrast
+  }
+
+  &.fit-mid {
+    color: #d97706; // slightly darker amber
+  }
+
+  &.fit-low {
+    color: #dc2626; // slightly darker red
+  }
+}
+// Add these rules to chatbot.page.scss
+
+.reasoning-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent !important;
+  border: none;
+  padding: 0;
+  margin: 8px 0 0;
+  color: $lavender-text;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s ease, transform 0.1s ease;
+
+  ion-icon {
+    font-size: 18px;
+    color: $lavender-text;
+  }
+
+  &:hover {
+    background: rgba(124, 92, 191, 0.12) !important;
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.reasoning-panel {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: rgba(124, 92, 191, 0.05);
+  border-left: 3px solid rgba(124, 92, 191, 0.4);
+  border-radius: 6px;
+  animation: reasoning-fade-in 0.18s ease-out;
+}
+
+.reasoning-panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: $lavender-text;
+  margin-bottom: 6px;
+}
+
+.reasoning-panel-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: $text;
+}
+
+@keyframes reasoning-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

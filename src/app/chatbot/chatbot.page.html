@@ -32,7 +32,7 @@
     </div>
 
     <!-- Conversation -->
-    <ng-container *ngFor="let msg of messages">
+    <ng-container *ngFor="let msg of messages; let msgIndex = index">
 
       <!-- Compare card message -->
       <ng-container *ngIf="msg.compareCard; else plainBubble">
@@ -46,11 +46,13 @@
               <div class="compare-plan-name">{{ plan.name }}</div>
               <div class="compare-plan-price">{{ plan.premium }}</div>
               <div class="fit-bar">
-                <div class="fit-bar-fill" [style.width]="getFitScore(msg.compareCard, plan.id) + '%'">
+                <div class="fit-bar-fill" [ngClass]="getFitScoreColorClass(getFitScore(msg.compareCard, plan.id))"
+                  [style.width]="getFitScore(msg.compareCard, plan.id) + '%'">
                 </div>
               </div>
               <div class="fit-row">
-                <span class="fit-percent">{{ getFitScore(msg.compareCard, plan.id) }}% FIT</span>
+                <span class="fit-percent" [ngClass]="getFitScoreColorClass(getFitScore(msg.compareCard, plan.id))">{{
+                  getFitScore(msg.compareCard, plan.id) }}% FIT</span>
                 <button class="why-btn" *ngIf="msg.compareCard.fitScores?.length"
                   (click)="showFitReason(msg.compareCard, plan.id)">
                   Why?
@@ -73,7 +75,17 @@
 
         <!-- AI summary below card -->
         <div class="msg-row assistant">
-          <div class="bubble">{{ msg.content }}</div>
+          <div class="bubble">
+            {{ msg.content }}
+            <button *ngIf="msg.reasoning" class="reasoning-toggle" (click)="toggleReasoning(msgIndex)"
+              [attr.aria-label]="isReasoningExpanded(msgIndex) ? 'Hide reasoning' : 'Show reasoning'">
+              <ion-icon [name]="isReasoningExpanded(msgIndex) ? 'help-circle' : 'help-circle-outline'"></ion-icon>
+            </button>
+            <div class="reasoning-panel" *ngIf="msg.reasoning && isReasoningExpanded(msgIndex)">
+              <div class="reasoning-panel-label">How Cova got here</div>
+              <div class="reasoning-panel-text">{{ msg.reasoning }}</div>
+            </div>
+          </div>
           <span class="msg-time">{{ nowTime() }}</span>
         </div>
       </ng-container>
@@ -123,6 +135,16 @@
               </div>
 
             </ng-container>
+
+            <!-- Reasoning toggle (structured blocks bubble) -->
+            <button *ngIf="msg.reasoning" class="reasoning-toggle" (click)="toggleReasoning(msgIndex)"
+              [attr.aria-label]="isReasoningExpanded(msgIndex) ? 'Hide reasoning' : 'Show reasoning'">
+              <ion-icon [name]="isReasoningExpanded(msgIndex) ? 'help-circle' : 'help-circle-outline'"></ion-icon>
+            </button>
+            <div class="reasoning-panel" *ngIf="msg.reasoning && isReasoningExpanded(msgIndex)">
+              <div class="reasoning-panel-label">How Cova got here</div>
+              <div class="reasoning-panel-text">{{ msg.reasoning }}</div>
+            </div>
           </div>
 
           <!-- Simple plain text -->
@@ -131,6 +153,14 @@
             <div class="follow-up-question" *ngIf="msg.followUpQuestion">
               <ion-icon name="help-circle-outline"></ion-icon>
               <span>{{ msg.followUpQuestion }}</span>
+            </div>
+            <button *ngIf="msg.reasoning" class="reasoning-toggle" (click)="toggleReasoning(msgIndex)"
+              [attr.aria-label]="isReasoningExpanded(msgIndex) ? 'Hide reasoning' : 'Show reasoning'">
+              <ion-icon [name]="isReasoningExpanded(msgIndex) ? 'help-circle' : 'help-circle-outline'"></ion-icon>
+            </button>
+            <div class="reasoning-panel" *ngIf="msg.reasoning && isReasoningExpanded(msgIndex)">
+              <div class="reasoning-panel-label">How Cova got here</div>
+              <div class="reasoning-panel-text">{{ msg.reasoning }}</div>
             </div>
           </div>
 
@@ -144,6 +174,7 @@
     <div class="msg-row bot" *ngIf="isLoading">
       <div class="bubble typing">
         <span></span><span></span><span></span>
+        <span class="loading-label" *ngIf="loadingLabel">{{ loadingLabel }}</span>
       </div>
     </div>
 
@@ -253,8 +284,7 @@
 
 
 <!-- Compare sheet -->
-<ion-modal [isOpen]="isCompareOpen" (didDismiss)="closeCompare()"
-  [breakpoints]="[0, 0.95]" [initialBreakpoint]="0.95">  
+<ion-modal [isOpen]="isCompareOpen" (didDismiss)="closeCompare()" [breakpoints]="[0, 0.95]" [initialBreakpoint]="0.95">
   <ng-template>
     <ion-header>
       <ion-toolbar>

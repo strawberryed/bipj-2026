@@ -36,6 +36,7 @@ export interface Message {
   compareCard?: CompareCard;
   followUpQuestion?: string;
   attachment?: { name: string; type: 'image' | 'pdf' };
+  reasoning?: string;
 }
 
 export interface GeminiResponse {
@@ -44,6 +45,7 @@ export interface GeminiResponse {
   fitScores?: FitScore[];
   followUpQuestion?: string;
   profileUpdate?: Record<string, any>;
+  reasoning?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -209,7 +211,8 @@ export class GeminiService {
 
   private validateResponse(parsed: GeminiResponse): GeminiResponse | null {
     const text = (typeof parsed.reply === 'string' ? parsed.reply : JSON.stringify(parsed.reply))
-      + (parsed.followUpQuestion ? ` ${parsed.followUpQuestion}` : '');
+      + (parsed.followUpQuestion ? ` ${parsed.followUpQuestion}` : '')
+      + (parsed.reasoning ? ` ${parsed.reasoning}` : '');
 
     if (this.looksSuspicious(text)) {
       console.warn('[GeminiService] Potential injection detected in response. Blocking.');
@@ -267,13 +270,13 @@ export class GeminiService {
     // Format list of existing plans, if any
     const existingPlansText = profile.existingPlans && profile.existingPlans.length > 0
       ? profile.existingPlans
-          .map(p => {
-            const parts = [s(p.name)];
-            if (p.insurer) parts.push(`by ${s(p.insurer)}`);
-            if (p.notes) parts.push(`(${s(p.notes)})`);
-            return `  • ${parts.join(' ')}`;
-          })
-          .join('\n')
+        .map(p => {
+          const parts = [s(p.name)];
+          if (p.insurer) parts.push(`by ${s(p.insurer)}`);
+          if (p.notes) parts.push(`(${s(p.notes)})`);
+          return `  • ${parts.join(' ')}`;
+        })
+        .join('\n')
       : '  • None specified';
 
     return `
@@ -342,7 +345,9 @@ When the user has existing plans listed, factor those in — avoid recommending 
           chips: parsed.chips ?? [],
           fitScores: parsed.fitScores,
           followUpQuestion: typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined,
-          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate)
+          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate),
+          reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim().length > 0
+            ? parsed.reasoning.trim().substring(0, 500) : undefined
         };
       }
 
@@ -352,7 +357,9 @@ When the user has existing plans listed, factor those in — avoid recommending 
           chips: parsed.chips ?? [],
           fitScores: parsed.fitScores,
           followUpQuestion: typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined,
-          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate)
+          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate),
+          reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim().length > 0
+            ? parsed.reasoning.trim().substring(0, 500) : undefined
         };
       }
 
@@ -382,6 +389,45 @@ When the user has existing plans listed, factor those in — avoid recommending 
       reply: "I'm here to help with your insurance questions. What would you like to know about Prudential's plans?",
       chips: ['Show me health plans', 'What is critical illness cover?', 'Compare savings plans']
     };
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // POST with retry — protects the demo from transient API blips
+  // ─────────────────────────────────────────────────────────
+
+  /**
+   * Wraps http.post with automatic retry for transient errors (503 overload,
+   * 429 rate limit). Uses exponential backoff so the API has breathing room
+   * to recover, and gives up after `maxRetries` attempts rather than looping
+   * forever.
+   *
+   * Non-transient errors (400 bad request, 401 auth, network errors, etc.)
+   * throw immediately without retrying — retrying wouldn't help.
+   */
+  private async postWithRetry(body: any, maxRetries = 2): Promise<any> {
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await firstValueFrom(this.http.post(this.apiUrl, body));
+      } catch (err: any) {
+        lastError = err;
+        const status = err?.status ?? err?.statusCode;
+        const isTransient = status === 503 || status === 429;
+
+        if (!isTransient || attempt === maxRetries) {
+          throw err;
+        }
+
+        // Exponential backoff: 1s, then 2s, then 4s. By the third wait,
+        // we're likely in a fresh per-minute rate limit window.
+        const delayMs = 1000 * Math.pow(2, attempt);
+        console.warn(`[GeminiService] Transient error ${status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw lastError;
   }
 
   // ─────────────────────────────────────────────────────────
@@ -442,6 +488,14 @@ FOLLOW-UP QUESTIONS (optional, selective — use "followUpQuestion" field):
 - Omit this field entirely for short/simple answers (greetings, one-line definitions, or anything where a question would feel forced). Use it occasionally and naturally, not on every reply.
 - This is NOT the same as "chips" — chips are fixed clickable shortcuts; followUpQuestion is a distinct, contextual, conversational line specific to what was just discussed. Never repeat a chip's content here.
 
+REASONING TRANSPARENCY (optional, selective — use "reasoning" field):
+- When your reply substantively personalizes to the user (references 2+ specific profile fields, factors in existing plans, or gives a plan recommendation), include a short "reasoning" field explaining the thinking process in 1-2 sentences.
+- The reasoning should explain WHY you framed the response the way you did — the connections between the user's situation and your answer — NOT just list the fields you used.
+- Good example: "Because you have PRUShield already, I focused on complementary CI coverage rather than another health plan — and prioritized budget-conscious options since your monthly budget is on the tighter side."
+- Bad example: "I used your age, budget, and existing plans." (This just lists fields without explaining the thinking.)
+- Write it in first-person, as Cova. Keep it grounded — only mention profile fields that actually influenced the response. Do not invent motivations or profile details.
+- Omit this field entirely (do NOT include the key) for short/simple answers, generic definitions, or anything where you didn't meaningfully personalize.
+
 ${this.formatProfile(profile)}
 
 Relevant Prudential policy data:
@@ -467,9 +521,10 @@ Return ONLY a raw JSON object, no markdown, no backticks:
   "reply": <string OR array of blocks>,
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
   "followUpQuestion": "<optional single contextual question, omit key entirely if none>",
-  "profileUpdate": { "<fieldName>": <value> }
+  "profileUpdate": { "<fieldName>": <value> },
+  "reasoning": "<optional 1-2 sentences explaining your thinking when the response substantively personalizes; omit key entirely otherwise>"
 }
-Omit "followUpQuestion" and/or "profileUpdate" entirely (don't include the key) when there's nothing to ask or save this turn.
+Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely (don't include the key) when there's nothing to say for them this turn.
 `.trim();
 
     const contents = [
@@ -492,7 +547,7 @@ Omit "followUpQuestion" and/or "profileUpdate" entirely (don't include the key) 
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       const raw = res.candidates[0].content.parts[0].text.trim();
       const parsed = this.parseResponse(raw);
 
@@ -571,8 +626,10 @@ Return ONLY a raw JSON object, no markdown, no backticks:
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
   "fitScores": [
     { "planId": "<exact plan id>", "score": <0-100>, "reason": "<max 10 words>" }
-  ]
+  ],
+  "reasoning": "<1-2 sentences explaining how you weighed the user's profile against the compared plans to arrive at these fit scores>"
 }
+Since comparisons always factor in the user's profile, always include "reasoning" here. Focus on the thinking (e.g. "Weighted PRUShield lower for you because you already hold PRUExtra as a similar rider, and prioritized PRUWealth II given your wealth accumulation goal") rather than just listing profile fields.
 `.trim();
 
     const body = {
@@ -585,7 +642,7 @@ Return ONLY a raw JSON object, no markdown, no backticks:
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       const raw = res.candidates[0].content.parts[0].text.trim();
       const parsed = this.parseResponse(raw);
 
@@ -663,9 +720,10 @@ Return ONLY a raw JSON object, no markdown, no backticks:
   "reply": [array of blocks],
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
   "followUpQuestion": "<optional>",
-  "profileUpdate": { "<fieldName>": <value> }
+  "profileUpdate": { "<fieldName>": <value> },
+  "reasoning": "<optional 1-2 sentences on how you framed the explanation for this user, if the analysis substantively factored in their profile>"
 }
-Omit "followUpQuestion" and/or "profileUpdate" entirely if there's nothing to ask or save.
+Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely if nothing applies.
 `.trim();
 
     const body = {
@@ -682,7 +740,7 @@ Omit "followUpQuestion" and/or "profileUpdate" entirely if there's nothing to as
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       const raw = res.candidates[0].content.parts[0].text.trim();
       const parsed = this.parseResponse(raw);
 
@@ -732,7 +790,7 @@ Keep it concise — this is a reference document, not a full transcript.
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       return res.candidates[0].content.parts[0].text.trim();
     } catch (err) {
       console.error('[GeminiService] Summary API error:', err);

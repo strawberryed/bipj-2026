@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import {
   Firestore, collection, doc, addDoc, deleteDoc, getDocs, query,
   orderBy, limit, writeBatch, Timestamp
@@ -20,8 +20,8 @@ import { Message } from './gemini.service';
  */
 @Injectable({ providedIn: 'root' })
 export class ChatStorageService {
-  private firestore = inject(Firestore);
 
+  constructor(private firestore: Firestore) { }
 
   /**
    * Loads the user's most recent messages from Firestore, ordered oldest-first
@@ -96,6 +96,7 @@ export class ChatStorageService {
     if (msg.compareCard) doc.compareCard = msg.compareCard;
     if (msg.followUpQuestion) doc.followUpQuestion = msg.followUpQuestion;
     if (msg.attachment) doc.attachment = msg.attachment;
+    if (msg.reasoning) doc.reasoning = msg.reasoning;
     return doc;
   }
 
@@ -108,6 +109,7 @@ export class ChatStorageService {
     if (data.compareCard) msg.compareCard = data.compareCard;
     if (data.followUpQuestion) msg.followUpQuestion = data.followUpQuestion;
     if (data.attachment) msg.attachment = data.attachment;
+    if (data.reasoning) msg.reasoning = data.reasoning;
     return msg;
   }
 }

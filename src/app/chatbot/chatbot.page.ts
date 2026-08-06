@@ -62,7 +62,27 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   messages: Message[] = [];
   inputText = '';
-  isLoading = false;
+
+  // Contextual loading state — null when idle, otherwise indicates
+  // which operation is in progress. Used for showing meaningful
+  // "Analyzing your document..." vs "Preparing comparison..." messages
+  // in the typing indicator, rather than a generic spinner.
+  loadingState: 'sending' | 'analyzing' | 'comparing' | null = null;
+
+  /** Backwards-compat getter: true whenever any operation is in progress. */
+  get isLoading(): boolean {
+    return this.loadingState !== null;
+  }
+
+  /** Text shown in the typing indicator based on what's happening. */
+  get loadingLabel(): string {
+    switch (this.loadingState) {
+      case 'analyzing': return 'Analyzing your document...';
+      case 'comparing': return 'Preparing your comparison...';
+      default: return ''; // 'sending' uses the classic 3-dot indicator
+    }
+  }
+
   isGeneratingSummary = false;
   chips: string[] = [...DEFAULT_CHIPS];
 
@@ -78,6 +98,10 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   // True while policy data is being fetched from Firestore on first load.
   isPolicyDataLoading = true;
+
+  // Tracks which reasoning panels are currently expanded (by message index
+  // in this.messages). Kept as a Set for O(1) toggle.
+  expandedReasoning = new Set<number>();
 
   private lastMessageCount = 0;
 
@@ -196,7 +220,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     }
 
     this.inputText = '';
-    this.isLoading = true;
+    this.loadingState = 'sending';
 
     const userMsg: Message = { role: 'user', content: message };
     this.messages.push(userMsg);
@@ -218,6 +242,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       if (res.followUpQuestion) {
         newMessage.followUpQuestion = res.followUpQuestion;
       }
+      if (res.reasoning) {
+        newMessage.reasoning = res.reasoning;
+      }
 
       this.messages.push(newMessage);
       await this.persistMessage(newMessage);
@@ -235,7 +262,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       await this.persistMessage(errorMsg);
     }
 
-    this.isLoading = false;
+    this.loadingState = null;
   }
 
   // ─────────────────────────────────────────────────────────
@@ -272,7 +299,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.messages.push(uploadMsg);
     await this.persistMessage(uploadMsg);
 
-    this.isLoading = true;
+    this.loadingState = 'analyzing';
 
     try {
       const base64Data = await this.fileToBase64(file);
@@ -286,6 +313,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
       if (res.followUpQuestion) {
         newMessage.followUpQuestion = res.followUpQuestion;
+      }
+      if (res.reasoning) {
+        newMessage.reasoning = res.reasoning;
       }
 
       this.messages.push(newMessage);
@@ -304,7 +334,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       await this.persistMessage(errorMsg);
     }
 
-    this.isLoading = false;
+    this.loadingState = null;
   }
 
   /** Converts a File to a raw base64 string (strips the data: URL prefix). */
@@ -384,7 +414,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.messages.push(userMsg);
     await this.persistMessage(userMsg);
 
-    this.isLoading = true;
+    this.loadingState = 'comparing';
     try {
       const history = this.messages.slice(0, -1);
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
@@ -407,6 +437,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
         },
         followUpQuestion: res.followUpQuestion
       };
+      if (res.reasoning) {
+        compareMsg.reasoning = res.reasoning;
+      }
       this.messages.push(compareMsg);
       await this.persistMessage(compareMsg);
 
@@ -422,12 +455,38 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       await this.persistMessage(errorMsg);
     }
 
-    this.isLoading = false;
+    this.loadingState = null;
     this.selectedPlans = [];
   }
 
   getFitScore(card: CompareCard, planId: string): number {
     return card.fitScores?.find(f => f.planId === planId)?.score ?? 0;
+  }
+
+  /**
+   * Toggles whether the reasoning panel for a given message index is open.
+   */
+  toggleReasoning(messageIndex: number) {
+    if (this.expandedReasoning.has(messageIndex)) {
+      this.expandedReasoning.delete(messageIndex);
+    } else {
+      this.expandedReasoning.add(messageIndex);
+    }
+  }
+
+  isReasoningExpanded(messageIndex: number): boolean {
+    return this.expandedReasoning.has(messageIndex);
+  }
+
+  /**
+   * Maps a fit score to a color class used by the fit bar and percent text.
+   * Thresholds match the scoring anchors in gemini.service.ts's compareMessage
+   * prompt: 80-100 = strong, 50-79 = partial, below 50 = mismatch.
+   */
+  getFitScoreColorClass(score: number): string {
+    if (score >= 80) return 'fit-high';
+    if (score >= 50) return 'fit-mid';
+    return 'fit-low';
   }
 
   async showFitReason(card: CompareCard, planId: string) {
