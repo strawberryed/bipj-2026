@@ -45,7 +45,14 @@ export class AuthPage {
 
     try {
       if (this.isSignUpMode) {
-        // Direct users into the questionnaire before persisting profile completion
+        // Actually create the Firebase Auth account before routing to onboarding.
+        // Onboarding then persists profile fields under this new user's UID.
+        await this.profileService.signUp(this.email, this.password, this.fullName);
+
+        // Wait briefly for auth state to fully register before onboarding
+        // tries to read auth.currentUser (same reason as the login flow).
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         await loader.dismiss();
         this.router.navigate(['/onboarding']);
       } else {

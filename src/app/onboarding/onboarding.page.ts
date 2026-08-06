@@ -64,7 +64,7 @@ export class OnboardingPage implements OnInit {
   }
 
   async finishOnboarding() {
-    if (this.hasInsurance === null || this.hasInsurance === undefined ||!this.mainGoal || !this.primaryConcern) {
+    if (this.hasInsurance === null || this.hasInsurance === undefined || !this.mainGoal || !this.primaryConcern) {
       this.showToast('Please complete all questions.');
       return;
     }
@@ -75,24 +75,26 @@ export class OnboardingPage implements OnInit {
     await loader.present();
 
     try {
+      // Field names deliberately match what saveOnboardingProfile expects
+      // and what the rest of the app (Cova's personalization, insights
+      // generation) reads. saveOnboardingProfile sets isOnboardingCompleted
+      // and derives insights automatically.
       const profileData = {
         fullName: this.fullName,
         age: Number(this.age),
         occupation: this.occupation,
         monthlyIncome: Number(this.monthlyIncome),
         maritalStatus: this.maritalStatus,
-        hasInsurance: this.hasInsurance,
-        mainGoal: this.mainGoal,
+        hasExistingInsurance: !!this.hasInsurance,
+        mainGoals: [this.mainGoal],
         monthlyBudget: this.monthlyBudget,
-        primaryConcern: this.primaryConcern,
-        isProfileComplete: true
+        topConcern: this.primaryConcern
       };
 
-      // Call updateProfile instead of saveUserProfile
-      await this.profileService.updateProfile(profileData);
+      await this.profileService.saveOnboardingProfile(profileData);
 
       await loader.dismiss();
-      this.router.navigate(['/tabs/tab1']); // Navigate to Landing Page after onboarding
+      this.router.navigate(['/tabs/tab1']);
     } catch (error: any) {
       await loader.dismiss();
       this.showToast(error.message || 'Failed to save profile.');
