@@ -13,35 +13,38 @@ const routes: Routes = [
   },
   {
     path: 'tab4',
-    loadChildren: () => import('./tab4/tab4.module').then( m => m.Tab4PageModule)
-  },
-  {
-      path: 'tab5',
-      loadChildren: () => import('./tab5/tab5.module').then(m => m.Tab5PageModule)
+    loadChildren: () => import('./tab4/tab4.module').then(m => m.Tab4PageModule)
   },
   {
     path: 'connect-consultant',
-    loadChildren: () => import('./connect-consultant/connect-consultant.module').then( m => m.ConnectConsultantPageModule)
+    loadChildren: () => import('./connect-consultant/connect-consultant.module').then(m => m.ConnectConsultantPageModule)
   },
   {
     path: 'upgrade',
-    loadChildren: () => import('./upgrade/upgrade.module').then( m => m.UpgradePageModule)
+    loadChildren: () => import('./upgrade/upgrade.module').then(m => m.UpgradePageModule)
   },
   {
     path: 'checkout-page',
-    loadChildren: () => import('./checkout-page/checkout-page.module').then( m => m.CheckoutPageModule)
+    loadChildren: () => import('./checkout-page/checkout-page.module').then(m => m.CheckoutPageModule)
   },
   {
     path: 'book-meeting',
-    loadChildren: () => import('./book-meeting/book-meeting.module').then( m => m.BookMeetingPageModule)
+    loadChildren: () => import('./book-meeting/book-meeting.module').then(m => m.BookMeetingPageModule)
   },
   {
     path: 'customer-onboarding',
-    loadChildren: () => import('./customer-onboarding/customer-onboarding.module').then( m => m.CustomerOnboardingPageModule)
+    loadChildren: () => import('./customer-onboarding/customer-onboarding.module').then(m => m.CustomerOnboardingPageModule)
+  },
+  {
+    path: 'onboarding',
+    loadChildren: () => import('./onboarding/onboarding.module').then(m => m.OnboardingPageModule)
+  },
+  {
+    path: 'auth',
+    loadChildren: () => import('./auth/auth.module').then(m => m.AuthPageModule)
   }
-
-
 ];
+
 @NgModule({
   imports: [
     RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })

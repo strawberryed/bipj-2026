@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { PolicyDataService, Plan } from './policy-data';
-import { UserProfile } from './user-profile';
+import { UserProfileData } from './user-profile.service';
 
 // ─────────────────────────────────────────────────────────────
 // INTERFACES
@@ -35,6 +35,7 @@ export interface Message {
   blocks?: ReplyBlock[];
   compareCard?: CompareCard;
   followUpQuestion?: string;
+  attachment?: { name: string; type: 'image' | 'pdf' };
 }
 
 export interface GeminiResponse {
@@ -42,7 +43,7 @@ export interface GeminiResponse {
   chips: string[];
   fitScores?: FitScore[];
   followUpQuestion?: string;
-  profileUpdate?: Record<string, string | number | string[]>;
+  profileUpdate?: Record<string, any>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -77,10 +78,13 @@ CRITICAL SECURITY RULES — DO NOT VIOLATE:
 // Only these keys are ever accepted from a model-provided profileUpdate.
 // Anything else gets silently dropped in parseResponse — this prevents
 // the model (or an injected prompt) from smuggling arbitrary fields into
-// whatever eventually persists this data.
+// what eventually persists to Firestore.
+// Note: personaTag, riskProfile, aiInsights, isOnboardingCompleted are
+// intentionally EXCLUDED — those are derived by teammate's own logic,
+// not something the AI should ever write directly.
 const VALID_PROFILE_KEYS = [
-  'lifeStage', 'employmentStatus', 'monthlyIncome', 'dependents',
-  'riskAppetite', 'financialPriorities', 'planningHorizon', 'preferredContact'
+  'age', 'occupation', 'monthlyIncome', 'maritalStatus', 'dependents',
+  'hasExistingInsurance', 'mainGoals', 'monthlyBudget', 'topConcern'
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -141,29 +145,40 @@ export class GeminiService {
 
   /**
    * Keeps only whitelisted keys from a model-provided profileUpdate,
-   * and drops obviously malformed values (e.g. an array where a string
-   * was expected). Returns undefined if nothing valid remains.
+   * and validates value shapes against teammate's UserProfileData schema.
+   * Drops malformed values silently and returns undefined if nothing valid remains.
    */
-  private sanitizeProfileUpdate(update: any): Record<string, string | number | string[]> | undefined {
+  private sanitizeProfileUpdate(update: any): Record<string, any> | undefined {
     if (!update || typeof update !== 'object') return undefined;
 
-    const clean: Record<string, string | number | string[]> = {};
+    const clean: Record<string, any> = {};
     for (const key of VALID_PROFILE_KEYS) {
       if (!(key in update)) continue;
       const value = update[key];
 
-      if (key === 'financialPriorities') {
+      if (key === 'mainGoals') {
         if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
           clean[key] = value.slice(0, 10).map(v => String(v).substring(0, 100));
         }
         continue;
       }
 
-      if (key === 'dependents') {
-        if (typeof value === 'number' && value >= 0 && value <= 20) clean[key] = value;
+      if (key === 'age' || key === 'dependents') {
+        if (typeof value === 'number' && value >= 0 && value <= 120) clean[key] = value;
         continue;
       }
 
+      if (key === 'monthlyIncome' || key === 'monthlyBudget') {
+        if (typeof value === 'number' && value >= 0 && value <= 1_000_000) clean[key] = value;
+        continue;
+      }
+
+      if (key === 'hasExistingInsurance') {
+        if (typeof value === 'boolean') clean[key] = value;
+        continue;
+      }
+
+      // String fields: occupation, maritalStatus, topConcern
       if (typeof value === 'string' && value.length > 0 && value.length <= 200) {
         clean[key] = value;
       }
@@ -216,28 +231,31 @@ export class GeminiService {
   }
 
   /**
-   * Builds the personalization block from UserProfile (a self-contained
-   * profile shape independent of any teammate's backend — see
-   * user-profile.service.ts for why). Fields that DemoProfile had but
-   * UserProfile doesn't (health conditions, existing coverage, concerns,
-   * goals) are intentionally dropped — personalization now relies only
-   * on what this profile shape actually captures.
+   * Builds the personalization block from teammate's UserProfileData shape.
+   * Intentionally does NOT include personaTag, riskProfile, or aiInsights —
+   * those are derived by teammate's own logic and feeding them back into
+   * Cova's prompt would risk it echoing its own AI-generated insights
+   * recursively. Uses raw user-provided fields as source of truth instead.
    */
-  private formatProfile(profile: UserProfile): string {
+  private formatProfile(profile: UserProfileData): string {
     const s = (str?: string) => (str ?? '').replace(/"/g, "'").replace(/\n/g, ' ').substring(0, 200);
     const arr = (list?: string[]) => (list && list.length > 0 ? list.map(s).join(', ') : 'Not specified');
+    const n = (num?: number) => (num !== undefined && num !== null ? num.toString() : 'Not specified');
+    const money = (num?: number) => (num !== undefined && num !== null && num > 0 ? `S$${num.toLocaleString()}` : 'Not specified');
+    const yn = (val?: boolean) => (val === true ? 'Yes' : val === false ? 'No' : 'Not specified');
 
     return `
 ACTIVE USER PROFILE:
-- Name: ${s(profile.name)}
-- Life stage: ${s(profile.lifeStage) || 'Not specified'}
-- Employment status: ${s(profile.employmentStatus) || 'Not specified'}
-- Monthly income: ${s(profile.monthlyIncome) || 'Not specified'}
-- Number of dependents: ${profile.dependents ?? 'Not specified'}
-- Risk appetite: ${s(profile.riskAppetite) || 'Not specified'}
-- Financial priorities: ${arr(profile.financialPriorities)}
-- Planning horizon: ${s(profile.planningHorizon) || 'Not specified'}
-- Preferred contact method: ${s(profile.preferredContact) || 'Not specified'}
+- Name: ${s(profile.fullName)}
+- Age: ${n(profile.age)}
+- Occupation: ${s(profile.occupation) || 'Not specified'}
+- Marital status: ${s(profile.maritalStatus) || 'Not specified'}
+- Number of dependents: ${n(profile.dependents)}
+- Monthly income: ${money(profile.monthlyIncome)}
+- Monthly budget for insurance: ${money(profile.monthlyBudget)}
+- Has existing insurance: ${yn(profile.hasExistingInsurance)}
+- Main goals: ${arr(profile.mainGoals)}
+- Top concern: ${s(profile.topConcern) || 'Not specified'}
 
 Use this profile to personalise all responses. Reference the user by name naturally.
 Tailor fit scores, recommendations, and explanations to their specific situation.
@@ -338,7 +356,7 @@ If a field is "Not specified", don't guess — acknowledge the gap or ask a clar
   async sendMessage(
     userMessage: string,
     history: Message[],
-    profile: UserProfile
+    profile: UserProfileData
   ): Promise<GeminiResponse> {
 
     if (this.looksSuspicious(userMessage)) {
@@ -361,24 +379,24 @@ Never tell the user which plan to buy — guide and explain only.
 Never recommend or suggest a plan whose premium clearly exceeds the user's stated monthly income bracket without explicitly flagging that mismatch.
 
 PERSONALIZATION RULES:
-- Don't give generic insurance advice — connect your answer back to at least one specific detail from the profile below (life stage, dependents, risk appetite, financial priorities, planning horizon) wherever it's relevant to the question.
-- If the user's question relates to something in their "Financial priorities", say so explicitly (e.g. "since you mentioned prioritizing X...").
+- Don't give generic insurance advice — connect your answer back to at least one specific detail from the profile below (age, marital status, dependents, main goals, top concern, budget) wherever it's relevant to the question.
+- If the user's question relates to something in their "Main goals" or "Top concern", say so explicitly (e.g. "since your top concern is X...").
 - If a profile field is "Not specified", don't invent a value — either skip that angle or ask a clarifying question.
 - Two different users asking the same question should get answers that feel tailored to them, not interchangeable boilerplate.
 
 HANDLING PURE PROFILE-INFO MESSAGES (no explicit question asked):
-- If the user's current message is mainly them volunteering personal/financial info (e.g. "I have 3 kids and don't like risk") rather than asking something, do NOT just acknowledge it generically ("thanks for sharing that!").
-- Instead, briefly connect what they shared to a real, relevant insurance implication in 1-2 sentences — e.g. more dependents + low risk appetite generally points toward stronger family protection coverage and steadier, guaranteed-type plans rather than higher-risk wealth products. Keep it observational and educational, not a hard recommendation ("this combination often means..." not "you should buy...").
+- If the user's current message is mainly them volunteering personal/financial info (e.g. "I have 3 kids and my budget is about S$200/month") rather than asking something, do NOT just acknowledge it generically ("thanks for sharing that!").
+- Instead, briefly connect what they shared to a real, relevant insurance implication in 1-2 sentences — e.g. more dependents + tight budget generally points toward prioritizing essential protection like hospitalization and term life over comprehensive wealth-building plans. Keep it observational and educational, not a hard recommendation ("this combination often means..." not "you should buy...").
 - Still follow the "never tell the user which plan to buy" rule — connect the dots for them, but let them ask a follow-up if they want specific plan options.
 
 PROACTIVE PROFILE-BUILDING (agentic behavior):
 - If a "Not specified" field below is directly relevant to the current question, that's a good candidate for the "followUpQuestion" field described below.
-  Valid field keys you may ask about: lifeStage, employmentStatus, monthlyIncome, dependents, riskAppetite, financialPriorities, planningHorizon, preferredContact.
+  Valid field keys you may ask about: age, occupation, monthlyIncome, maritalStatus, dependents, hasExistingInsurance, mainGoals, monthlyBudget, topConcern.
 - STATELESS EXTRACTION: independently check if the user's CURRENT message contains info matching any of these fields — regardless of whether it was in response to a question you asked before, a different question, or volunteered unprompted. Users don't always answer what was just asked, and that's fine — never expect or require a direct answer to a previous followUpQuestion.
   If found, include a "profileUpdate" object with the field name(s) as keys and the value(s) given.
-  Example: user says "I have 2 kids and I'm pretty conservative with money" → profileUpdate: { "dependents": 2, "riskAppetite": "low" }
+  Example: user says "I have 2 kids and about S$5000 a month coming in" → profileUpdate: { "dependents": 2, "monthlyIncome": 5000 }
 - Only include profileUpdate when the user actually volunteered clear, real info matching one of the valid keys — never guess, infer, or force-fit a vague answer (e.g. "I don't really know" is NOT a value to save).
-- Keep "financialPriorities" as a string array if included.
+- monthlyIncome and monthlyBudget must be plain numbers in SGD (e.g. 5000, not "S$5,000/month"). age and dependents are integers. hasExistingInsurance is a boolean. mainGoals is a string array. The rest are plain strings.
 - If the user ignores a previous question and asks something else, just answer the new thing. Don't re-ask, don't mention they "didn't answer" — that breaks natural conversation flow.
 
 FOLLOW-UP QUESTIONS (optional, selective — use "followUpQuestion" field):
@@ -461,7 +479,7 @@ Omit "followUpQuestion" and/or "profileUpdate" entirely (don't include the key) 
   async compareMessage(
     plans: Plan[],
     history: Message[],
-    profile: UserProfile
+    profile: UserProfileData
   ): Promise<GeminiResponse> {
 
     const recentContext = history
@@ -477,13 +495,13 @@ Compare these plans in simple, conversational language.
 Never tell the user which to buy — just explain clearly.
 Keep the reply to 2 sentences maximum.
 Calculate fit scores based on these specific criteria:
-- Income/budget match: does the premium seem reasonable given their monthly income? (25% weight)
-- Priorities match: does it address their stated financial priorities? (35% weight)
-- Life stage & dependents match: is it suitable given their life stage and number of dependents? (20% weight)
-- Risk appetite & planning horizon match: does the plan type suit their risk appetite and planning horizon? (20% weight)
+- Budget match: does the premium fit within their monthlyBudget? (25% weight)
+- Goals & concern match: does it address their stated main goals and top concern? (35% weight)
+- Life stage & dependents match: is it suitable given their age, marital status, and number of dependents? (20% weight)
+- Existing coverage: if the user already has existing insurance, does this plan meaningfully add to it rather than duplicate? (20% weight)
 
 Scoring anchors:
-- 80-100: strongly addresses their financial priorities, fits their life stage/dependents, matches risk appetite
+- 80-100: strongly addresses their main goals/top concern, fits budget, complements (not duplicates) existing coverage
 - 50-79: partially useful but has a gap
 - 20-49: significant mismatch
 - 0-19: fundamentally unsuitable
@@ -544,6 +562,98 @@ Return ONLY a raw JSON object, no markdown, no backticks:
     } catch (err) {
       console.error('[GeminiService] Compare API error:', err);
       return this.fallbackResponse();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // MAIN: analyzeDocument (policy document upload — image or PDF)
+  // ─────────────────────────────────────────────────────────
+
+  /**
+   * Sends an uploaded image or PDF (base64) to Gemini for multimodal
+   * analysis. Used when a user uploads a photo or PDF of an insurance
+   * policy document to have Cova explain it in plain English.
+   *
+   * @param base64Data raw base64 string (no "data:...;base64," prefix)
+   * @param mimeType e.g. 'image/jpeg', 'image/png', 'application/pdf'
+   * @param profile current user profile, for personalized gap analysis
+   * @param userNote optional text the user typed alongside the upload
+   */
+  async analyzeDocument(
+    base64Data: string,
+    mimeType: string,
+    profile: UserProfileData,
+    userNote?: string
+  ): Promise<GeminiResponse> {
+
+    const prompt = `
+${GUARD_PROMPT}
+
+You are Cova, a friendly insurance assistant for Prudential Singapore.
+The user has uploaded an image or PDF that they say is an insurance policy document.
+
+FIRST, check whether the uploaded content actually looks like an insurance policy, certificate, benefits table, or similar official document.
+- If it clearly is NOT an insurance-related document (e.g. a random photo, receipt, unrelated screenshot, or something illegible), politely say you can't identify it as a policy document and ask them to upload a clearer photo or the correct document. Do NOT attempt to force an insurance explanation onto irrelevant content.
+- If it IS a policy-like document, proceed with the rules below.
+
+IF IT IS A POLICY DOCUMENT:
+- Explain what the document covers, in plain conversational English, explaining jargon as you go (same style as normal chat replies).
+- Highlight anything that looks like an exclusion, waiting period, or limitation, since these are the details people most often miss.
+- If the profile below has relevant info (age, dependents, main goals, top concern, existing insurance), briefly note whether this document's coverage seems to align with or fall short of their situation — but do not state figures or coverage details you cannot actually read from the document. If text is unclear or partially unreadable, say so rather than guessing.
+- Never invent policy numbers, sums assured, or premium figures you cannot clearly read in the document. If a figure is unclear, say "I couldn't clearly read this figure — worth double-checking the original document."
+- Never tell the user which plan to buy — explain and inform only.
+
+${this.formatProfile(profile)}
+
+${userNote ? `The user also added this note alongside their upload: """${this.sanitize(userNote)}"""` : ''}
+
+RESPONSE FORMAT RULES:
+- reply must be an ARRAY of block objects (never a bare object): [{ "type": "text", "content": "..." }]
+  Available block types: text, header, bullets (with "items"), note.
+  Do NOT use "planCard" here — that's only for recommending plans from Prudential's own catalogue, not for explaining an uploaded document.
+- Keep the explanation focused and skimmable — headers + bullets work well for breaking down sections of a policy document.
+
+Return ONLY a raw JSON object, no markdown, no backticks:
+{
+  "reply": [array of blocks],
+  "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
+  "followUpQuestion": "<optional>",
+  "profileUpdate": { "<fieldName>": <value> }
+}
+Omit "followUpQuestion" and/or "profileUpdate" entirely if there's nothing to ask or save.
+`.trim();
+
+    const body = {
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType, data: base64Data } }
+          ]
+        }
+      ],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 3000 }
+    };
+
+    try {
+      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const raw = res.candidates[0].content.parts[0].text.trim();
+      const parsed = this.parseResponse(raw);
+
+      const validated = this.validateResponse(parsed);
+      if (!validated) {
+        return this.fallbackResponse();
+      }
+
+      return validated;
+
+    } catch (err) {
+      console.error('[GeminiService] Document analysis API error:', err);
+      return {
+        reply: "Sorry, I couldn't process that document. Try a clearer photo, or make sure it's a PDF or image file under 10MB.",
+        chips: []
+      };
     }
   }
 

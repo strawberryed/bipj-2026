@@ -1,0 +1,168 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="purple-toolbar">
+    <ion-buttons slot="start">
+      <ion-button *ngIf="currentStep === 2" (click)="prevStep()" class="back-btn">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ currentStep === 1 ? 'Build Your Profile' : 'Insurance Needs' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="onboarding-content">
+  <!-- STEP 1 -->
+  <div *ngIf="currentStep === 1" class="step-container">
+    <div class="header-section">
+      <h2>Build Your Profile</h2>
+      <p>Let's get to know you. We'll use this information to build your insurance profile.</p>
+    </div>
+
+    <ion-card class="form-card">
+      <ion-card-content>
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="person-outline"></ion-icon> Full Name
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-input [(ngModel)]="fullName" type="text" placeholder="e.g. John Doe"></ion-input>
+          </ion-item>
+        </div>
+
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="calendar-outline"></ion-icon> Age
+          </ion-label>
+          <ion-item lines="none" class="custom-input" [class.has-error]="ageError">
+            <ion-input [(ngModel)]="age" type="number" placeholder="e.g. 25" (ionInput)="ageError = ''">
+            </ion-input>
+          </ion-item>
+          <!-- Inline Error Message -->
+          <div *ngIf="ageError" class="error-message">
+            <ion-icon name="alert-circle-outline"></ion-icon>
+            <span>{{ ageError }}</span>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="briefcase-outline"></ion-icon> Employment Status
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-select [(ngModel)]="occupation" placeholder="Select Employment Type" interface="popover">
+              <ion-select-option value="Full-time">Full-time</ion-select-option>
+              <ion-select-option value="Part-time">Part-time</ion-select-option>
+              <ion-select-option value="Freelancer / Self-Employed">Freelancer/Self-Employed</ion-select-option>
+              <ion-select-option value="Business Owner">Business Owner</ion-select-option>
+              <ion-select-option value="Student">Student</ion-select-option>
+              <ion-select-option value="Unemployed / Between Jobs">Unemployed/Between Jobs</ion-select-option>
+              <ion-select-option value="Retired">Retired</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </div>
+
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="wallet-outline"></ion-icon> Monthly Income (S$)
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-input [(ngModel)]="monthlyIncome" type="number" placeholder="e.g. 3500"></ion-input>
+          </ion-item>
+        </div>
+
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="heart-outline"></ion-icon> Marital Status
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-select [(ngModel)]="maritalStatus" placeholder="Select Status" interface="popover">
+              <ion-select-option value="Single">Single</ion-select-option>
+              <ion-select-option value="Married">Married</ion-select-option>
+              <ion-select-option value="Divorced">Divorced</ion-select-option>
+              <ion-select-option value="Widowed">Widowed</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </div>
+
+        <ion-button expand="block" shape="round" class="action-btn" (click)="nextStep()">
+          CONTINUE
+        </ion-button>
+
+        <p class="security-note">
+          <ion-icon name="lock-closed-outline"></ion-icon>
+          Your information is safe with us.
+        </p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- STEP 2 -->
+  <div *ngIf="currentStep === 2" class="step-container">
+    <div class="header-section">
+      <h2>Insurance Needs</h2>
+      <p>Help us understand your needs to recommend suitable plans.</p>
+    </div>
+
+    <ion-card class="form-card">
+      <ion-card-content>
+        <div class="question-group">
+          <label class="group-label">
+            <ion-icon name="shield-checkmark-outline"></ion-icon> Do you currently have insurance?
+          </label>
+          <ion-radio-group [(ngModel)]="hasInsurance">
+            <ion-item lines="none" class="radio-item">
+              <ion-label>Yes</ion-label>
+              <ion-radio slot="end" [value]="true"></ion-radio>
+            </ion-item>
+            <ion-item lines="none" class="radio-item">
+              <ion-label>No</ion-label>
+              <ion-radio slot="end" [value]="false"></ion-radio>
+            </ion-item>
+          </ion-radio-group>
+        </div>
+
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="disc-outline"></ion-icon> What is your main goal?
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-select [(ngModel)]="mainGoal" placeholder="Select Main Goal" interface="popover">
+              <ion-select-option value="Health Protection">Health Protection</ion-select-option>
+              <ion-select-option value="Retirement">Retirement</ion-select-option>
+              <ion-select-option value="Savings">Savings</ion-select-option>
+              <ion-select-option value="Family Protection">Family Protection</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </div>
+
+        <div class="question-group">
+          <label class="group-label">
+            <ion-icon name="cash-outline"></ion-icon> Preferred monthly insurance budget:
+          </label>
+          <div class="budget-display">S$ {{ monthlyBudget }} / month</div>
+          <ion-range min="100" max="1000" step="50" [(ngModel)]="monthlyBudget" class="purple-range">
+            <ion-label slot="start">S$100</ion-label>
+            <ion-label slot="end">S$1,000</ion-label>
+          </ion-range>
+        </div>
+
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="help-circle-outline"></ion-icon> Primary Financial Concern
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-select [(ngModel)]="primaryConcern" placeholder="Select Concern" interface="popover">
+              <ion-select-option value="Medical Expenses">Medical Expenses</ion-select-option>
+              <ion-select-option value="Income Loss">Income Loss</ion-select-option>
+              <ion-select-option value="Critical Illness">Critical Illness</ion-select-option>
+              <ion-select-option value="Wealth Accumulation">Wealth Accumulation</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </div>
+
+        <ion-button expand="block" shape="round" class="action-btn" (click)="finishOnboarding()">
+          GENERATE MY PROFILE
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

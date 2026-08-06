@@ -1,0 +1,217 @@
+// Brand Theme Variables
+$purple-primary: #6c5ce7;
+$purple-hover: #5b4bc4;
+$purple-light: #f3f0ff;
+$text-dark: #1e1e2d;
+$text-muted: #6c757d;
+$bg-light: #f8f9fa;
+
+.purple-toolbar {
+    --background: #ffffff;
+    --color: #{$text-dark};
+    border-bottom: 1px solid #eef0f3;
+
+    ion-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: $text-dark;
+    }
+
+    .back-btn {
+        --color: #{$purple-primary};
+    }
+}
+
+.onboarding-content {
+    --background: #{$bg-light};
+    padding: 20px 16px;
+}
+
+.step-container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+.header-section {
+    text-align: center;
+    margin-top: 12px;
+    margin-bottom: 24px;
+
+    h2 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: $text-dark;
+        margin-bottom: 8px;
+    }
+
+    p {
+        font-size: 0.95rem;
+        color: $text-muted;
+        line-height: 1.5;
+        margin: 0;
+    }
+}
+
+.form-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(108, 92, 231, 0.08);
+    border: 1px solid #eef0f3;
+    margin: 0;
+
+    ion-card-content {
+        padding: 28px 24px;
+    }
+}
+
+/* Clear Separate Field Layout (Prevents Overlapping) */
+.field-group {
+    margin-bottom: 20px;
+
+    .field-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: $text-dark;
+        margin-bottom: 8px;
+
+        ion-icon {
+            color: $purple-primary;
+            font-size: 1.1rem;
+        }
+    }
+}
+
+.custom-input {
+    --background: #{$bg-light};
+    --color: #{$text-dark};
+    --border-radius: 12px;
+    --padding-start: 14px;
+    --padding-end: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.2s ease-in-out;
+
+    &:focus-within {
+        border-color: $purple-primary;
+        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+    }
+
+    ion-input,
+    ion-select {
+        --padding-top: 12px;
+        --padding-bottom: 12px;
+        font-size: 0.95rem;
+        color: $text-dark;
+        --placeholder-color: #a0aec0;
+        --placeholder-opacity: 1;
+    }
+}
+
+/* Radio & Selection Options */
+.question-group {
+    margin-bottom: 24px;
+
+    .group-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: $text-dark;
+        margin-bottom: 12px;
+
+        ion-icon {
+            color: $purple-primary;
+            font-size: 1.1rem;
+        }
+    }
+}
+
+.radio-item {
+    --background: #{$bg-light};
+    --color: #{$text-dark};
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 10px;
+
+    ion-radio {
+        --color-checked: #{$purple-primary};
+    }
+}
+
+.budget-display {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: $purple-primary;
+    text-align: center;
+    margin: 12px 0 6px 0;
+}
+
+.purple-range {
+    --bar-background: #e2e8f0;
+    --bar-background-active: #{$purple-primary};
+    --knob-background: #{$purple-primary};
+    --pin-background: #{$purple-primary};
+
+    ion-label {
+        color: $text-muted;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+}
+
+/* Primary Button Style */
+.action-btn {
+    --background: #{$purple-primary};
+    --background-hover: #{$purple-hover};
+    --background-activated: #{$purple-hover};
+    --color: #ffffff;
+    --border-radius: 30px;
+    margin-top: 28px;
+    height: 52px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 20px rgba(108, 92, 231, 0.3);
+}
+
+.security-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: $text-muted;
+    margin-top: 18px;
+    text-align: center;
+
+    ion-icon {
+        font-size: 0.95rem;
+    }
+}
+
+/* Inline Error Styling */
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #e63946;
+    font-size: 0.82rem;
+    font-weight: 500;
+    margin-top: 6px;
+    margin-left: 4px;
+
+    ion-icon {
+        font-size: 1rem;
+    }
+}
+
+/* Red border when field has an error */
+.custom-input.has-error {
+    border-color: #e63946 !important;
+    box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.15) !important;
+}

@@ -156,9 +156,9 @@
 <!-- Input bar -->
 <ion-footer class="ion-no-border">
   <div class="input-bar">
-    <ion-button fill="clear" (click)="openCompare()" [disabled]="isPolicyDataLoading">
-      <ion-icon name="git-compare-outline"></ion-icon>
-    </ion-button>
+<ion-button fill="clear" (click)="openCompare()" [disabled]="isPolicyDataLoading">
+  <ion-icon name="git-compare-outline"></ion-icon>
+</ion-button>
     <ion-input [(ngModel)]="inputText" placeholder="Ask anything..." (keyup.enter)="send()" class="input-field">
     </ion-input>
     <ion-button fill="clear" (click)="send()" [disabled]="!inputText.trim()">

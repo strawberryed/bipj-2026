@@ -1,7 +1,9 @@
-import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit, OnDestroy } from '@angular/core';
 import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gemini.service';
-import { UserProfile, UserProfileService } from '../services/user-profile';
+import { UserProfileData, UserProfileService } from '../services/user-profile.service';
 import { PolicyDataService, Plan } from '../services/policy-data';
+import { ChatStorageService } from '../services/chat-storage.service';
+import { Subscription } from 'rxjs';
 import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
 
@@ -24,6 +26,9 @@ const CATEGORY_MAP: Record<string, string> = {
   'Wealth Accumulation': 'wealth'
 };
 
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
 const DEFAULT_CHIPS = [
   'What does PRUShield cover?',
   'Do I need critical illness coverage?',
@@ -31,21 +36,22 @@ const DEFAULT_CHIPS = [
   'How much coverage do I need?'
 ];
 
-// Local chat history key — self-contained, same reasoning as
-// user-profile.service.ts. Swap this out once real chat storage is confirmed.
-const CHAT_STORAGE_KEY = 'cova_chat_history_v1';
-
 @Component({
   selector: 'app-chatbot',
   templateUrl: './chatbot.page.html',
   styleUrls: ['./chatbot.page.scss'],
   standalone: false,
 })
-export class ChatbotPage implements AfterViewChecked, OnInit {
+export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
-
-  profile: UserProfile = { id: 'guest', name: 'Guest' };
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  isAuthReady = false;
+  // Current user's profile — kept in sync via userProfile$ subscription
+  // to teammate's UserProfileService (auth-scoped and Firestore-backed).
+  profile: UserProfileData = { fullName: 'Guest' };
+  currentUid: string | null = null;
+  private profileSub?: Subscription;
 
   messages: Message[] = [];
   inputText = '';
@@ -72,18 +78,34 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     private gemini: GeminiService,
     private profileService: UserProfileService,
     private policyData: PolicyDataService,
+    private chatStorage: ChatStorageService,
     private alertCtrl: AlertController
   ) { }
 
   async ngOnInit() {
-    this.profile = this.profileService.getProfile();
-    this.loadChat();
+    // NEW: get UID immediately from auth state, not from the Firestore profile pipe
+    this.profileService.authUser$.subscribe(authUser => {
+      const uid = authUser?.uid ?? null;
+      const uidChanged = uid !== this.currentUid;
+      this.currentUid = uid;
+      this.isAuthReady = true;   // auth has resolved at least once
 
-    // Policy data loads once and is cached in-memory afterward (see
-    // PolicyDataService) — this only actually hits Firestore on the
-    // very first load of the app session.
+      if (uidChanged || (uid && this.messages.length === 0)) {
+        this.loadChat();         // drop the await; let it run in background
+      }
+    });
+
+    // Keep the existing profile subscription for name/avatar/etc.
+    this.profileSub = this.profileService.userProfile$.subscribe(profileData => {
+      this.profile = profileData ?? { fullName: 'Guest' };
+    });
+
     await this.policyData.ensureLoaded();
     this.isPolicyDataLoading = false;
+  }
+
+  ngOnDestroy() {
+    this.profileSub?.unsubscribe();
   }
 
   ngAfterViewChecked() {
@@ -94,32 +116,39 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Chat Persistence (self-contained, see note on CHAT_STORAGE_KEY above)
+  // Chat Persistence (per-user Firestore subcollection via ChatStorageService)
   // ─────────────────────────────────────────────────────────
 
-  saveChat() {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.messages.slice(-MAX_HISTORY)));
+  /** Appends a single new message to the user's Firestore chat history. */
+  private async persistMessage(message: Message) {
+    await this.chatStorage.appendMessage(this.currentUid, message);
   }
 
-  loadChat() {
-    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
-    this.messages = saved ? JSON.parse(saved) : [];
+  /** Loads the user's chat history from Firestore into this.messages. */
+  async loadChat() {
+    this.messages = await this.chatStorage.loadChat(this.currentUid, MAX_HISTORY);
   }
 
-  reset() {
+  async reset() {
     this.messages = [];
     this.chips = [...DEFAULT_CHIPS];
-    localStorage.removeItem(CHAT_STORAGE_KEY);
+    await this.chatStorage.clearChat(this.currentUid);
   }
 
   // ─────────────────────────────────────────────────────────
   // Profile updates (agentic profile-building)
   // ─────────────────────────────────────────────────────────
 
-  private applyProfileUpdate(update?: Record<string, string | number | string[]>) {
-    if (!update) return;
-    this.profile = this.profileService.updateProfile(update);
-    console.log('[ChatbotPage] Profile updated:', update);
+  private async applyProfileUpdate(update?: Record<string, any>) {
+    if (!update || !this.currentUid) return;
+    try {
+      await this.profileService.updateProfile(update);
+      console.log('[ChatbotPage] Profile updated:', update);
+      // userProfile$ subscription above will fire and refresh this.profile
+      // automatically once Firestore emits the updated document.
+    } catch (err) {
+      console.error('[ChatbotPage] Failed to persist profile update:', err);
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -130,9 +159,17 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     const message = (text ?? this.inputText).trim();
     if (!message || this.isLoading) return;
 
+    if (!this.currentUid) {
+      await this.showErrorAlert('Please log in to save chat history.');
+      return;
+    }
+
     this.inputText = '';
     this.isLoading = true;
-    this.messages.push({ role: 'user', content: message });
+
+    const userMsg: Message = { role: 'user', content: message };
+    this.messages.push(userMsg);
+    await this.persistMessage(userMsg);
 
     const history = this.messages.slice(0, -1);
 
@@ -148,20 +185,104 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       }
 
       this.messages.push(newMessage);
+      await this.persistMessage(newMessage);
 
       if (res.chips?.length) this.chips = res.chips;
-      this.applyProfileUpdate(res.profileUpdate);
+      await this.applyProfileUpdate(res.profileUpdate);
 
     } catch (e) {
       console.error('[ChatbotPage] sendMessage failed:', e);
-      this.messages.push({
+      const errorMsg: Message = {
         role: 'assistant',
         content: "Sorry, something went wrong. Try again?"
-      });
+      };
+      this.messages.push(errorMsg);
+      await this.persistMessage(errorMsg);
     }
 
     this.isLoading = false;
-    this.saveChat();
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Document upload (policy document photo/PDF explanation)
+  // ─────────────────────────────────────────────────────────
+
+  triggerFileUpload() {
+    this.fileInput.nativeElement.click();
+  }
+
+  async onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // reset so selecting the same file again still fires change
+    if (!file) return;
+
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      await this.showErrorAlert('Please upload a JPG, PNG, WEBP image, or a PDF file.');
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      await this.showErrorAlert('File is too large. Please upload a file under 10MB.');
+      return;
+    }
+
+    const attachmentType: 'image' | 'pdf' = file.type === 'application/pdf' ? 'pdf' : 'image';
+
+    const uploadMsg: Message = {
+      role: 'user',
+      content: '',
+      attachment: { name: file.name, type: attachmentType }
+    };
+    this.messages.push(uploadMsg);
+    await this.persistMessage(uploadMsg);
+
+    this.isLoading = true;
+
+    try {
+      const base64Data = await this.fileToBase64(file);
+
+      const res = await this.gemini.analyzeDocument(base64Data, file.type, this.profile);
+
+      const newMessage: Message = Array.isArray(res.reply)
+        ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
+        : { role: 'assistant', content: res.reply as string };
+
+      if (res.followUpQuestion) {
+        newMessage.followUpQuestion = res.followUpQuestion;
+      }
+
+      this.messages.push(newMessage);
+      await this.persistMessage(newMessage);
+
+      if (res.chips?.length) this.chips = res.chips;
+      await this.applyProfileUpdate(res.profileUpdate);
+
+    } catch (e) {
+      console.error('[ChatbotPage] analyzeDocument failed:', e);
+      const errorMsg: Message = {
+        role: 'assistant',
+        content: "Sorry, I couldn't process that document. Try again?"
+      };
+      this.messages.push(errorMsg);
+      await this.persistMessage(errorMsg);
+    }
+
+    this.isLoading = false;
+  }
+
+  /** Converts a File to a raw base64 string (strips the data: URL prefix). */
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1] ?? '';
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   // ─────────────────────────────────────────────────────────
@@ -223,7 +344,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
     this.closeCompare();
 
     const names = this.selectedPlans.map(p => p.name).join(' and ');
-    this.messages.push({ role: 'user', content: `Compare ${names}` });
+    const userMsg: Message = { role: 'user', content: `Compare ${names}` };
+    this.messages.push(userMsg);
+    await this.persistMessage(userMsg);
 
     this.isLoading = true;
     try {
@@ -237,7 +360,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
         { label: 'Does not cover', values: this.selectedPlans.map(p => p.notCovered.join(', ')) }
       ];
 
-      this.messages.push({
+      const compareMsg: Message = {
         role: 'assistant',
         content: res.reply as string,
         compareCard: {
@@ -246,21 +369,24 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
           fitScores: res.fitScores
         },
         followUpQuestion: res.followUpQuestion
-      });
+      };
+      this.messages.push(compareMsg);
+      await this.persistMessage(compareMsg);
 
       if (res.chips?.length) this.chips = res.chips;
-      this.applyProfileUpdate(res.profileUpdate);
+      await this.applyProfileUpdate(res.profileUpdate);
     } catch (e) {
       console.error('[ChatbotPage] compareMessage failed:', e);
-      this.messages.push({
+      const errorMsg: Message = {
         role: 'assistant',
         content: "Sorry, couldn't run the comparison. Try again?"
-      });
+      };
+      this.messages.push(errorMsg);
+      await this.persistMessage(errorMsg);
     }
 
     this.isLoading = false;
     this.selectedPlans = [];
-    this.saveChat();
   }
 
   getFitScore(card: CompareCard, planId: string): number {
@@ -325,7 +451,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       PDF_MARGIN, y
     );
     y += 4;
-    doc.text(`Prepared for: ${this.profile.name}`, PDF_MARGIN, y);
+    doc.text(`Prepared for: ${this.profile.fullName}`, PDF_MARGIN, y);
     y += 10;
 
     doc.setDrawColor(220);
@@ -384,7 +510,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit {
       PDF_MARGIN, 285, { maxWidth }
     );
 
-    doc.save(`cova-summary-${this.profile.name.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+    doc.save(`cova-summary-${this.profile.fullName.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   }
 
   // ─────────────────────────────────────────────────────────

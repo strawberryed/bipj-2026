@@ -10,6 +10,7 @@ import { AppComponent } from './app.component';
 import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 import { environment } from 'src/environments/environment';
+import { getAuth, provideAuth } from '@angular/fire/auth';
 
 const firebaseConfig = environment.firebaseConfig;
 
@@ -23,9 +24,10 @@ const firebaseConfig = environment.firebaseConfig;
       ? [
           provideFirebaseApp(() => initializeApp(firebaseConfig)),
           provideFirestore(() => getFirestore()),
+          provideAuth(() => getAuth()),
         ]
       : []),
   ],
   bootstrap: [AppComponent],
 })
-export class AppModule { }
+export class AppModule {}
