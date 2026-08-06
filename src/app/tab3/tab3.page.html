@@ -1,3 +1,44 @@
-<ion-content [fullscreen]="true" class="tab3-react-host">
-  <div #reactHost></div>
+<ion-content [fullscreen]="true" class="tab3-angular-host">
+  <main class="tab3-angular-shell" [class.consultant-theme]="isConsultant">
+    <section class="hero-band">
+      <div><p class="kicker">{{ isConsultant ? 'Consultant workspace' : 'My protection workspace' }}</p><h1>Welcome, {{ displayName }}</h1><p class="subtitle">{{ isConsultant ? 'Review client activity, coverage and recommendations.' : 'Keep your meetings, proposals and policies together.' }}</p></div>
+      <div class="hero-actions"><button class="notify-bell" type="button" (click)="markRead()" aria-label="Mark notifications as read"><ion-icon name="notifications-outline"></ion-icon><span *ngIf="unreadCount">{{ unreadCount }}</span></button><button class="secondary-button light" type="button" (click)="signOut()">Sign out</button></div>
+    </section>
+    <ng-container *ngIf="activeUser; else signedOut">
+      <nav class="top-nav workspace-card" aria-label="Workspace sections">
+        <ng-container *ngIf="!isConsultant"><button *ngFor="let tab of customerTabs" class="nav-pill" [class.active]="customerView === tab.id" (click)="setCustomerView(tab.id)"><ion-icon [name]="tab.icon"></ion-icon>{{ tab.label }}</button></ng-container>
+        <ng-container *ngIf="isConsultant"><button *ngFor="let tab of consultantTabs" class="nav-pill" [class.active]="consultantView === tab.id" (click)="setConsultantView(tab.id)"><ion-icon [name]="tab.icon"></ion-icon>{{ tab.label }}</button></ng-container>
+      </nav>
+      <section *ngIf="!isConsultant && customerView === 'home'" class="content-stack">
+        <article class="workspace-card recommended-plan-card">
+          <div class="card-title-row">
+            <div><p class="kicker purple">Recommended for you</p><h2>{{ selectedPolicy.name }}</h2></div>
+            <span class="tag">{{ selectedPolicy.matchScore }}% match</span>
+          </div>
+          <p>{{ recommendationReason }}</p>
+          <div class="grid three">
+            <div class="panel"><small>Premium</small><strong>{{ selectedPolicy.premium }}</strong></div>
+            <div class="panel"><small>Coverage</small><strong>{{ selectedPolicy.coverage }}</strong></div>
+            <div class="panel"><small>Matched consultant</small><strong>{{ recommendedAdvisor }}</strong></div>
+          </div>
+          <button class="consultant-booking-cta" type="button" (click)="bookRecommendedPlan()">
+            <span class="cta-icon"><ion-icon name="calendar-clear-outline"></ion-icon></span>
+            <span class="cta-copy"><small>Free consultation with {{ recommendedAdvisor }}</small><strong>Book a meeting</strong></span>
+            <span class="cta-arrow"><ion-icon name="arrow-forward-outline"></ion-icon></span>
+          </button>
+        </article>
+        <div class="grid three"><article class="panel metric-card"><span>Saved AI chats</span><strong>{{ chatCount }}</strong></article><article class="panel metric-card"><span>Upcoming meetings</span><strong>{{ meetings.length }}</strong></article><article class="panel metric-card"><span>Active policies</span><strong>{{ policies.length }}</strong></article></div>
+        <article class="workspace-card"><p class="kicker purple">Activity</p><h2>Interaction timeline</h2><div class="timeline" *ngIf="timeline.length; else noActivity"><div class="timeline-item" *ngFor="let item of timeline; trackBy: trackById"><div class="timeline-dot"><ion-icon name="checkmark"></ion-icon></div><div class="panel"><div class="card-title-row"><strong>{{ item.title }}</strong><span class="tag">{{ timelineLabel(item.type) }}</span></div><p>{{ item.detail }}</p><small>{{ relativeTime(item.createdAt) }}</small></div></div></div><ng-template #noActivity><p class="empty-state">Your recent interactions will appear here.</p></ng-template></article>
+      </section>
+      <section *ngIf="!isConsultant && customerView === 'proposal'" class="workspace-card"><p class="kicker purple">Recommended plan</p><h2>{{ selectedPolicy.name }}</h2><p>{{ recommendationReason }}</p><div class="grid three"><div class="panel"><small>Premium</small><strong>{{ selectedPolicy.premium }}</strong></div><div class="panel"><small>Coverage</small><strong>{{ selectedPolicy.coverage }}</strong></div><div class="panel"><small>Profile match</small><strong>{{ selectedPolicy.matchScore }}%</strong></div></div><h3>Why it fits</h3><ul><li *ngFor="let pro of selectedPolicy.pros">{{ pro }}</li></ul><button class="consultant-booking-cta" type="button" (click)="bookRecommendedPlan()"><span class="cta-icon"><ion-icon name="calendar-clear-outline"></ion-icon></span><span class="cta-copy"><small>Free consultation with {{ recommendedAdvisor }}</small><strong>Book a meeting</strong></span><span class="cta-arrow"><ion-icon name="arrow-forward-outline"></ion-icon></span></button></section>
+      <section *ngIf="!isConsultant && customerView === 'compare'" class="workspace-card"><p class="kicker purple">Side-by-side</p><h2>Policy comparison</h2><div class="grid three"><button type="button" class="panel policy-card" *ngFor="let policy of policies" [class.selected]="selectedPolicyId === policy.id" (click)="selectedPolicyId = policy.id"><span class="tag">{{ policy.matchScore }}% match</span><h3>{{ policy.name }}</h3><p>{{ policy.coverage }}</p><strong>{{ policy.premium }}</strong></button></div></section>
+      <section *ngIf="!isConsultant && customerView === 'policies'" class="content-stack"><article class="workspace-card" *ngFor="let policy of policies"><div class="card-title-row"><div><span class="tag">{{ policy.coverage }}</span><h3>{{ policy.name }}</h3></div><strong>{{ policy.premium }}</strong></div><p>Renewal: {{ policy.renewal }}</p><div class="progress-track"><span [style.width.%]="policy.matchScore"></span></div></article></section>
+      <section *ngIf="isConsultant && consultantView === 'dashboard'" class="content-stack"><div class="grid three"><article class="panel metric-card"><span>Clients</span><strong>{{ customers.length }}</strong></article><article class="panel metric-card"><span>Recent events</span><strong>{{ timeline.length }}</strong></article><article class="panel metric-card"><span>Meetings</span><strong>{{ meetings.length }}</strong></article></div><article class="workspace-card"><p class="kicker purple">Portfolio</p><h2>Client activity</h2><div class="timeline-item" *ngFor="let item of timeline | slice:0:6"><div class="timeline-dot"><ion-icon name="flash-outline"></ion-icon></div><div class="panel"><strong>{{ item.title }}</strong><p>{{ item.detail }}</p><small>{{ relativeTime(item.createdAt) }}</small></div></div></article></section>
+      <section *ngIf="isConsultant && consultantView === 'clients'" class="workspace-card"><p class="kicker purple">Directory</p><h2>Client list</h2><ion-searchbar [(ngModel)]="clientQuery" placeholder="Search clients"></ion-searchbar><div class="client-list"><button type="button" class="panel client-row" *ngFor="let client of filteredCustomers" (click)="selectedClientId = client.id; consultantView = 'profile'"><div class="avatar">{{ client.name.charAt(0) }}</div><div><strong>{{ client.name }}</strong><p>{{ client.email }}</p></div><ion-icon name="chevron-forward-outline"></ion-icon></button></div></section>
+      <section *ngIf="isConsultant && consultantView === 'profile'" class="workspace-card"><ng-container *ngIf="selectedClient as client"><p class="kicker purple">Client profile</p><h2>{{ client.name }}</h2><div class="grid two"><div class="panel"><small>Email</small><strong>{{ client.email }}</strong></div><div class="panel"><small>Life stage</small><strong>{{ client.lifeStage || 'Not provided' }}</strong></div><div class="panel"><small>Risk appetite</small><strong>{{ client.riskAppetite || 'Not provided' }}</strong></div><div class="panel"><small>Dependents</small><strong>{{ client.dependents ?? 'Not provided' }}</strong></div></div><h3>Financial priorities</h3><span class="tag" *ngFor="let priority of client.financialPriorities">{{ priority }}</span></ng-container></section>
+      <section *ngIf="isConsultant && consultantView === 'analytics'" class="workspace-card"><p class="kicker purple">Coverage analysis</p><h2>Protection balance</h2><div class="coverage-row" *ngFor="let policy of policies"><span>{{ policy.coverage }}</span><div class="progress-track"><span [style.width.%]="policy.matchScore"></span></div><strong>{{ policy.matchScore }}%</strong></div></section>
+      <section *ngIf="isConsultant && consultantView === 'recommendations'" class="content-stack"><article class="workspace-card" *ngFor="let policy of policies"><span class="tag">{{ policy.matchScore }}% fit</span><h3>{{ policy.name }}</h3><p>{{ policy.pros.join('. ') }}.</p><strong>{{ policy.premium }}</strong></article></section>
+    </ng-container>
+    <ng-template #signedOut><section class="workspace-card empty-state"><ion-icon name="lock-closed-outline"></ion-icon><h2>Sign in to view your workspace</h2><button class="primary-button" type="button" (click)="signOut()">Go to sign in</button></section></ng-template>
+  </main>
 </ion-content>

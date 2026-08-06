@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserProfileService } from '../services/user-profile.service';
 import { ToastController, LoadingController } from '@ionic/angular';
+import { updateCurrentLocalUserProfile } from '../../data/app-db';
 
 @Component({
   selector: 'app-onboarding',
@@ -9,7 +10,12 @@ import { ToastController, LoadingController } from '@ionic/angular';
   styleUrls: ['./onboarding.page.scss'],
   standalone: false,
 })
-export class OnboardingPage implements OnInit {
+export class OnboardingPage {
+  private profileService = inject(UserProfileService);
+  private router = inject(Router);
+  private toastCtrl = inject(ToastController);
+  private loadingCtrl = inject(LoadingController);
+
   currentStep: number = 1;
 
   // Step 1 Form Fields (initialized empty)
@@ -28,16 +34,6 @@ export class OnboardingPage implements OnInit {
   // Validation Error States
   ageError: string = ''; // Stores inline error message for age
   readonly MINIMUM_AGE: number = 18;
-
-
-  constructor(
-    private profileService: UserProfileService,
-    private router: Router,
-    private toastCtrl: ToastController,
-    private loadingCtrl: LoadingController
-  ) { }
-
-  ngOnInit() { }
 
   nextStep() {
     // Reset errors
@@ -92,6 +88,16 @@ export class OnboardingPage implements OnInit {
       };
 
       await this.profileService.saveOnboardingProfile(profileData);
+
+      // Keep the local Tab 3 workspace profile aligned with onboarding so its
+      // recommendation can be generated without asking for the details again.
+      updateCurrentLocalUserProfile({
+        name: this.fullName,
+        monthlyIncome: Number(this.monthlyIncome),
+        financialPriorities: [this.mainGoal, this.primaryConcern],
+        monthlyBudget: this.monthlyBudget,
+        hasExistingInsurance: this.hasInsurance,
+      });
 
       await loader.dismiss();
       this.router.navigate(['/tabs/tab1']);

@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit, OnDestroy } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit, OnDestroy, inject } from '@angular/core';
 import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gemini.service';
 import { UserProfileData, UserProfileService } from '../services/user-profile.service';
 import { PolicyDataService, Plan } from '../services/policy-data';
@@ -13,6 +13,7 @@ import { AlertController } from '@ionic/angular';
 
 const MAX_HISTORY = 50;
 const MAX_COMPARE_PLANS = 3;
+const CHAT_RESET_VERSION = 'fresh-chat-2026-08-06-v1';
 
 const PDF_PAGE_HEIGHT = 297;   // A4 mm
 const PDF_MARGIN = 16;
@@ -43,6 +44,12 @@ const DEFAULT_CHIPS = [
   standalone: false,
 })
 export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
+  private gemini = inject(GeminiService);
+  private profileService = inject(UserProfileService);
+  private policyData = inject(PolicyDataService);
+  private chatStorage = inject(ChatStorageService);
+  private alertCtrl = inject(AlertController);
+
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -74,14 +81,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   private lastMessageCount = 0;
 
-  constructor(
-    private gemini: GeminiService,
-    private profileService: UserProfileService,
-    private policyData: PolicyDataService,
-    private chatStorage: ChatStorageService,
-    private alertCtrl: AlertController
-  ) { }
-
   async ngOnInit() {
     // NEW: get UID immediately from auth state, not from the Firestore profile pipe
     this.profileService.authUser$.subscribe(authUser => {
@@ -91,7 +90,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       this.isAuthReady = true;   // auth has resolved at least once
 
       if (uidChanged || (uid && this.messages.length === 0)) {
-        this.loadChat();         // drop the await; let it run in background
+        void this.startChatSession(uid);
       }
     });
 
@@ -127,6 +126,24 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   /** Loads the user's chat history from Firestore into this.messages. */
   async loadChat() {
     this.messages = await this.chatStorage.loadChat(this.currentUid, MAX_HISTORY);
+  }
+
+  private async startChatSession(uid: string | null): Promise<void> {
+    if (!uid) {
+      this.messages = [];
+      return;
+    }
+
+    const resetKey = `cova_chat_reset_${CHAT_RESET_VERSION}_${uid}`;
+    if (!localStorage.getItem(resetKey)) {
+      localStorage.setItem(resetKey, 'done');
+      this.messages = [];
+      this.chips = [...DEFAULT_CHIPS];
+      await this.chatStorage.clearChat(uid);
+      return;
+    }
+
+    await this.loadChat();
   }
 
   async reset() {

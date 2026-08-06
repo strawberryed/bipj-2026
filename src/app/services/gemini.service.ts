@@ -1,5 +1,5 @@
 // gemini.service.ts
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -93,13 +93,11 @@ const VALID_PROFILE_KEYS = [
 
 @Injectable({ providedIn: 'root' })
 export class GeminiService {
+  private http = inject(HttpClient);
+  private policyData = inject(PolicyDataService);
+
 
   private apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${environment.geminiApiKey}`;
-
-  constructor(
-    private http: HttpClient,
-    private policyData: PolicyDataService
-  ) { }
 
   // ─────────────────────────────────────────────────────────
   // HELPERS: Sanitization & Validation
@@ -379,6 +377,8 @@ Never tell the user which plan to buy — guide and explain only.
 Never recommend or suggest a plan whose premium clearly exceeds the user's stated monthly income bracket without explicitly flagging that mismatch.
 
 PERSONALIZATION RULES:
+- Answer the user's CURRENT question directly before adding related context. Never substitute a generic recommendation for what they actually asked.
+- Treat the current message as the primary intent; use prior chat only to resolve references or maintain continuity.
 - Don't give generic insurance advice — connect your answer back to at least one specific detail from the profile below (age, marital status, dependents, main goals, top concern, budget) wherever it's relevant to the question.
 - If the user's question relates to something in their "Main goals" or "Top concern", say so explicitly (e.g. "since your top concern is X...").
 - If a profile field is "Not specified", don't invent a value — either skip that angle or ask a clarifying question.

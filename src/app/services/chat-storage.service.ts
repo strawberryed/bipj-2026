@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import {
   Firestore, collection, doc, addDoc, deleteDoc, getDocs, query,
   orderBy, limit, writeBatch, Timestamp
@@ -20,8 +20,8 @@ import { Message } from './gemini.service';
  */
 @Injectable({ providedIn: 'root' })
 export class ChatStorageService {
+  private firestore = inject(Firestore);
 
-  constructor(private firestore: Firestore) { }
 
   /**
    * Loads the user's most recent messages from Firestore, ordered oldest-first

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 
 @Component({
@@ -7,7 +7,9 @@ import { Router } from '@angular/router';
   styleUrls: ['./upgrade.page.scss'],
   standalone: false
 })
-export class UpgradePage implements OnInit {
+export class UpgradePage {
+  private router = inject(Router);
+
   // Cart state tracking
   isSummarySelected: boolean = false;
   isConsultantSelected: boolean = false;
@@ -15,11 +17,6 @@ export class UpgradePage implements OnInit {
 
   readonly SUMMARY_PRICE: number = 5.0;
   readonly CONSULTANT_PRICE: number = 10.0;
-
-
-  constructor(private router: Router) { }
-
-  ngOnInit() {}
 
   // Automatically fires whenever a user checks or unchecks a box
   calculateCartTotal() {

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router'; // 1. Import Angular Router
 
 @Component({
@@ -8,10 +8,10 @@ import { ActivatedRoute, Router } from '@angular/router'; // 1. Import Angular R
   standalone: false
 })
 export class ConsultantPage implements OnInit {
-  isPaidUser: boolean = false;
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
-  // 2. Inject router in constructor
-  constructor(private router: Router, private route: ActivatedRoute) { }
+  isPaidUser: boolean = false;
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
