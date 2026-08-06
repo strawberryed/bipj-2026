@@ -24,7 +24,9 @@
     <!-- Welcome message -->
     <div class="msg-row bot">
       <div class="bubble">
-        Hi! I'm <strong>Cova</strong>, your Prudential insurance assistant.
+        Hi<ng-container *ngIf="profile.fullName && profile.fullName !== 'Guest'"> <strong>{{ profile.fullName.split('
+            ')[0] }}</strong></ng-container>!
+        I'm <strong>Cova</strong>, your Prudential insurance assistant.
         Ask me anything about your coverage or to simplify any policy terms.
       </div>
     </div>
@@ -251,7 +253,8 @@
 
 
 <!-- Compare sheet -->
-<ion-modal [isOpen]="isCompareOpen" (didDismiss)="closeCompare()" [breakpoints]="[0, 0.6]" [initialBreakpoint]="0.6">
+<ion-modal [isOpen]="isCompareOpen" (didDismiss)="closeCompare()"
+  [breakpoints]="[0, 0.95]" [initialBreakpoint]="0.95">  
   <ng-template>
     <ion-header>
       <ion-toolbar>

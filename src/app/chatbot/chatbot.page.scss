@@ -274,6 +274,8 @@ ion-modal {
 // ── Compare sheet ────────────────────────────────────────────
 .compare-content {
   --background: #{$surface};
+  flex: 1;
+  min-height: 0;
 }
 
 .compare-category {

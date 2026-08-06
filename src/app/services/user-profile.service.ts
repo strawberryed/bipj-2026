@@ -70,14 +70,20 @@ export class UserProfileService {
     const userDocRef = doc(this.firestore, `users/${user.uid}`);
     await setDoc(userDocRef, data, { merge: true });
   }
-  async getCurrentProfile(): Promise<UserProfileData | null> {
-    const user = this.auth.currentUser;
-    if (!user) return null;
-
-    const userDocRef = doc(this.firestore, `users/${user.uid}`);
-    const snapshot = await getDoc(userDocRef);
-    return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
+async getCurrentProfile(): Promise<UserProfileData | null> {
+  const user = this.auth.currentUser;
+  console.log('[getCurrentProfile] auth.currentUser:', user?.uid);
+  if (!user) {
+    console.log('[getCurrentProfile] No auth user, returning null');
+    return null;
   }
+
+  const userDocRef = doc(this.firestore, `users/${user.uid}`);
+  const snapshot = await getDoc(userDocRef);
+
+
+  return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
+}
 
   // Get current logged-in user ID
   get currentUserId(): string | null {

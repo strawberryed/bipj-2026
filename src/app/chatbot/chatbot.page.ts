@@ -177,6 +177,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       // Read profile fresh from Firestore to avoid stale/guest data
       // from the userProfile$ subscription not having emitted yet.
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
+      console.log('[send] liveProfile being sent to Gemini:', liveProfile);
       const res = await this.gemini.sendMessage(message, history, liveProfile);
 
       const newMessage: Message = Array.isArray(res.reply)
@@ -247,7 +248,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
       const res = await this.gemini.analyzeDocument(base64Data, file.type, liveProfile);
-      
+
       const newMessage: Message = Array.isArray(res.reply)
         ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
         : { role: 'assistant', content: res.reply as string };

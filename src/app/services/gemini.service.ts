@@ -94,7 +94,7 @@ const VALID_PROFILE_KEYS = [
 @Injectable({ providedIn: 'root' })
 export class GeminiService {
 
-  private apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${environment.geminiApiKey}`;
+  private apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${environment.geminiApiKey}`;
 
   constructor(
     private http: HttpClient,
