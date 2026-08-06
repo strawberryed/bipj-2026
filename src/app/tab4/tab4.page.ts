@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserProfileService, UserProfileData } from '../services/user-profile.service';
 import { Observable } from 'rxjs';
@@ -10,13 +10,13 @@ import { Observable } from 'rxjs';
   standalone: false,
 })
 export class Tab4Page implements OnInit {
+  private profileService = inject(UserProfileService);
+  private router = inject(Router);
+
   // Directly observe the current logged-in user's profile from Firestore
   profile$: Observable<UserProfileData | null>;
 
-  constructor(
-    private profileService: UserProfileService,
-    private router: Router
-  ) {
+  constructor() {
     this.profile$ = this.profileService.userProfile$;
   }
 

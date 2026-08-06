@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { BookingService } from '../services/booking';
 import { ToastController } from '@ionic/angular';
@@ -11,6 +11,11 @@ import { ActivatedRoute } from '@angular/router';
   standalone: false,
 })
 export class BookMeetingPage implements OnInit {
+  private bookingService = inject(BookingService);
+  private router = inject(Router);
+  private toastController = inject(ToastController);
+  private route = inject(ActivatedRoute);
+
   advisors = [
     { name: 'SARAH LIM', title: 'Financial and health advisor – 8 years', avatar: 'assets/cat1.png' },
     { name: 'BRANDON', title: 'Senior Prudential FA – 10 years', avatar: 'assets/cat2.png' },
@@ -28,10 +33,10 @@ export class BookMeetingPage implements OnInit {
   selectedSlot: any = null;
   selectedDate: string = '';
   recommendedAdvisorName = '';
-
-  constructor(private bookingService: BookingService, private router: Router, private toastController: ToastController, private route: ActivatedRoute) { }
+  minimumDate = '';
 
   ngOnInit() {
+    this.minimumDate = this.toLocalDateInputValue(new Date());
     this.selectedAdvisor = this.advisors[0]; // Default to the first advisor
 
     this.route.queryParams.subscribe(params => {
@@ -51,8 +56,19 @@ export class BookMeetingPage implements OnInit {
     });
   }
 
-      selectAdvisor(advisor: any) { this.selectedAdvisor = advisor; }
+      selectAdvisor(advisor: any) {
+        this.selectedAdvisor = advisor;
+      }
       selectSlot(slot: any) { this.selectedSlot = slot; }
+
+      onDateChange(event: Event) {
+        this.selectedDate = (event.target as HTMLInputElement).value;
+      }
+
+      private toLocalDateInputValue(date: Date): string {
+        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return offsetDate.toISOString().slice(0, 10);
+      }
 
   async presentSuccessToast(advisorName: string) {
         const toast = await this.toastController.create({

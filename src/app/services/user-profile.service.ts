@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, docData, setDoc, getDoc, updateDoc } from '@angular/fire/firestore';
 import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, user } from '@angular/fire/auth';
 import { BehaviorSubject, Observable, of } from 'rxjs';
@@ -25,6 +25,9 @@ export interface UserProfileData {
   providedIn: 'root'
 })
 export class UserProfileService {
+  private firestore = inject(Firestore);
+  private auth = inject(Auth);
+
   // Real-time Firebase Auth state
   authUser$ = user(this.auth);
   private userProfileSubject = new BehaviorSubject<UserProfileData>({
@@ -44,10 +47,7 @@ export class UserProfileService {
 
 
 
-  constructor(
-    private firestore: Firestore,
-    private auth: Auth
-  ) {
+  constructor() {
     this.userProfile$ = this.authUser$.pipe(
       switchMap((authUser) => {
         if (!authUser) return of(null);

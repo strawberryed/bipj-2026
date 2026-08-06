@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserProfileService } from '../services/user-profile.service';
 import { ToastController, LoadingController } from '@ionic/angular';
+import { establishLocalSession } from '../../data/app-db';
 
 @Component({
   selector: 'app-auth',
@@ -10,18 +11,16 @@ import { ToastController, LoadingController } from '@ionic/angular';
   standalone: false,
 })
 export class AuthPage {
+  private profileService = inject(UserProfileService);
+  private router = inject(Router);
+  private toastCtrl = inject(ToastController);
+  private loadingCtrl = inject(LoadingController);
+
   isSignUpMode: boolean = false;
 
   fullName: string = '';
   email: string = '';
   password: string = '';
-
-  constructor(
-    private profileService: UserProfileService,
-    private router: Router,
-    private toastCtrl: ToastController,
-    private loadingCtrl: LoadingController
-  ) { }
 
   toggleMode() {
     this.isSignUpMode = !this.isSignUpMode;
@@ -45,12 +44,17 @@ export class AuthPage {
 
     try {
       if (this.isSignUpMode) {
-        // Direct users into the questionnaire before persisting profile completion
+        const user = await this.profileService.signUp(this.email, this.password, this.fullName);
+        establishLocalSession(user.email || this.email, this.fullName);
         await loader.dismiss();
         this.router.navigate(['/onboarding']);
       } else {
         // --- LOG IN FLOW ---
         const user = await this.profileService.login(this.email, this.password);
+
+        // Tab 3 uses the local workspace database for its timeline and policy
+        // data. Reuse this login there instead of presenting another sign-in.
+        establishLocalSession(user.email || this.email, user.displayName || undefined);
 
         // Wait for Firebase Auth to fully register the session before reading
         // Firestore. Without this, isProfileComplete()'s Firestore read can fire

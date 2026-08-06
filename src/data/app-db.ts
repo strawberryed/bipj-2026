@@ -17,6 +17,8 @@ export interface UserRecord {
   financialPriorities?: string[];
   planningHorizon?: string;
   preferredContact?: 'chat' | 'email' | 'phone';
+  monthlyBudget?: number;
+  hasExistingInsurance?: boolean;
   createdAt: string;
   hasSeenOnboarding?: boolean;
 }
@@ -91,6 +93,7 @@ export interface ProposalAcceptanceRecord {
 
 const DB_KEY = 'bipj_local_db_v1';
 const SESSION_KEY = 'bipj_local_session_v1';
+const CHAT_RESET_KEY = 'bipj_chat_reset_fresh_2026_08_06_v1';
 
 interface LocalDatabase {
   users: UserRecord[];
@@ -225,9 +228,15 @@ function getDatabase(): LocalDatabase {
   initDatabase();
   const db = safeParse<Partial<LocalDatabase>>(localStorage.getItem(DB_KEY), {});
 
-  const chatHistory = db.chatHistory && typeof db.chatHistory === 'object' && !Array.isArray(db.chatHistory)
+  let chatHistory = db.chatHistory && typeof db.chatHistory === 'object' && !Array.isArray(db.chatHistory)
     ? db.chatHistory
     : {};
+
+  if (!localStorage.getItem(CHAT_RESET_KEY)) {
+    chatHistory = {};
+    localStorage.setItem(DB_KEY, JSON.stringify({ ...db, chatHistory }));
+    localStorage.setItem(CHAT_RESET_KEY, 'done');
+  }
 
   return {
     users: Array.isArray(db.users) ? db.users : [],
@@ -851,6 +860,64 @@ export function loginUser(email: string, password: string): { ok: true; user: Us
 
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return { ok: true, user };
+}
+
+/**
+ * Mirrors an already-authenticated app user into the local workspace session.
+ * Tab 3 stores its activity data locally, but authentication is handled by
+ * Firebase. Keeping the local session in sync avoids asking the user to log in
+ * a second time when they open the workspace.
+ */
+export function establishLocalSession(email: string, name?: string): UserRecord {
+  const normalizedEmail = email.trim().toLowerCase();
+  const db = getDatabase();
+  let localUser = db.users.find(user => user.email.toLowerCase() === normalizedEmail);
+
+  if (!localUser) {
+    localUser = {
+      id: `u-customer-${Date.now()}`,
+      role: 'customer',
+      name: name?.trim() || normalizedEmail.split('@')[0] || 'Customer',
+      email: normalizedEmail,
+      password: '',
+      createdAt: new Date().toISOString(),
+    };
+    saveDatabase({ ...db, users: [...db.users, localUser] });
+  }
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    userId: localUser.id,
+    loggedInAt: new Date().toISOString(),
+  } satisfies SessionRecord));
+
+  return localUser;
+}
+
+export function updateCurrentLocalUserProfile(input: {
+  name?: string;
+  monthlyIncome?: number;
+  financialPriorities?: string[];
+  monthlyBudget?: number;
+  hasExistingInsurance?: boolean;
+}): UserRecord | null {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return null;
+
+  const db = getDatabase();
+  const updatedUser: UserRecord = {
+    ...currentUser,
+    name: input.name?.trim() || currentUser.name,
+    monthlyIncome: input.monthlyIncome != null ? `S$${input.monthlyIncome.toLocaleString()}` : currentUser.monthlyIncome,
+    financialPriorities: input.financialPriorities ?? currentUser.financialPriorities,
+    monthlyBudget: input.monthlyBudget ?? currentUser.monthlyBudget,
+    hasExistingInsurance: input.hasExistingInsurance ?? currentUser.hasExistingInsurance,
+  };
+
+  saveDatabase({
+    ...db,
+    users: db.users.map(user => user.id === currentUser.id ? updatedUser : user),
+  });
+  return updatedUser;
 }
 
 export function getCurrentUser(): UserRecord | null {

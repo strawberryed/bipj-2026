@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   getChatHistory,
@@ -35,6 +35,8 @@ interface PolicyCard {
   standalone: false,
 })
 export class Tab3Page implements OnInit, OnDestroy {
+  private readonly router = inject(Router);
+
   activeUser: UserRecord | null = null;
   customerView: CustomerView = 'home';
   consultantView: ConsultantView = 'dashboard';
@@ -47,6 +49,7 @@ export class Tab3Page implements OnInit, OnDestroy {
   clientQuery = '';
   clientFilter: 'All' | 'Active' | 'Pending' = 'All';
   private refreshTimer?: number;
+  private recommendationInitialized = false;
 
   readonly customerTabs: Array<{ id: CustomerView; label: string; icon: string }> = [
     { id: 'home', label: 'Interaction Timeline', icon: 'time-outline' },
@@ -70,8 +73,6 @@ export class Tab3Page implements OnInit, OnDestroy {
     { id: 'p3', name: 'PRUActive Saver III', premium: 'S$120/mo', coverage: 'Savings', renewal: '08 Mar 2027', matchScore: 78, pros: ['Capital guarantee at maturity', 'Milestone planning support', 'Predictable schedule'] },
   ];
 
-  constructor(private readonly router: Router) {}
-
   ngOnInit(): void {
     this.refresh();
     this.refreshTimer = window.setInterval(() => this.refresh(), 1500);
@@ -85,6 +86,24 @@ export class Tab3Page implements OnInit, OnDestroy {
   get displayName(): string { return this.activeUser?.name || 'User'; }
   get chatCount(): number { return this.activeUser ? getChatHistory(this.activeUser.id).length : 0; }
   get selectedPolicy(): PolicyCard { return this.policies.find(item => item.id === this.selectedPolicyId) || this.policies[0]; }
+  get recommendationReason(): string {
+    const priorities = (this.activeUser?.financialPriorities || []).join(' ').toLowerCase();
+    if (priorities.includes('health') || priorities.includes('medical') || priorities.includes('critical')) {
+      return 'Recommended from your health and medical-protection priorities.';
+    }
+    if (priorities.includes('family') || priorities.includes('income loss')) {
+      return 'Recommended to strengthen protection for you and your dependants.';
+    }
+    if (priorities.includes('saving') || priorities.includes('retirement') || priorities.includes('wealth')) {
+      return 'Recommended to support your savings and long-term wealth goals.';
+    }
+    return 'A balanced starting plan based on the profile you provided.';
+  }
+  get recommendedAdvisor(): string {
+    if (this.selectedPolicyId === 'p2') return 'JOHNNY LEE';
+    if (this.selectedPolicyId === 'p3') return 'BRANDON';
+    return 'SARAH LIM';
+  }
   get selectedClient(): UserRecord | undefined { return this.customers.find(item => item.id === this.selectedClientId) || this.customers[0]; }
   get filteredCustomers(): UserRecord[] {
     const query = this.clientQuery.trim().toLowerCase();
@@ -97,6 +116,16 @@ export class Tab3Page implements OnInit, OnDestroy {
   }
 
   setConsultantView(view: ConsultantView): void { this.consultantView = view; }
+
+  bookRecommendedPlan(): void {
+    void this.router.navigate(['/book-meeting'], {
+      queryParams: {
+        recommendedAdvisor: this.recommendedAdvisor,
+        plan: this.selectedPolicy.name,
+        fromTab3: 'true',
+      },
+    });
+  }
 
   markRead(): void {
     if (!this.activeUser) return;
@@ -125,6 +154,13 @@ export class Tab3Page implements OnInit, OnDestroy {
   private refresh(): void {
     this.activeUser = getCurrentUser();
     if (!this.activeUser) { this.timeline = []; this.meetings = []; this.customers = []; return; }
+    if (!this.recommendationInitialized && this.activeUser.role === 'customer') {
+      const priorities = (this.activeUser.financialPriorities || []).join(' ').toLowerCase();
+      if (priorities.includes('family') || priorities.includes('income loss')) this.selectedPolicyId = 'p2';
+      else if (priorities.includes('saving') || priorities.includes('retirement') || priorities.includes('wealth')) this.selectedPolicyId = 'p3';
+      else this.selectedPolicyId = 'p1';
+      this.recommendationInitialized = true;
+    }
     this.timeline = getTimelineEventsForUser(this.activeUser);
     this.meetings = getMeetingsForUser(this.activeUser);
     this.unreadCount = getUnreadTimelineCountForUser(this.activeUser);

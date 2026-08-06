@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { getCurrentUser, markOnboardingSeen, UserRecord } from '../../data/app-db';
 
@@ -20,11 +20,11 @@ interface RecommendedConsultant {
 	standalone: false,
 })
 export class CustomerOnboardingPage implements OnInit {
+	private router = inject(Router);
+
 	currentUser: UserRecord | null = null;
 	recommendedPlans: RecommendedPlan[] = [];
 	recommendedConsultant: RecommendedConsultant | null = null;
-
-	constructor(private router: Router) {}
 
 	ngOnInit(): void {
 		this.currentUser = getCurrentUser();

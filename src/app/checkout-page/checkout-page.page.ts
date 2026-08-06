@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 
@@ -9,17 +9,15 @@ import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/fo
   standalone: false,
 })
 export class CheckoutPage implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private fb = inject(FormBuilder);
+
   paymentForm!: FormGroup;
   includeReport: boolean = true;     
   includeConsultant: boolean = true; 
   totalPrice: number = 15.00;
   selectedMethod: 'card' | 'nets' = 'card';
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private fb: FormBuilder
-  ) { }
 
   ngOnInit() {
     this.paymentForm = this.fb.group({

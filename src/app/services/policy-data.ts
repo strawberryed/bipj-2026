@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 
 export interface Plan {
@@ -19,12 +19,12 @@ export interface Plan {
 
 @Injectable({ providedIn: 'root' })
 export class PolicyDataService {
+  private firestore = inject(Firestore, { optional: true });
+
 
   private plans: Plan[] = [];
   private loaded = false;
   private loadingPromise: Promise<void> | null = null;
-
-  constructor(@Optional() private firestore: Firestore | null) { }
 
   /**
    * Fetches all plans from Firestore if not already cached. Safe to call
