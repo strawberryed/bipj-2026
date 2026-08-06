@@ -32,10 +32,6 @@ const routes: Routes = [
     loadChildren: () => import('./book-meeting/book-meeting.module').then(m => m.BookMeetingPageModule)
   },
   {
-    path: 'customer-onboarding',
-    loadChildren: () => import('./customer-onboarding/customer-onboarding.module').then(m => m.CustomerOnboardingPageModule)
-  },
-  {
     path: 'onboarding',
     loadChildren: () => import('./onboarding/onboarding.module').then(m => m.OnboardingPageModule)
   },

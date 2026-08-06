@@ -7,7 +7,7 @@ import { getCurrentUser } from '../../data/app-db';
 import { UserProfileService, UserProfileData } from '../services/user-profile.service';
 
 @Component({
-  selector: 'app-landing-page',
+  selector: 'app-tab1',
   templateUrl: 'tab1.page.html',
   styleUrls: ['tab1.page.scss'],
   standalone: false,
@@ -16,11 +16,10 @@ export class Tab1Page implements OnInit, OnDestroy {
   todayDate: Date = new Date();
   activeBooking$: Observable<Booking | null>;
   isDetailsModalOpen: boolean = false;
-  currentUserName = 'Orange Tan';
-
+  currentUserName = '';
   userNotes: string = '';
 
-  // Dynamic Profile Properties
+  // Dynamic Profile Properties for Dashboard
   userProfile: UserProfileData | null = null;
   private profileSub!: Subscription;
 
@@ -42,7 +41,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   ngOnInit() {
     this.refreshViewModel();
 
-    // Subscribe to live profile changes
+    // Subscribe to userProfile$ to sync currentUserName dynamically from sign-up/onboarding
     this.profileSub = this.userProfileService.userProfile$.subscribe((profile) => {
       this.userProfile = profile;
       if (profile?.fullName) {
@@ -57,7 +56,6 @@ export class Tab1Page implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    // Unsubscribe to avoid memory leaks
     if (this.profileSub) {
       this.profileSub.unsubscribe();
     }
@@ -65,15 +63,15 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   private refreshViewModel() {
     this.todayDate = new Date();
-    // Prefer user profile full name if set, fallback to getCurrentUser() or default
-    this.currentUserName = this.userProfile?.fullName ?? getCurrentUser()?.name ?? 'Orange Tan';
+    // Prioritize sign-up/profile full name, then local app DB user, then default fallback
+    this.currentUserName = this.userProfile?.fullName ?? getCurrentUser()?.name ?? 'User';
   }
 
   openDetailsModal() { 
     this.isDetailsModalOpen = true; 
     this.cdr.detectChanges();
   }
-
+  
   closeDetailsModal() { 
     this.isDetailsModalOpen = false; 
     this.cdr.detectChanges();
@@ -100,37 +98,6 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   handleCancellation() {
     this.bookingService.clearBooking();
-    this.isDetailsModalOpen = false; // Forces modal close
+    this.isDetailsModalOpen = false; 
   }
-
-  // Helper method for dynamic consultant recommendations based on user's main goal
-  getRecommendedConsultants() {
-  if (!this.userProfile?.mainGoals) {
-    return [
-      { name: 'Alex Ang', specialty: 'General Insurance Consultant', rating: '4.9/5' },
-      { name: 'Sarah Tan', specialty: 'Wealth & Protection Specialist', rating: '4.8/5' }
-    ];
-  }
-
-  const goal = this.userProfile.mainGoals; // goal is string[] or string
-
-  // If goal is an array (or can be an array):
-  if (Array.isArray(goal)) {
-    if (goal.includes('Retirement') || goal.includes('Savings')) {
-      return [
-        { name: 'Sarah Tan', specialty: 'Retirement & Wealth Planning', rating: '4.9/5' },
-        { name: 'David Lim', specialty: 'Investment & Estate Planning', rating: '4.8/5' }
-      ];
-    } else if (goal.includes('Health Protection') || goal.includes('Family Protection')) {
-      return [
-        { name: 'Rachel Wong', specialty: 'Critical Illness & Medical Coverage', rating: '4.9/5' },
-        { name: 'Marcus Chen', specialty: 'Family & Term Life Protection', rating: '4.7/5' }
-      ];
-    }
-  }
-
-  return [
-    { name: 'Alex Ang', specialty: 'Comprehensive Financial Planning', rating: '4.9/5' }
-  ];
-}
 }
