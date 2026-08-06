@@ -5,6 +5,7 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding landing-page">
+  <!-- Header with Dynamic User Name -->
   <div class="header-container ion-margin-bottom">
     <div class="header-text">
       <p class="date-text">{{ todayDate | date:'d MMMM yyyy' }}</p>
@@ -15,38 +16,74 @@
     </ion-avatar>
   </div>
 
+  <!-- Dynamic Dashboard / Today's Brief Card -->
   <div class="brief-card">
     <div class="brief-title-container">
       <span class="brief-subtitle">Today's Brief</span>
       <ion-badge class="insights-badge">Insights</ion-badge>
     </div>
 
-    <h2 class="main-card-title">Your coverage has 3 gaps to review today</h2>
+    <!-- DYNAMIC HEADING & ITEMS BASED ON PROFILE -->
+    <ng-container *ngIf="userProfile?.isOnboardingCompleted; else fallbackBrief">
+      <h2 class="main-card-title">
+        Custom plan breakdown for {{ userProfile?.mainGoals || 'your financial goals' }}
+      </h2>
 
-    <div class="brief-item">
-      <ion-icon name="star-outline" class="brief-icon"></ion-icon>
-      <div>
-        <h3>RECOMMENDED</h3>
-        <p>2 better plans found that covers more of your bill</p>
+      <div class="brief-item">
+        <ion-icon name="star-outline" class="brief-icon"></ion-icon>
+        <div>
+          <h3>PRIMARY FOCUS</h3>
+          <p>Targeting {{ userProfile?.topConcern || 'overall protection' }} within your S${{ userProfile?.monthlyBudget }}/mo budget</p>
+        </div>
       </div>
-    </div>
 
-    <div class="brief-item">
-      <ion-icon name="alert-circle-outline" class="brief-icon"></ion-icon>
-      <div>
-        <h3>COVERAGE GAP</h3>
-        <p>Basic plan can only cover 40% of your healthcare bill</p>
+      <div class="brief-item">
+        <ion-icon name="alert-circle-outline" class="brief-icon"></ion-icon>
+        <div>
+          <h3>COVERAGE STATUS</h3>
+          <p>{{ userProfile?.hasExistingInsurance ? 'Existing policy integrated — gaps identified for optimization' : 'No active policy — high priority for basic hospitalization setup' }}</p>
+        </div>
       </div>
-    </div>
 
-    <div class="brief-item">
-      <ion-icon name="time-outline" class="brief-icon"></ion-icon>
-      <div>
-        <h3>EXPIRING POLICY</h3>
-        <p>1,200 Lifepoints expiring by 31 Dec</p>
+      <div class="brief-item">
+        <ion-icon name="time-outline" class="brief-icon"></ion-icon>
+        <div>
+          <h3>PROFILE MATCH</h3>
+          <p>Occupation: {{ userProfile?.occupation || 'Not specified' }} • Age: {{ userProfile?.age }}</p>
+        </div>
       </div>
-    </div>
+    </ng-container>
 
+    <!-- FALLBACK BRIEF (IF PROFILE NOT GENERATED YET) -->
+    <ng-template #fallbackBrief>
+      <h2 class="main-card-title">Your coverage has 3 gaps to review today</h2>
+
+      <div class="brief-item">
+        <ion-icon name="star-outline" class="brief-icon"></ion-icon>
+        <div>
+          <h3>RECOMMENDED</h3>
+          <p>Complete your profile onboarding to see personalized recommendations</p>
+        </div>
+      </div>
+
+      <div class="brief-item">
+        <ion-icon name="alert-circle-outline" class="brief-icon"></ion-icon>
+        <div>
+          <h3>COVERAGE GAP</h3>
+          <p>Basic plan can only cover 40% of your healthcare bill</p>
+        </div>
+      </div>
+
+      <div class="brief-item">
+        <ion-icon name="time-outline" class="brief-icon"></ion-icon>
+        <div>
+          <h3>EXPIRING POLICY</h3>
+          <p>1,200 Lifepoints expiring by 31 Dec</p>
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- EMBEDDED MEETING CARD -->
     <div class="embedded-meeting-card" *ngIf="activeBooking$ | async as booking" (click)="openDetailsModal()">
       <div class="meeting-header">
         <ion-icon name="calendar-number-outline"></ion-icon>
@@ -63,6 +100,7 @@
     </div>
   </div>
 
+  <!-- CONSULTATION DETAILS MODAL -->
   <ion-modal [isOpen]="isDetailsModalOpen" (didDismiss)="closeDetailsModal()">
     <ng-template>
       <ion-header class="ion-no-border">
@@ -106,8 +144,9 @@
               <div class="ion-padding accordion-content ion-text-left" slot="content">
                 <p class="summary-intro">Profile highlights synced with your advisor:</p>
                 <ul>
-                  <li>Identified Gaps: <strong>Benefits & Health</strong></li>
-                  <li>Priority: <strong>Switching group health plans</strong></li>
+                  <li>Primary Focus: <strong>{{ userProfile?.mainGoals || 'Health & Protection' }}</strong></li>
+                  <li>Key Concern: <strong>{{ userProfile?.topConcern || 'Hospitalization Coverage' }}</strong></li>
+                  <li>Monthly Budget: <strong>S$ {{ userProfile?.monthlyBudget || '300' }}/mo</strong></li>
                 </ul>
               </div>
             </ion-accordion>
@@ -141,6 +180,7 @@
     </ng-template>
   </ion-modal>
 
+  <!-- NAVIGATION GRID -->
   <ion-grid class="ion-no-padding ion-margin-top">
     <ion-row>
       <ion-col size="6">

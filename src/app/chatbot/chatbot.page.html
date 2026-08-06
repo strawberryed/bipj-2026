@@ -80,8 +80,14 @@
       <ng-template #plainBubble>
         <div class="msg-row" [ngClass]="msg.role">
 
+          <!-- Attachment (user's uploaded file) -->
+          <div class="bubble bubble-attachment" *ngIf="msg.attachment">
+            <ion-icon [name]="msg.attachment.type === 'pdf' ? 'document-text-outline' : 'image-outline'"></ion-icon>
+            <span>{{ msg.attachment.name }}</span>
+          </div>
+
           <!-- Structured blocks -->
-          <div class="bubble bubble-structured" *ngIf="msg.blocks; else simpleBubble">
+          <div class="bubble bubble-structured" *ngIf="!msg.attachment && msg.blocks">
             <ng-container *ngFor="let block of msg.blocks">
 
               <!-- Text block -->
@@ -114,21 +120,17 @@
                 <div class="plan-card-blurb">{{ block['blurb'] }}</div>
               </div>
 
-
             </ng-container>
           </div>
 
           <!-- Simple plain text -->
-          <ng-template #simpleBubble>
-            <div class="bubble">
-              {{ msg.content }}
-              <div class="follow-up-question" *ngIf="msg.followUpQuestion">
-                <ion-icon name="help-circle-outline"></ion-icon>
-                <span>{{ msg.followUpQuestion }}</span>
-              </div>
+          <div class="bubble" *ngIf="!msg.attachment && !msg.blocks">
+            {{ msg.content }}
+            <div class="follow-up-question" *ngIf="msg.followUpQuestion">
+              <ion-icon name="help-circle-outline"></ion-icon>
+              <span>{{ msg.followUpQuestion }}</span>
             </div>
-          </ng-template>
-
+          </div>
 
           <span class="msg-time">{{ nowTime() }}</span>
         </div>
@@ -156,9 +158,17 @@
 <!-- Input bar -->
 <ion-footer class="ion-no-border">
   <div class="input-bar">
-<ion-button fill="clear" (click)="openCompare()" [disabled]="isPolicyDataLoading">
-  <ion-icon name="git-compare-outline"></ion-icon>
-</ion-button>
+    <ion-button fill="clear" (click)="openCompare()" [disabled]="isPolicyDataLoading">
+      <ion-icon name="git-compare-outline"></ion-icon>
+    </ion-button>
+    <!-- Upload file button -->
+    <ion-button fill="clear" (click)="triggerFileUpload()" [disabled]="isLoading">
+      <ion-icon name="document-attach-outline"></ion-icon>
+    </ion-button>
+
+    <!-- Hidden file input, triggered programmatically via triggerFileUpload() -->
+    <input #fileInput type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none"
+      (change)="onFileSelected($event)" />
     <ion-input [(ngModel)]="inputText" placeholder="Ask anything..." (keyup.enter)="send()" class="input-field">
     </ion-input>
     <ion-button fill="clear" (click)="send()" [disabled]="!inputText.trim()">

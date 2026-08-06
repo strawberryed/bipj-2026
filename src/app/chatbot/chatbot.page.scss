@@ -775,3 +775,15 @@ ion-toolbar {
   color: #7c5cbf;
   font-weight: 700;
 }
+.bubble-attachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  font-weight: 500;
+
+  ion-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+}

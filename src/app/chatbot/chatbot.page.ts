@@ -191,7 +191,10 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     const history = this.messages.slice(0, -1);
 
     try {
-      const res = await this.gemini.sendMessage(message, history, this.profile);
+      // Read profile fresh from Firestore to avoid stale/guest data
+      // from the userProfile$ subscription not having emitted yet.
+      const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
+      const res = await this.gemini.sendMessage(message, history, liveProfile);
 
       const newMessage: Message = Array.isArray(res.reply)
         ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
@@ -259,8 +262,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     try {
       const base64Data = await this.fileToBase64(file);
 
-      const res = await this.gemini.analyzeDocument(base64Data, file.type, this.profile);
-
+      const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
+      const res = await this.gemini.analyzeDocument(base64Data, file.type, liveProfile);
+      
       const newMessage: Message = Array.isArray(res.reply)
         ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
         : { role: 'assistant', content: res.reply as string };
@@ -368,7 +372,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.isLoading = true;
     try {
       const history = this.messages.slice(0, -1);
-      const res = await this.gemini.compareMessage(this.selectedPlans, history, this.profile);
+      const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
+      const res = await this.gemini.compareMessage(this.selectedPlans, history, liveProfile);
 
       const rows = [
         { label: 'Monthly premium', values: this.selectedPlans.map(p => p.premium) },

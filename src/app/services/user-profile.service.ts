@@ -63,96 +63,101 @@ export class UserProfileService {
       throw new Error('No authenticated user found.');
     }
 
-    const current = this.userProfileSubject.value;
-    const updated = { ...current, ...data };
-
-    // 1. Save/Merge into Firestore under collection 'users'
+    // Firestore's merge:true handles per-field merging server-side —
+    // no need to combine with a local snapshot (which was previously
+    // pulling from a BehaviorSubject stuck on stale initial defaults,
+    // causing every update to overwrite good data with those defaults).
     const userDocRef = doc(this.firestore, `users/${user.uid}`);
-    await setDoc(userDocRef, updated, { merge: true });
+    await setDoc(userDocRef, data, { merge: true });
+  }
+  async getCurrentProfile(): Promise<UserProfileData | null> {
+    const user = this.auth.currentUser;
+    if (!user) return null;
 
-    // 2. Update local BehaviorSubject state
-    this.userProfileSubject.next(updated);
+    const userDocRef = doc(this.firestore, `users/${user.uid}`);
+    const snapshot = await getDoc(userDocRef);
+    return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
   }
 
   // Get current logged-in user ID
   get currentUserId(): string | null {
-  return this.auth.currentUser ? this.auth.currentUser.uid : null;
-}
+    return this.auth.currentUser ? this.auth.currentUser.uid : null;
+  }
 
   // Sign Up with Email & Password
   async signUp(email: string, pass: string, fullName: string) {
-  const credential = await createUserWithEmailAndPassword(this.auth, email, pass);
-  const uid = credential.user.uid;
+    const credential = await createUserWithEmailAndPassword(this.auth, email, pass);
+    const uid = credential.user.uid;
 
-  // Initialize user document in Firestore
-  const userDocRef = doc(this.firestore, `users/${uid}`);
-  await setDoc(userDocRef, {
-    fullName,
-    email,
-    isOnboardingCompleted: false,
-    createdAt: new Date().toISOString()
-  });
+    // Initialize user document in Firestore
+    const userDocRef = doc(this.firestore, `users/${uid}`);
+    await setDoc(userDocRef, {
+      fullName,
+      email,
+      isOnboardingCompleted: false,
+      createdAt: new Date().toISOString()
+    });
 
-  return credential.user;
-}
+    return credential.user;
+  }
 
   // Log In with Email & Password
   async login(email: string, pass: string) {
-  const credential = await signInWithEmailAndPassword(this.auth, email, pass);
-  return credential.user;
-}
+    const credential = await signInWithEmailAndPassword(this.auth, email, pass);
+    return credential.user;
+  }
 
   // Check if current user has already completed profile needs
-async isProfileComplete(uid: string): Promise<boolean> {
-  const userDocRef = doc(this.firestore, `users/${uid}`);
-  const snapshot = await getDoc(userDocRef);
-  if (snapshot.exists()) {
-    return !!snapshot.data()?.['isProfileComplete'];  // ← matches Firestore
+  async isProfileComplete(uid: string): Promise<boolean> {
+    const userDocRef = doc(this.firestore, `users/${uid}`);
+    const snapshot = await getDoc(userDocRef);
+    if (snapshot.exists()) {
+      return !!snapshot.data()?.['isOnboardingCompleted'];
+    }
+    return false;
   }
-  return false;
-}
 
   // Save onboarding questionnaire data
-  async saveOnboardingProfile(data: UserProfileData): Promise < void> {
-  const uid = this.currentUserId;
-  if(!uid) throw new Error('No authenticated user found.');
+  async saveOnboardingProfile(data: UserProfileData): Promise<void> {
+    const uid = this.currentUserId;
+    if (!uid) throw new Error('No authenticated user found.');
 
-  const insights = this.generateProfileInsights(data);
-  const fullPayload = {
-    ...data,
-    ...insights,
-    isOnboardingCompleted: true
-  };
+    const insights = this.generateProfileInsights(data);
+    const fullPayload = {
+      ...data,
+      ...insights,
+      isOnboardingCompleted: true
+    };
 
-  const userDocRef = doc(this.firestore, `users/${uid}`);
-  await setDoc(userDocRef, fullPayload, { merge: true });
-}
+    const userDocRef = doc(this.firestore, `users/${uid}`);
+    await setDoc(userDocRef, fullPayload, { merge: true });
+  }
 
   // Logout
   async logout() {
-  await signOut(this.auth);
-}
+    await signOut(this.auth);
+  }
 
   private generateProfileInsights(data: Partial<UserProfileData>) {
-  let personaTag = 'Young Working Adult';
-  if (data.age && data.age < 23) personaTag = 'Student / Early Career';
-  else if (data.dependents && data.dependents > 0) personaTag = 'Family Breadwinner';
+    let personaTag = 'Young Working Adult';
+    if (data.age && data.age < 23) personaTag = 'Student / Early Career';
+    else if (data.dependents && data.dependents > 0) personaTag = 'Family Breadwinner';
 
-  const aiInsights: string[] = [];
-  if (data.monthlyIncome && data.monthlyIncome >= 2000) {
-    aiInsights.push('You are in a good position to build both protection and savings.');
-  }
-  if (data.mainGoals?.includes('Health Protection')) {
-    aiInsights.push('Health coverage should be prioritised.');
-  }
-  if (data.mainGoals?.includes('Savings')) {
-    aiInsights.push('A plan with a savings component will help you achieve your long-term goals.');
-  }
+    const aiInsights: string[] = [];
+    if (data.monthlyIncome && data.monthlyIncome >= 2000) {
+      aiInsights.push('You are in a good position to build both protection and savings.');
+    }
+    if (data.mainGoals?.includes('Health Protection')) {
+      aiInsights.push('Health coverage should be prioritised.');
+    }
+    if (data.mainGoals?.includes('Savings')) {
+      aiInsights.push('A plan with a savings component will help you achieve your long-term goals.');
+    }
 
-  return {
-    personaTag,
-    riskProfile: 'Moderate Risk',
-    aiInsights
-  };
-}
+    return {
+      personaTag,
+      riskProfile: 'Moderate Risk',
+      aiInsights
+    };
+  }
 }
