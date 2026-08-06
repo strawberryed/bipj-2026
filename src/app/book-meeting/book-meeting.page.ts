@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { BookingService } from '../services/booking';
 import { ToastController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
+import { getCurrentUser, recordMeetingBooking } from '../../data/app-db';
 
 @Component({
   selector: 'app-book-meeting',
@@ -34,6 +35,7 @@ export class BookMeetingPage implements OnInit {
   selectedDate: string = '';
   recommendedAdvisorName = '';
   minimumDate = '';
+  policyName = '';
 
   ngOnInit() {
     this.minimumDate = this.toLocalDateInputValue(new Date());
@@ -41,6 +43,7 @@ export class BookMeetingPage implements OnInit {
 
     this.route.queryParams.subscribe(params => {
       this.recommendedAdvisorName = (params['recommendedAdvisor'] || '').toString().toUpperCase();
+      this.policyName = (params['plan'] || '').toString();
       const inboundAdvisorName = params['advisorName'] || this.recommendedAdvisorName;
 
       if (inboundAdvisorName) {
@@ -96,6 +99,19 @@ export class BookMeetingPage implements OnInit {
             timeSlot: this.selectedSlot.time,
             type: this.selectedSlot.duration
           });
+
+          const currentUser = getCurrentUser();
+          if (currentUser?.role === 'customer') {
+            recordMeetingBooking({
+              customerId: currentUser.id,
+              consultantName: this.selectedAdvisor.name,
+              consultantTitle: this.selectedAdvisor.title,
+              date: this.selectedDate,
+              time: this.selectedSlot.time,
+              channel: this.selectedSlot.duration,
+              policyName: this.policyName || undefined,
+            });
+          }
 
           this.presentSuccessToast(this.selectedAdvisor.name);
           this.router.navigate(['/tabs/tab1']); // Returns directly to your dashboard tab

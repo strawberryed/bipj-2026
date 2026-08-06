@@ -50,6 +50,7 @@ export class Tab3Page implements OnInit, OnDestroy {
   clientFilter: 'All' | 'Active' | 'Pending' = 'All';
   private refreshTimer?: number;
   private recommendationInitialized = false;
+  private readonly dataChangeHandler = () => this.refresh();
 
   readonly customerTabs: Array<{ id: CustomerView; label: string; icon: string }> = [
     { id: 'home', label: 'Interaction Timeline', icon: 'time-outline' },
@@ -75,10 +76,12 @@ export class Tab3Page implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.refresh();
+    window.addEventListener('bipj-data-changed', this.dataChangeHandler);
     this.refreshTimer = window.setInterval(() => this.refresh(), 1500);
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('bipj-data-changed', this.dataChangeHandler);
     if (this.refreshTimer) window.clearInterval(this.refreshTimer);
   }
 

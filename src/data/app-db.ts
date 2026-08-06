@@ -222,6 +222,7 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 
 function saveDatabase(db: LocalDatabase): void {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
+  window.dispatchEvent(new CustomEvent('bipj-data-changed'));
 }
 
 function getDatabase(): LocalDatabase {
@@ -398,6 +399,58 @@ export function getMeetingsForUser(user: UserRecord): MeetingRecord[] {
   return meetings
     .filter(meeting => meeting.consultantId === user.id)
     .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+}
+
+export function recordMeetingBooking(input: {
+  customerId: string;
+  consultantName: string;
+  consultantTitle: string;
+  date: string;
+  time: string;
+  channel: string;
+  policyName?: string;
+}): MeetingRecord {
+  const db = getDatabase();
+  const consultant = db.users.find(user =>
+    user.role === 'consultant' && user.name.toLowerCase() === input.consultantName.toLowerCase()
+  );
+  const consultantId = consultant?.id ?? 'u-consultant-demo';
+  const now = new Date().toISOString();
+  const uniqueId = Date.now();
+
+  const meeting: MeetingRecord = {
+    id: `m-${uniqueId}`,
+    customerId: input.customerId,
+    consultantId,
+    consultantName: input.consultantName,
+    consultantTitle: input.consultantTitle,
+    specialty: input.policyName ? `Review of ${input.policyName}` : 'Insurance planning consultation',
+    date: input.date,
+    time: input.time,
+    channel: input.channel,
+    status: 'confirmed',
+    updatedAt: now,
+  };
+
+  const timelineEvent: TimelineRecord = {
+    id: `t-${uniqueId}`,
+    customerId: input.customerId,
+    consultantId,
+    type: 'consultation',
+    channel: 'meeting',
+    title: 'Consultant meeting booked',
+    detail: `Meeting with ${input.consultantName} confirmed for ${input.date} at ${input.time}.`,
+    policyOptions: input.policyName ? [input.policyName] : undefined,
+    createdAt: now,
+    readBy: [input.customerId],
+  };
+
+  saveDatabase({
+    ...db,
+    meetings: [meeting, ...db.meetings],
+    timeline: [timelineEvent, ...db.timeline],
+  });
+  return meeting;
 }
 
 export function getMeetingChangeRequestsForCustomer(customerId: string): MeetingChangeRequestRecord[] {
