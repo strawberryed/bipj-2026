@@ -103,6 +103,36 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   // in this.messages). Kept as a Set for O(1) toggle.
   expandedReasoning = new Set<number>();
 
+  // ─────────────────────────────────────────────────────────
+  // Confidence badges — only shown for medium/low confidence
+  // ─────────────────────────────────────────────────────────
+
+  /**
+   * Whether to show a confidence badge on this message.
+   * High confidence is the default state and produces no badge (reduces clutter).
+   */
+  shouldShowConfidence(msg: Message): boolean {
+    return msg.role === 'assistant' && !!msg.confidence && msg.confidence !== 'high';
+  }
+
+  /** Returns a user-friendly label for the badge. */
+  getConfidenceLabel(confidence: string): string {
+    switch (confidence) {
+      case 'medium': return 'Moderate confidence';
+      case 'low': return 'Lower confidence';
+      default: return '';
+    }
+  }
+
+  /** Returns a CSS class for color-coding the badge. */
+  getConfidenceClass(confidence: string): string {
+    switch (confidence) {
+      case 'medium': return 'confidence-medium';
+      case 'low': return 'confidence-low';
+      default: return '';
+    }
+  }
+
   private lastMessageCount = 0;
 
   async ngOnInit() {
@@ -245,6 +275,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       if (res.reasoning) {
         newMessage.reasoning = res.reasoning;
       }
+      if (res.confidence) {
+        newMessage.confidence = res.confidence;
+      }
 
       this.messages.push(newMessage);
       await this.persistMessage(newMessage);
@@ -316,6 +349,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       }
       if (res.reasoning) {
         newMessage.reasoning = res.reasoning;
+      }
+      if (res.confidence) {
+        newMessage.confidence = res.confidence;
       }
 
       this.messages.push(newMessage);
@@ -439,6 +475,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       };
       if (res.reasoning) {
         compareMsg.reasoning = res.reasoning;
+      }
+      if (res.confidence) {
+        compareMsg.confidence = res.confidence;
       }
       this.messages.push(compareMsg);
       await this.persistMessage(compareMsg);

@@ -1,4 +1,3 @@
-// gemini.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -37,6 +36,7 @@ export interface Message {
   followUpQuestion?: string;
   attachment?: { name: string; type: 'image' | 'pdf' };
   reasoning?: string;
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 export interface GeminiResponse {
@@ -46,6 +46,7 @@ export interface GeminiResponse {
   followUpQuestion?: string;
   profileUpdate?: Record<string, any>;
   reasoning?: string;
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -212,7 +213,8 @@ export class GeminiService {
   private validateResponse(parsed: GeminiResponse): GeminiResponse | null {
     const text = (typeof parsed.reply === 'string' ? parsed.reply : JSON.stringify(parsed.reply))
       + (parsed.followUpQuestion ? ` ${parsed.followUpQuestion}` : '')
-      + (parsed.reasoning ? ` ${parsed.reasoning}` : '');
+      + (parsed.reasoning ? ` ${parsed.reasoning}` : '')
+      + (parsed.confidence ? ` ${parsed.confidence}` : '');
 
     if (this.looksSuspicious(text)) {
       console.warn('[GeminiService] Potential injection detected in response. Blocking.');
@@ -305,6 +307,26 @@ When the user has existing plans listed, factor those in — avoid recommending 
   // HELPERS: Response Parsing
   // ─────────────────────────────────────────────────────────
 
+  /**
+   * Fallback: if Gemini embedded a follow-up question at the end of the
+   * reply string instead of using the followUpQuestion field, extract it.
+   * Looks for the last sentence ending with '?' that reads like a question
+   * Cova is asking the user (not a rhetorical question inside an explanation).
+   */
+  private extractTrailingQuestion(reply: string): { text: string; question?: string } {
+    // Match the last sentence that ends with '?'
+    // Look for it after a period/sentence boundary to avoid grabbing mid-paragraph questions
+    const match = reply.match(/(?:^|[.!]\s+)([A-Z][^.!?]*\?)\s*$/);
+    if (!match) return { text: reply };
+
+    const question = match[1].trim();
+    // Only extract if it looks like a direct question to the user (not too short, not too long)
+    if (question.length < 15 || question.length > 200) return { text: reply };
+
+    const text = reply.substring(0, reply.lastIndexOf(question)).replace(/\s+$/, '');
+    return { text, question };
+  }
+
   private parseResponse(raw: string): GeminiResponse {
     try {
       const clean = raw
@@ -339,27 +361,58 @@ When the user has existing plans listed, factor those in — avoid recommending 
         reply = [reply];
       }
 
+      const confidence = ['high', 'medium', 'low'].includes(parsed.confidence)
+        ? parsed.confidence as 'high' | 'medium' | 'low'
+        : 'high';
+
       if (Array.isArray(reply)) {
+        let followUp = typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined;
+
+        // Fallback: if Gemini baked the question into the last text block, extract it
+        if (!followUp) {
+          const lastTextIdx = reply.map((b: any) => b.type).lastIndexOf('text');
+          if (lastTextIdx !== -1 && typeof reply[lastTextIdx].content === 'string') {
+            const extracted = this.extractTrailingQuestion(reply[lastTextIdx].content);
+            if (extracted.question) {
+              reply[lastTextIdx] = { ...reply[lastTextIdx], content: extracted.text };
+              followUp = extracted.question;
+            }
+          }
+        }
+
         return {
           reply: this.sanitizeBlocks(reply),
           chips: parsed.chips ?? [],
           fitScores: parsed.fitScores,
-          followUpQuestion: typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined,
+          followUpQuestion: followUp,
           profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate),
           reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim().length > 0
-            ? parsed.reasoning.trim().substring(0, 500) : undefined
+            ? parsed.reasoning.trim().substring(0, 500) : undefined,
+          confidence
         };
       }
 
       if (typeof reply === 'string') {
+        let followUp = typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined;
+
+        // Fallback: if Gemini baked the question into the reply text, extract it
+        if (!followUp) {
+          const extracted = this.extractTrailingQuestion(reply);
+          if (extracted.question) {
+            reply = extracted.text;
+            followUp = extracted.question;
+          }
+        }
+
         return {
           reply,
           chips: parsed.chips ?? [],
           fitScores: parsed.fitScores,
-          followUpQuestion: typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined,
+          followUpQuestion: followUp,
           profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate),
           reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim().length > 0
-            ? parsed.reasoning.trim().substring(0, 500) : undefined
+            ? parsed.reasoning.trim().substring(0, 500) : undefined,
+          confidence
         };
       }
 
@@ -485,8 +538,16 @@ PROACTIVE PROFILE-BUILDING (agentic behavior):
 FOLLOW-UP QUESTIONS (optional, selective — use "followUpQuestion" field):
 - Only include this field when there's a genuinely good reason: either (a) a "Not specified" profile field is directly relevant to the current topic, or (b) there's a natural next-step in the conversation worth surfacing.
 - Prefer (a) over (b) when both apply — one question only, never both in the same reply.
+- CRITICAL: When you use the "followUpQuestion" field, do NOT also write that question inside "reply". The app renders the follow-up question in a separate styled block beneath the reply — if you embed it in both places, the user sees it twice. Keep "reply" as your answer only, and put the question exclusively in "followUpQuestion".
 - Omit this field entirely for short/simple answers (greetings, one-line definitions, or anything where a question would feel forced). Use it occasionally and naturally, not on every reply.
 - This is NOT the same as "chips" — chips are fixed clickable shortcuts; followUpQuestion is a distinct, contextual, conversational line specific to what was just discussed. Never repeat a chip's content here.
+
+CONFIDENCE LEVEL (required — use "confidence" field):
+- Always include a "confidence" field with one of: "high", "medium", "low".
+- "high": your answer is grounded in the policy data provided and/or clear user info. This is the default for most answers.
+- "medium": the answer involves general insurance guidance, assumptions about the user's situation, or topics where the policy data doesn't give a definitive answer.
+- "low": the question is outside your training scope, you're making significant assumptions, or the policy data doesn't cover this topic at all.
+- Be honest — users see a badge for medium/low confidence, which builds trust. Don't default to "high" when you're genuinely uncertain.
 
 REASONING TRANSPARENCY (optional, selective — use "reasoning" field):
 - When your reply substantively personalizes to the user (references 2+ specific profile fields, factors in existing plans, or gives a plan recommendation), include a short "reasoning" field explaining the thinking process in 1-2 sentences.
@@ -520,11 +581,12 @@ Return ONLY a raw JSON object, no markdown, no backticks:
 {
   "reply": <string OR array of blocks>,
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
+  "confidence": "high" | "medium" | "low",
   "followUpQuestion": "<optional single contextual question, omit key entirely if none>",
   "profileUpdate": { "<fieldName>": <value> },
   "reasoning": "<optional 1-2 sentences explaining your thinking when the response substantively personalizes; omit key entirely otherwise>"
 }
-Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely (don't include the key) when there's nothing to say for them this turn.
+Always include "confidence". Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely (don't include the key) when there's nothing to say for them this turn.
 `.trim();
 
     const contents = [
@@ -627,9 +689,10 @@ Return ONLY a raw JSON object, no markdown, no backticks:
   "fitScores": [
     { "planId": "<exact plan id>", "score": <0-100>, "reason": "<max 10 words>" }
   ],
+  "confidence": "high" | "medium" | "low",
   "reasoning": "<1-2 sentences explaining how you weighed the user's profile against the compared plans to arrive at these fit scores>"
 }
-Since comparisons always factor in the user's profile, always include "reasoning" here. Focus on the thinking (e.g. "Weighted PRUShield lower for you because you already hold PRUExtra as a similar rider, and prioritized PRUWealth II given your wealth accumulation goal") rather than just listing profile fields.
+Since comparisons always factor in the user's profile, always include "reasoning" here. Always include "confidence". Focus on the thinking (e.g. "Weighted PRUShield lower for you because you already hold PRUExtra as a similar rider, and prioritized PRUWealth II given your wealth accumulation goal") rather than just listing profile fields.
 `.trim();
 
     const body = {
@@ -719,11 +782,12 @@ Return ONLY a raw JSON object, no markdown, no backticks:
 {
   "reply": [array of blocks],
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
+  "confidence": "high" | "medium" | "low",
   "followUpQuestion": "<optional>",
   "profileUpdate": { "<fieldName>": <value> },
   "reasoning": "<optional 1-2 sentences on how you framed the explanation for this user, if the analysis substantively factored in their profile>"
 }
-Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely if nothing applies.
+Always include "confidence". Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely if nothing applies.
 `.trim();
 
     const body = {

@@ -1,27 +1,50 @@
 // ── Variables ──────────────────────────────────────────────
-$bg: #f7f7f9;
+$bg: #f4f2f8;
 $surface: #ffffff;
-$lavender: #e8e0f0;
+$lavender: #ece5f5;
 $lavender-mid: #d4c8e8;
+$lavender-deep: #b8a4d9;
 $lavender-text: #7c5cbf;
+$lavender-dark: #5a3d9e;
 $text: #111111;
 $text-mid: #555555;
 $text-muted: #999999;
-$border: #e2e2e2;
+$border: #e8e4ef;
+
+$user-bubble-start: #9b7ad8;
+$user-bubble-end: #7c5cbf;
 
 // ── Fonts ───────────────────────────────────────────────────
-// Add to your index.html <head> if not already there:
 // <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 // ── Toolbar / Header ────────────────────────────────────────
-ion-toolbar {
-  --background: #{$surface};
-  --border-color: #{$border};
-  --color: #{$text};
-}
-
 ion-header {
   box-shadow: none;
+
+  &::after {
+    display: none;
+  }
+}
+
+ion-toolbar {
+  --background: #{$surface};
+  --border-color: transparent;
+  --color: #{$text};
+  border-bottom: 1px solid #{$border};
+
+  ion-title {
+    text-align: left;
+    padding-left: 16px;
+  }
+
+  ion-button {
+    --color: #{$text-muted};
+    transition: color 0.2s;
+
+    &:hover {
+      --color: #{$lavender-text};
+    }
+  }
 }
 
 .title-italic {
@@ -37,7 +60,7 @@ ion-header {
   font-weight: 600;
   font-size: 20px;
   letter-spacing: -0.5px;
-  color: $text;
+  color: $lavender-text;
 }
 
 // ── Ion content background ───────────────────────────────────
@@ -49,7 +72,7 @@ ion-content {
 .messages-area {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 16px 16px 24px;
   min-height: 100%;
 }
@@ -62,7 +85,26 @@ ion-content {
   color: $text-muted;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin: 8px 0;
+  margin: 8px 0 4px;
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 28%;
+    height: 1px;
+    background: $border;
+  }
+
+  &::before {
+    left: 0;
+  }
+
+  &::after {
+    right: 0;
+  }
 }
 
 // ── Message rows ─────────────────────────────────────────────
@@ -71,8 +113,10 @@ ion-content {
   flex-direction: column;
   max-width: 82%;
   gap: 3px;
+  animation: msg-slide-in 0.25s ease-out;
 
-  &.bot {
+  &.bot,
+  &.assistant {
     align-self: flex-start;
     align-items: flex-start;
   }
@@ -81,10 +125,17 @@ ion-content {
     align-self: flex-end;
     align-items: flex-end;
   }
+}
 
-  &.assistant {
-    align-self: flex-start;
-    align-items: flex-start;
+@keyframes msg-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -92,26 +143,22 @@ ion-content {
 .bubble {
   padding: 12px 16px;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: $text;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  .msg-row.bot & {
-    background: $surface;
-    border-radius: 18px 18px 18px 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  }
-
+  .msg-row.bot &,
   .msg-row.assistant & {
     background: $surface;
     border-radius: 18px 18px 18px 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 4px rgba(90, 61, 158, 0.06), 0 0 0 1px rgba(90, 61, 158, 0.04);
   }
 
   .msg-row.user & {
-    background: $lavender;
+    background: linear-gradient(135deg, $user-bubble-start, $user-bubble-end);
     border-radius: 18px 18px 4px 18px;
-    color: $text;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(124, 92, 191, 0.25);
   }
 }
 
@@ -136,7 +183,7 @@ ion-content {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: $text-muted;
+    background: $lavender-deep;
     animation: dot-bounce 1.2s infinite;
 
     &:nth-child(2) {
@@ -156,6 +203,7 @@ ion-content {
     white-space: nowrap;
   }
 }
+
 @keyframes dot-bounce {
 
   0%,
@@ -180,7 +228,6 @@ ion-content {
   background: $bg;
   flex-shrink: 0;
 
-  // hide scrollbar
   &::-webkit-scrollbar {
     display: none;
   }
@@ -189,18 +236,22 @@ ion-content {
   scrollbar-width: none;
 
   ion-chip {
-    --background: #e8e8e8;
-    --color: #{$text-mid};
+    --background: #{$surface};
+    --color: #{$lavender-text};
     font-size: 13px;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     border-radius: 20px;
+    border: 1px solid #{$border};
     flex-shrink: 0;
     white-space: nowrap;
     margin: 0;
+    transition: all 0.15s ease;
 
     &:active {
-      --background: #{$lavender-mid};
-      --color: #{$lavender-text};
+      --background: #{$lavender};
+      --color: #{$lavender-dark};
+      border-color: #{$lavender-mid};
+      transform: scale(0.96);
     }
   }
 }
@@ -210,7 +261,7 @@ ion-footer {
   background: $bg;
 
   &::before {
-    display: none; // remove Ionic's default top shadow line
+    display: none;
   }
 }
 
@@ -222,10 +273,11 @@ ion-footer {
   background: $bg;
 
   ion-button {
-    --color: #{$text-mid};
+    --color: #{$text-muted};
     --padding-start: 4px;
     --padding-end: 4px;
     flex-shrink: 0;
+    transition: color 0.2s;
 
     &:hover {
       --color: #{$lavender-text};
@@ -243,8 +295,14 @@ ion-footer {
     --padding-bottom: 10px;
     border-radius: 24px;
     font-size: 15px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: 1px solid $border;
     min-height: 44px;
+    transition: border-color 0.2s;
+
+    &:focus-within {
+      border-color: $lavender-mid;
+      box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.1);
+    }
   }
 }
 
@@ -266,6 +324,7 @@ ion-modal {
     em {
       font-family: 'Instrument Serif', serif;
       font-style: italic;
+      color: $lavender-text;
     }
   }
 
@@ -313,12 +372,6 @@ ion-modal {
   }
 }
 
-.category-arrow {
-  font-size: 12px;
-  color: $lavender-text;
-}
-
-
 .plan-list {
   display: flex;
   flex-direction: column;
@@ -331,35 +384,41 @@ ion-modal {
   align-items: center;
   gap: 12px;
   border: 1.5px solid $border;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 14px 16px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
 
   &.checked {
     border-color: $lavender-mid;
-    background: #faf8ff;
+    background: linear-gradient(135deg, rgba(236, 229, 245, 0.5), rgba(212, 200, 232, 0.2));
+    box-shadow: 0 1px 6px rgba(124, 92, 191, 0.1);
   }
 
   .plan-checkbox {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border: 1.5px solid $border;
-    border-radius: 4px;
+    border-radius: 6px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.15s ease;
 
     ion-icon {
       font-size: 14px;
-      color: $lavender-text;
+      color: #fff;
     }
   }
 
   &.checked .plan-checkbox {
-    background: $lavender;
-    border-color: $lavender-mid;
+    background: linear-gradient(135deg, $user-bubble-start, $user-bubble-end);
+    border-color: $lavender-text;
   }
 
   .plan-info {
@@ -371,6 +430,7 @@ ion-modal {
   .plan-name {
     font-size: 15px;
     color: $text;
+    font-weight: 500;
   }
 
   .plan-premium {
@@ -385,23 +445,30 @@ ion-modal {
 
   .compare-run-btn {
     width: 100%;
-    background: $lavender;
-    color: $lavender-text;
+    background: linear-gradient(135deg, $user-bubble-start, $user-bubble-end);
+    color: #ffffff;
     border: none;
     border-radius: 28px;
     padding: 16px;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 10px rgba(124, 92, 191, 0.3);
 
     &:disabled {
-      opacity: 0.4;
+      opacity: 0.35;
       cursor: default;
+      box-shadow: none;
     }
 
     &:not(:disabled):hover {
-      background: $lavender-mid;
+      box-shadow: 0 4px 16px rgba(124, 92, 191, 0.4);
+      transform: translateY(-1px);
+    }
+
+    &:not(:disabled):active {
+      transform: translateY(0);
     }
   }
 }
@@ -413,7 +480,7 @@ ion-modal {
   padding: 16px;
   max-width: 92%;
   align-self: flex-start;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(90, 61, 158, 0.08), 0 0 0 1px rgba(90, 61, 158, 0.04);
   margin-bottom: 4px;
 }
 
@@ -421,22 +488,32 @@ ion-modal {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   letter-spacing: 0.1em;
-  color: $text-mid;
+  color: $lavender-text;
   text-transform: uppercase;
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    background: linear-gradient(to bottom, $user-bubble-start, $user-bubble-end);
+    border-radius: 2px;
+  }
 }
 
 .compare-plans-header {
   display: grid;
   gap: 8px;
   margin-bottom: 12px;
-  // grid-template-columns set dynamically via [style] binding
 }
 
 .compare-plan-col {
   background: $lavender;
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 12px 14px;
 }
 
 .compare-plan-name {
@@ -450,7 +527,7 @@ ion-modal {
   font-family: 'JetBrains Mono', monospace;
   font-size: 14px;
   font-weight: 600;
-  color: $text;
+  color: $lavender-text;
 }
 
 .compare-table {
@@ -508,6 +585,17 @@ ion-modal {
   text-transform: uppercase;
   color: $lavender-text;
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: 11px;
+    background: $lavender-text;
+    border-radius: 2px;
+  }
 }
 
 .block-bullets {
@@ -521,6 +609,10 @@ ion-modal {
     font-size: 14px;
     line-height: 1.5;
     color: $text-mid;
+
+    &::marker {
+      color: $lavender-deep;
+    }
   }
 }
 
@@ -536,18 +628,29 @@ ion-modal {
 
 .fit-bar {
   width: 100%;
-  height: 4px;
-  background: $border;
-  border-radius: 2px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
   margin: 8px 0 4px;
   overflow: hidden;
 }
 
 .fit-bar-fill {
   height: 100%;
-  background: $lavender-text;
-  border-radius: 2px;
-  transition: width 0.6s ease;
+  border-radius: 3px;
+  transition: width 0.6s ease, background 0.3s ease;
+
+  &.fit-high {
+    background: linear-gradient(90deg, #34d399, #22c55e);
+  }
+
+  &.fit-mid {
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  }
+
+  &.fit-low {
+    background: linear-gradient(90deg, #f87171, #ef4444);
+  }
 }
 
 .fit-row {
@@ -559,7 +662,21 @@ ion-modal {
 .fit-percent {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
+  font-weight: 600;
   color: $text-muted;
+  transition: color 0.3s ease;
+
+  &.fit-high {
+    color: #16a34a;
+  }
+
+  &.fit-mid {
+    color: #d97706;
+  }
+
+  &.fit-low {
+    color: #dc2626;
+  }
 }
 
 .why-btn {
@@ -569,8 +686,14 @@ ion-modal {
   font-size: 10px;
   color: $lavender-text;
   cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
+  padding: 2px 6px;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(124, 92, 191, 0.08);
+  }
 }
 
 // ── Tappable plan card (inline in chat bubble) ───────────────
@@ -581,7 +704,12 @@ ion-modal {
   border: 1px solid $lavender-mid;
   border-radius: 12px;
   cursor: pointer;
-  transition: box-shadow 0.15s ease, transform 0.1s ease;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: $lavender-text;
+    box-shadow: 0 2px 8px rgba(124, 92, 191, 0.12);
+  }
 
   &:active {
     transform: scale(0.98);
@@ -599,6 +727,11 @@ ion-modal {
   ion-icon {
     color: $lavender-text;
     font-size: 16px;
+    transition: transform 0.15s;
+  }
+
+  .block-plan-card:hover & ion-icon {
+    transform: translateX(2px);
   }
 }
 
@@ -648,43 +781,33 @@ ion-modal {
   }
 }
 
-ion-toolbar {
-  --background: #{$surface};
-  --border-color: #{$border};
-  --color: #{$text};
-
-  ion-title {
-    text-align: left;
-    padding-left: 16px;
-  }
-}
-
 .follow-up-question {
   display: flex;
   align-items: flex-start;
   gap: 6px;
   margin-top: 8px;
   padding: 8px 12px;
-  background: rgba(124, 92, 191, 0.08);
-  border-left: 3px solid rgba(124, 92, 191, 0.6);
-  border-radius: 8px;
+  background: rgba(124, 92, 191, 0.06);
+  border-left: 3px solid $lavender-deep;
+  border-radius: 0 8px 8px 0;
   font-size: 0.9em;
   font-style: italic;
-  color: var(--ion-color-medium-shade, #555);
+  color: $text-mid;
 
   ion-icon {
     font-size: 1.1em;
     margin-top: 1px;
-    color: rgba(124, 92, 191, 0.8);
+    color: $lavender-text;
     flex-shrink: 0;
   }
 }
 
+// ── Plan detail modal ────────────────────────────────────────
 .plan-modal-header {
   box-shadow: none;
 
   &::after {
-    display: none; // remove Ionic's default header bottom border/shadow line
+    display: none;
   }
 }
 
@@ -693,20 +816,20 @@ ion-toolbar {
   justify-content: space-between;
   align-items: flex-start;
   padding: 20px 20px 16px;
-  border-bottom: 1px solid #f0eef5;
+  border-bottom: 1px solid $border;
   background: $surface;
 }
 
 .plan-modal-title {
   font-size: 1.15em;
   font-weight: 700;
-  color: #1a1a1a;
+  color: $text;
   margin-bottom: 4px;
 }
 
 .plan-modal-subtitle {
   font-size: 0.85em;
-  color: #8a8a94;
+  color: $text-muted;
   line-height: 1.4;
   max-width: 260px;
 }
@@ -715,13 +838,19 @@ ion-toolbar {
   width: 28px;
   height: 28px;
   border: none;
-  background: transparent;
-  color: #b0b0b8;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 50%;
+  color: $text-muted;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2em;
   flex-shrink: 0;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.08);
+  }
 }
 
 .plan-detail-content {
@@ -733,10 +862,11 @@ ion-toolbar {
 }
 
 .plan-group {
-  background: #f8f7fb;
+  background: #f9f7fd;
   border-radius: 14px;
   margin-bottom: 14px;
   overflow: hidden;
+  border: 1px solid rgba(124, 92, 191, 0.06);
 
   &:last-child {
     margin-bottom: 4px;
@@ -750,7 +880,7 @@ ion-toolbar {
   padding: 12px 16px 8px;
   font-size: 0.8em;
   font-weight: 600;
-  color: #7c5cbf;
+  color: $lavender-text;
   letter-spacing: 0.02em;
 }
 
@@ -759,7 +889,7 @@ ion-toolbar {
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  border-top: 1px solid #eeecf4;
+  border-top: 1px solid rgba(124, 92, 191, 0.06);
 
   &:first-of-type {
     border-top: none;
@@ -775,15 +905,16 @@ ion-toolbar {
 .plan-row-value {
   font-size: 0.92em;
   font-weight: 600;
-  color: #1a1a1a;
+  color: $text;
   white-space: nowrap;
   margin-left: 12px;
 }
 
 .plan-row-value--accent {
-  color: #7c5cbf;
+  color: $lavender-text;
   font-weight: 700;
 }
+
 .bubble-attachment {
   display: flex;
   align-items: center;
@@ -795,7 +926,14 @@ ion-toolbar {
     font-size: 18px;
     flex-shrink: 0;
   }
+
+  .msg-row.user & {
+    ion-icon {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
 }
+
 .loading-label {
   display: inline-block;
   margin-left: 8px;
@@ -804,43 +942,8 @@ ion-toolbar {
   vertical-align: middle;
   font-style: italic;
 }
- // Add these rules alongside your existing .fit-bar-fill and .fit-percent
-// rules in chatbot.page.scss. The three color classes apply to both the
-// bar fill (background) and the percent text label (color).
 
-.fit-bar-fill {
-  transition: background 0.3s ease;
-
-  &.fit-high {
-    background: #22c55e; // green — strong fit
-  }
-
-  &.fit-mid {
-    background: #f59e0b; // amber — partial fit, has a gap
-  }
-
-  &.fit-low {
-    background: #ef4444; // red — significant mismatch
-  }
-}
-
-.fit-percent {
-  transition: color 0.3s ease;
-
-  &.fit-high {
-    color: #16a34a; // slightly darker green so text has enough contrast
-  }
-
-  &.fit-mid {
-    color: #d97706; // slightly darker amber
-  }
-
-  &.fit-low {
-    color: #dc2626; // slightly darker red
-  }
-}
-// Add these rules to chatbot.page.scss
-
+// ── Reasoning transparency ──────────────────────────────────
 .reasoning-toggle {
   display: inline-flex;
   align-items: center;
@@ -850,10 +953,11 @@ ion-toolbar {
   background: transparent !important;
   border: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: 0 0 0 2px;
   color: $lavender-text;
   cursor: pointer;
   border-radius: 50%;
+  vertical-align: middle;
   transition: background 0.15s ease, transform 0.1s ease;
 
   ion-icon {
@@ -862,21 +966,21 @@ ion-toolbar {
   }
 
   &:hover {
-    background: rgba(124, 92, 191, 0.12) !important;
+    background: rgba(124, 92, 191, 0.1) !important;
   }
 
   &:active {
-    transform: scale(0.92);
+    transform: scale(0.9);
   }
 }
 
 .reasoning-panel {
   margin: 8px 0 0;
   padding: 10px 12px;
-  background: rgba(124, 92, 191, 0.05);
-  border-left: 3px solid rgba(124, 92, 191, 0.4);
-  border-radius: 6px;
-  animation: reasoning-fade-in 0.18s ease-out;
+  background: rgba(124, 92, 191, 0.04);
+  border-left: 3px solid $lavender-deep;
+  border-radius: 0 8px 8px 0;
+  animation: reasoning-fade-in 0.2s ease-out;
 }
 
 .reasoning-panel-label {
@@ -900,8 +1004,37 @@ ion-toolbar {
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// ── Confidence badge ────────────────────────────────────────
+.confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  vertical-align: middle;
+
+  ion-icon {
+    font-size: 0.8rem;
+  }
+
+  &.confidence-medium {
+    background: rgba(251, 191, 36, 0.12);
+    color: #b8860b;
+  }
+
+  &.confidence-low {
+    background: rgba(248, 113, 113, 0.1);
+    color: #c62828;
   }
 }

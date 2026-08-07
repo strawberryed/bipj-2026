@@ -76,6 +76,11 @@
         <!-- AI summary below card -->
         <div class="msg-row assistant">
           <div class="bubble">
+            <span class="confidence-badge" *ngIf="shouldShowConfidence(msg)"
+              [ngClass]="getConfidenceClass(msg.confidence!)">
+              <ion-icon name="shield-half-outline"></ion-icon>
+              {{ getConfidenceLabel(msg.confidence!) }}
+            </span>
             {{ msg.content }}
             <button *ngIf="msg.reasoning" class="reasoning-toggle" (click)="toggleReasoning(msgIndex)"
               [attr.aria-label]="isReasoningExpanded(msgIndex) ? 'Hide reasoning' : 'Show reasoning'">
@@ -102,6 +107,11 @@
 
           <!-- Structured blocks -->
           <div class="bubble bubble-structured" *ngIf="!msg.attachment && msg.blocks">
+            <span class="confidence-badge" *ngIf="shouldShowConfidence(msg)"
+              [ngClass]="getConfidenceClass(msg.confidence!)">
+              <ion-icon name="shield-half-outline"></ion-icon>
+              {{ getConfidenceLabel(msg.confidence!) }}
+            </span>
             <ng-container *ngFor="let block of msg.blocks">
 
               <!-- Text block -->
@@ -149,6 +159,11 @@
 
           <!-- Simple plain text -->
           <div class="bubble" *ngIf="!msg.attachment && !msg.blocks">
+            <span class="confidence-badge" *ngIf="shouldShowConfidence(msg)"
+              [ngClass]="getConfidenceClass(msg.confidence!)">
+              <ion-icon name="shield-half-outline"></ion-icon>
+              {{ getConfidenceLabel(msg.confidence!) }}
+            </span>
             {{ msg.content }}
             <div class="follow-up-question" *ngIf="msg.followUpQuestion">
               <ion-icon name="help-circle-outline"></ion-icon>
