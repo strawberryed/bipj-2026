@@ -92,7 +92,7 @@ export class OnboardingPage {
   }
 
   async finishOnboarding() {
-    if (this.hasInsurance === null || this.hasInsurance === undefined ||!this.mainGoal || !this.primaryConcern) {
+    if (this.hasInsurance === null || this.hasInsurance === undefined || !this.mainGoal || !this.primaryConcern) {
       this.showToast('Please complete all questions.');
       return;
     }
@@ -132,12 +132,8 @@ export class OnboardingPage {
         monthlyIncome: Number(this.monthlyIncome),
         maritalStatus: this.maritalStatus,
         hasExistingInsurance: !!this.hasInsurance,
-<<<<<<< HEAD
-        mainGoals: this.mainGoal ? [this.mainGoal] : [],
-=======
         existingPlans: cleanedExistingPlans,
-        mainGoals: [this.mainGoal],
->>>>>>> 054354e84264c9224e3ecea50e387a3a6e1bdfa4
+        mainGoals: this.mainGoal ? [this.mainGoal] : [],
         monthlyBudget: this.monthlyBudget,
         topConcern: this.primaryConcern
       };

@@ -18,6 +18,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private userProfileService = inject(UserProfileService);
+  private toastCtrl = inject(ToastController);
 
   todayDate: Date = new Date();
   activeBooking$: Observable<Booking | null>;

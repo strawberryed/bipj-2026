@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { EntitlementService } from './entitlement.service';
+import { EntitlementsService } from './entitlement.service';
 
-describe('EntitlementService', () => {
-  let service: EntitlementService;
+describe('EntitlementsService', () => {
+  let service: EntitlementsService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(EntitlementService);
+    service = TestBed.inject(EntitlementsService);
   });
 
   it('should be created', () => {

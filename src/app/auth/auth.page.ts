@@ -44,14 +44,10 @@ export class AuthPage {
 
     try {
       if (this.isSignUpMode) {
-<<<<<<< HEAD
         // Create the Firebase Auth account + initial Firestore doc first,
         // THEN send them into the questionnaire. Previously this just
         // navigated to /onboarding without ever creating an account, so
         // onboarding's save call had no authenticated user to attach to.
-        await this.profileService.signUp(this.email, this.password, this.fullName);
-=======
-
         const user = await this.profileService.signUp(this.email, this.password, this.fullName);
         establishLocalSession(user.email || this.email, this.fullName);
 
@@ -59,8 +55,6 @@ export class AuthPage {
         // tries to read auth.currentUser (same reason as the login flow).
         await new Promise(resolve => setTimeout(resolve, 500));
 
-
->>>>>>> 054354e84264c9224e3ecea50e387a3a6e1bdfa4
         await loader.dismiss();
         this.router.navigate(['/onboarding']);
       } else {

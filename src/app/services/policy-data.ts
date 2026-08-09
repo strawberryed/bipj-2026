@@ -24,7 +24,7 @@ export class PolicyDataService {
   private loaded = false;
   private loadingPromise: Promise<void> | null = null;
 
-  constructor(private firestore: Firestore) { }
+  constructor(private firestore: Firestore, private injector: EnvironmentInjector) { }
 
   async ensureLoaded(): Promise<void> {
     if (this.loaded) return;

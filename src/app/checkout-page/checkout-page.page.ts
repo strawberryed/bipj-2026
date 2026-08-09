@@ -13,6 +13,7 @@ export class CheckoutPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private entitlements = inject(EntitlementsService);
 
   paymentForm!: FormGroup;
   includeReport: boolean = true;
@@ -20,16 +21,9 @@ export class CheckoutPage implements OnInit {
   totalPrice: number = 15.00;
   selectedMethod: 'card' | 'nets' = 'card';
 
-<<<<<<< HEAD
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private fb: FormBuilder,
-    private entitlements: EntitlementsService
-  ) { }
 
-=======
->>>>>>> 054354e84264c9224e3ecea50e387a3a6e1bdfa4
+
+
   ngOnInit() {
     this.paymentForm = this.fb.group({
       cardName: ['', [Validators.required, Validators.minLength(2), Validators.pattern('^[a-zA-Z ]*$')]],

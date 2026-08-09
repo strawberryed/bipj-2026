@@ -28,6 +28,7 @@ export class BookMeetingPage implements OnInit {
   selectedSlot: any = null;
   selectedDate: string = '';
   recommendedAdvisorName = '';
+  minimumDate: string = '';
 
   constructor(
     private bookingService: BookingService,
@@ -43,6 +44,7 @@ export class BookMeetingPage implements OnInit {
     // Guard direct/deep-link access: without this, a user could navigate
     // straight to /book-meeting and book even without having purchased the
     // consultant add-on.
+    this.minimumDate = this.toLocalDateInputValue(new Date());
     const entitlements = await firstValueFrom(this.entitlements.entitlements$);
     if (!entitlements.consultantUnlocked) {
       this.router.navigate(['/upgrade']);
