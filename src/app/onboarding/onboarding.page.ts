@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { UserProfileService } from '../services/user-profile.service';
+import { UserProfileService, ExistingPlan } from '../services/user-profile.service';
 import { ToastController, LoadingController } from '@ionic/angular';
+import { updateCurrentLocalUserProfile } from '../../data/app-db';
 
 @Component({
   selector: 'app-onboarding',
@@ -9,7 +10,12 @@ import { ToastController, LoadingController } from '@ionic/angular';
   styleUrls: ['./onboarding.page.scss'],
   standalone: false,
 })
-export class OnboardingPage implements OnInit {
+export class OnboardingPage {
+  private profileService = inject(UserProfileService);
+  private router = inject(Router);
+  private toastCtrl = inject(ToastController);
+  private loadingCtrl = inject(LoadingController);
+
   currentStep: number = 1;
 
   // Step 1 Form Fields (initialized empty)
@@ -25,19 +31,41 @@ export class OnboardingPage implements OnInit {
   monthlyBudget: number = 300;
   primaryConcern: string = '';
 
+  // Existing insurance plans — only shown when hasInsurance === true.
+  // Users can add multiple plans, each with plan name (required),
+  // insurer (optional), and freeform notes (optional).
+  existingPlans: ExistingPlan[] = [];
+
   // Validation Error States
   ageError: string = ''; // Stores inline error message for age
   readonly MINIMUM_AGE: number = 18;
 
+  // Helpers for the existing-plans dynamic list
 
-  constructor(
-    private profileService: UserProfileService,
-    private router: Router,
-    private toastCtrl: ToastController,
-    private loadingCtrl: LoadingController
-  ) { }
+  addExistingPlan() {
+    if (this.existingPlans.length >= 10) {
+      this.showToast('You can add up to 10 plans.');
+      return;
+    }
+    this.existingPlans.push({ name: '', insurer: '', notes: '' });
+  }
 
-  ngOnInit() { }
+  removeExistingPlan(index: number) {
+    this.existingPlans.splice(index, 1);
+  }
+
+  // ngFor trackBy — keeps input focus stable when the array mutates
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  // Reset the list when the user flips hasInsurance to No,
+  // so we don't accidentally save stale entries.
+  onHasInsuranceChange() {
+    if (this.hasInsurance === false) {
+      this.existingPlans = [];
+    }
+  }
 
   nextStep() {
     // Reset errors
@@ -69,6 +97,28 @@ export class OnboardingPage implements OnInit {
       return;
     }
 
+    // Clean up existing plans: drop rows where the user added an entry
+    // but didn't fill in a name. For optional fields, OMIT them entirely
+    // when empty rather than setting them to undefined — Firestore rejects
+    // undefined values and setDoc will fail with an "invalid data" error.
+    const cleanedExistingPlans: ExistingPlan[] = this.hasInsurance
+      ? this.existingPlans
+        .map(p => {
+          const cleaned: ExistingPlan = { name: (p.name ?? '').trim() };
+          const insurer = (p.insurer ?? '').trim();
+          const notes = (p.notes ?? '').trim();
+          if (insurer) cleaned.insurer = insurer;
+          if (notes) cleaned.notes = notes;
+          return cleaned;
+        })
+        .filter(p => p.name.length > 0)
+      : [];
+
+    if (this.hasInsurance && cleanedExistingPlans.length === 0) {
+      this.showToast('Please add at least one plan, or select "No" for existing insurance.');
+      return;
+    }
+
     const loader = await this.loadingCtrl.create({
       message: 'Generating your profile...',
     });
@@ -82,7 +132,12 @@ export class OnboardingPage implements OnInit {
         monthlyIncome: Number(this.monthlyIncome),
         maritalStatus: this.maritalStatus,
         hasExistingInsurance: !!this.hasInsurance,
+<<<<<<< HEAD
         mainGoals: this.mainGoal ? [this.mainGoal] : [],
+=======
+        existingPlans: cleanedExistingPlans,
+        mainGoals: [this.mainGoal],
+>>>>>>> 054354e84264c9224e3ecea50e387a3a6e1bdfa4
         monthlyBudget: this.monthlyBudget,
         topConcern: this.primaryConcern
       };
@@ -92,6 +147,16 @@ export class OnboardingPage implements OnInit {
       // aiInsights — the fields tab1's dynamic dashboard and tab4's
       // Profile Summary both depend on.
       await this.profileService.saveOnboardingProfile(profileData);
+
+      // Keep the local Tab 3 workspace profile aligned with onboarding so its
+      // recommendation can be generated without asking for the details again.
+      updateCurrentLocalUserProfile({
+        name: this.fullName,
+        monthlyIncome: Number(this.monthlyIncome),
+        financialPriorities: [this.mainGoal, this.primaryConcern],
+        monthlyBudget: this.monthlyBudget,
+        hasExistingInsurance: this.hasInsurance,
+      });
 
       await loader.dismiss();
       this.router.navigate(['/tabs/tab1']); // Navigate to Landing Page after onboarding

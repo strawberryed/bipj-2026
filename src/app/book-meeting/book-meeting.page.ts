@@ -66,8 +66,19 @@ export class BookMeetingPage implements OnInit {
     }
   }
 
-  selectAdvisor(advisor: ConsultantProfile) { this.selectedAdvisor = advisor; }
-  selectSlot(slot: any) { this.selectedSlot = slot; }
+      selectAdvisor(advisor: any) {
+        this.selectedAdvisor = advisor;
+      }
+      selectSlot(slot: any) { this.selectedSlot = slot; }
+
+      onDateChange(event: Event) {
+        this.selectedDate = (event.target as HTMLInputElement).value;
+      }
+
+      private toLocalDateInputValue(date: Date): string {
+        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return offsetDate.toISOString().slice(0, 10);
+      }
 
   async presentSuccessToast(advisorName: string) {
     const toast = await this.toastController.create({

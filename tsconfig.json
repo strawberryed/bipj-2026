@@ -18,7 +18,6 @@
     "moduleResolution": "node",
     "importHelpers": true,
     "target": "es2022",
-    "jsx": "react-jsx",
     "module": "es2020",
     "lib": [
       "es2018",

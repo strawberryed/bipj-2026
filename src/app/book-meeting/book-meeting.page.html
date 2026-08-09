@@ -15,9 +15,12 @@
   <h2 class="section-title">YOUR MATCHED ADVISORS</h2>
 
   <div class="advisor-list">
-    <div class="advisor-card" *ngFor="let advisor of advisors"
-      [class.active-card]="selectedAdvisor?.name === advisor.name"
-      [class.recommended-card]="advisor.name === recommendedAdvisorName" (click)="selectAdvisor(advisor)">
+    <button type="button" class="advisor-card" 
+         *ngFor="let advisor of advisors" 
+         [class.active-card]="selectedAdvisor?.name === advisor.name"
+         [class.recommended-card]="advisor.name === recommendedAdvisorName"
+         [attr.aria-pressed]="selectedAdvisor?.name === advisor.name"
+         (click)="selectAdvisor(advisor)">
       <ion-avatar>
         <ion-icon name="person-circle" class="avatar-fallback-icon"></ion-icon>
       </ion-avatar>
@@ -26,16 +29,16 @@
         <p>{{ advisor.title }}</p>
         <span class="recommended-badge" *ngIf="advisor.name === recommendedAdvisorName">Recommended for you</span>
       </div>
-    </div>
+      <ion-icon class="selection-check" [name]="selectedAdvisor?.name === advisor.name ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+    </button>
   </div>
 
   <h2 class="section-title ion-margin-top">SELECT DATE</h2>
-
-  <ion-item class="date-picker-item" lines="none">
-    <ion-label position="stacked">Preferred Meeting Date</ion-label>
-    <ion-input type="date" [(ngModel)]="selectedDate" placeholder="Choose a date" class="date-input">
-    </ion-input>
-  </ion-item>
+  
+  <label class="date-picker-field">
+    <span>Preferred Meeting Date</span>
+    <input type="date" class="date-input" [min]="minimumDate" [value]="selectedDate" (change)="onDateChange($event)" />
+  </label>
 
   <h2 class="section-title ion-margin-top">AVAILABLE SLOTS</h2>
 

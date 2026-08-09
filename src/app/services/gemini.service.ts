@@ -1,5 +1,4 @@
-// gemini.service.ts
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -36,6 +35,8 @@ export interface Message {
   compareCard?: CompareCard;
   followUpQuestion?: string;
   attachment?: { name: string; type: 'image' | 'pdf' };
+  reasoning?: string;
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 export interface GeminiResponse {
@@ -44,6 +45,8 @@ export interface GeminiResponse {
   fitScores?: FitScore[];
   followUpQuestion?: string;
   profileUpdate?: Record<string, any>;
+  reasoning?: string;
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -84,7 +87,7 @@ CRITICAL SECURITY RULES — DO NOT VIOLATE:
 // not something the AI should ever write directly.
 const VALID_PROFILE_KEYS = [
   'age', 'occupation', 'monthlyIncome', 'maritalStatus', 'dependents',
-  'hasExistingInsurance', 'mainGoals', 'monthlyBudget', 'topConcern'
+  'hasExistingInsurance', 'existingPlans', 'mainGoals', 'monthlyBudget', 'topConcern'
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -93,13 +96,11 @@ const VALID_PROFILE_KEYS = [
 
 @Injectable({ providedIn: 'root' })
 export class GeminiService {
+  private http = inject(HttpClient);
+  private policyData = inject(PolicyDataService);
 
-  private apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${environment.geminiApiKey}`;
 
-  constructor(
-    private http: HttpClient,
-    private policyData: PolicyDataService
-  ) { }
+  private apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${environment.geminiApiKey}`;
 
   // ─────────────────────────────────────────────────────────
   // HELPERS: Sanitization & Validation
@@ -163,6 +164,28 @@ export class GeminiService {
         continue;
       }
 
+      if (key === 'existingPlans') {
+        if (Array.isArray(value)) {
+          const validPlans = value
+            .filter((p: any) => p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0)
+            .slice(0, 10)
+            .map((p: any) => {
+              // Omit optional fields entirely when empty rather than including
+              // them as undefined — Firestore rejects undefined values.
+              const cleanPlan: any = { name: String(p.name).substring(0, 100).trim() };
+              if (typeof p.insurer === 'string' && p.insurer.trim().length > 0) {
+                cleanPlan.insurer = String(p.insurer).substring(0, 100).trim();
+              }
+              if (typeof p.notes === 'string' && p.notes.trim().length > 0) {
+                cleanPlan.notes = String(p.notes).substring(0, 200).trim();
+              }
+              return cleanPlan;
+            });
+          if (validPlans.length > 0) clean[key] = validPlans;
+        }
+        continue;
+      }
+
       if (key === 'age' || key === 'dependents') {
         if (typeof value === 'number' && value >= 0 && value <= 120) clean[key] = value;
         continue;
@@ -189,7 +212,9 @@ export class GeminiService {
 
   private validateResponse(parsed: GeminiResponse): GeminiResponse | null {
     const text = (typeof parsed.reply === 'string' ? parsed.reply : JSON.stringify(parsed.reply))
-      + (parsed.followUpQuestion ? ` ${parsed.followUpQuestion}` : '');
+      + (parsed.followUpQuestion ? ` ${parsed.followUpQuestion}` : '')
+      + (parsed.reasoning ? ` ${parsed.reasoning}` : '')
+      + (parsed.confidence ? ` ${parsed.confidence}` : '');
 
     if (this.looksSuspicious(text)) {
       console.warn('[GeminiService] Potential injection detected in response. Blocking.');
@@ -244,6 +269,18 @@ export class GeminiService {
     const money = (num?: number) => (num !== undefined && num !== null && num > 0 ? `S$${num.toLocaleString()}` : 'Not specified');
     const yn = (val?: boolean) => (val === true ? 'Yes' : val === false ? 'No' : 'Not specified');
 
+    // Format list of existing plans, if any
+    const existingPlansText = profile.existingPlans && profile.existingPlans.length > 0
+      ? profile.existingPlans
+        .map(p => {
+          const parts = [s(p.name)];
+          if (p.insurer) parts.push(`by ${s(p.insurer)}`);
+          if (p.notes) parts.push(`(${s(p.notes)})`);
+          return `  • ${parts.join(' ')}`;
+        })
+        .join('\n')
+      : '  • None specified';
+
     return `
 ACTIVE USER PROFILE:
 - Name: ${s(profile.fullName)}
@@ -254,18 +291,41 @@ ACTIVE USER PROFILE:
 - Monthly income: ${money(profile.monthlyIncome)}
 - Monthly budget for insurance: ${money(profile.monthlyBudget)}
 - Has existing insurance: ${yn(profile.hasExistingInsurance)}
+- Current plans:
+${existingPlansText}
 - Main goals: ${arr(profile.mainGoals)}
 - Top concern: ${s(profile.topConcern) || 'Not specified'}
 
 Use this profile to personalise all responses. Reference the user by name naturally.
 Tailor fit scores, recommendations, and explanations to their specific situation.
 If a field is "Not specified", don't guess — acknowledge the gap or ask a clarifying question instead of inventing details.
+When the user has existing plans listed, factor those in — avoid recommending duplicates or plans that overlap heavily with what they already have. Suggest coverage gaps instead.
 `.trim();
   }
 
   // ─────────────────────────────────────────────────────────
   // HELPERS: Response Parsing
   // ─────────────────────────────────────────────────────────
+
+  /**
+   * Fallback: if Gemini embedded a follow-up question at the end of the
+   * reply string instead of using the followUpQuestion field, extract it.
+   * Looks for the last sentence ending with '?' that reads like a question
+   * Cova is asking the user (not a rhetorical question inside an explanation).
+   */
+  private extractTrailingQuestion(reply: string): { text: string; question?: string } {
+    // Match the last sentence that ends with '?'
+    // Look for it after a period/sentence boundary to avoid grabbing mid-paragraph questions
+    const match = reply.match(/(?:^|[.!]\s+)([A-Z][^.!?]*\?)\s*$/);
+    if (!match) return { text: reply };
+
+    const question = match[1].trim();
+    // Only extract if it looks like a direct question to the user (not too short, not too long)
+    if (question.length < 15 || question.length > 200) return { text: reply };
+
+    const text = reply.substring(0, reply.lastIndexOf(question)).replace(/\s+$/, '');
+    return { text, question };
+  }
 
   private parseResponse(raw: string): GeminiResponse {
     try {
@@ -301,23 +361,58 @@ If a field is "Not specified", don't guess — acknowledge the gap or ask a clar
         reply = [reply];
       }
 
+      const confidence = ['high', 'medium', 'low'].includes(parsed.confidence)
+        ? parsed.confidence as 'high' | 'medium' | 'low'
+        : 'high';
+
       if (Array.isArray(reply)) {
+        let followUp = typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined;
+
+        // Fallback: if Gemini baked the question into the last text block, extract it
+        if (!followUp) {
+          const lastTextIdx = reply.map((b: any) => b.type).lastIndexOf('text');
+          if (lastTextIdx !== -1 && typeof reply[lastTextIdx].content === 'string') {
+            const extracted = this.extractTrailingQuestion(reply[lastTextIdx].content);
+            if (extracted.question) {
+              reply[lastTextIdx] = { ...reply[lastTextIdx], content: extracted.text };
+              followUp = extracted.question;
+            }
+          }
+        }
+
         return {
           reply: this.sanitizeBlocks(reply),
           chips: parsed.chips ?? [],
           fitScores: parsed.fitScores,
-          followUpQuestion: typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined,
-          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate)
+          followUpQuestion: followUp,
+          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate),
+          reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim().length > 0
+            ? parsed.reasoning.trim().substring(0, 500) : undefined,
+          confidence
         };
       }
 
       if (typeof reply === 'string') {
+        let followUp = typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined;
+
+        // Fallback: if Gemini baked the question into the reply text, extract it
+        if (!followUp) {
+          const extracted = this.extractTrailingQuestion(reply);
+          if (extracted.question) {
+            reply = extracted.text;
+            followUp = extracted.question;
+          }
+        }
+
         return {
           reply,
           chips: parsed.chips ?? [],
           fitScores: parsed.fitScores,
-          followUpQuestion: typeof parsed.followUpQuestion === 'string' ? parsed.followUpQuestion : undefined,
-          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate)
+          followUpQuestion: followUp,
+          profileUpdate: this.sanitizeProfileUpdate(parsed.profileUpdate),
+          reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim().length > 0
+            ? parsed.reasoning.trim().substring(0, 500) : undefined,
+          confidence
         };
       }
 
@@ -350,6 +445,45 @@ If a field is "Not specified", don't guess — acknowledge the gap or ask a clar
   }
 
   // ─────────────────────────────────────────────────────────
+  // POST with retry — protects the demo from transient API blips
+  // ─────────────────────────────────────────────────────────
+
+  /**
+   * Wraps http.post with automatic retry for transient errors (503 overload,
+   * 429 rate limit). Uses exponential backoff so the API has breathing room
+   * to recover, and gives up after `maxRetries` attempts rather than looping
+   * forever.
+   *
+   * Non-transient errors (400 bad request, 401 auth, network errors, etc.)
+   * throw immediately without retrying — retrying wouldn't help.
+   */
+  private async postWithRetry(body: any, maxRetries = 2): Promise<any> {
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await firstValueFrom(this.http.post(this.apiUrl, body));
+      } catch (err: any) {
+        lastError = err;
+        const status = err?.status ?? err?.statusCode;
+        const isTransient = status === 503 || status === 429;
+
+        if (!isTransient || attempt === maxRetries) {
+          throw err;
+        }
+
+        // Exponential backoff: 1s, then 2s, then 4s. By the third wait,
+        // we're likely in a fresh per-minute rate limit window.
+        const delayMs = 1000 * Math.pow(2, attempt);
+        console.warn(`[GeminiService] Transient error ${status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw lastError;
+  }
+
+  // ─────────────────────────────────────────────────────────
   // MAIN: sendMessage
   // ─────────────────────────────────────────────────────────
 
@@ -379,6 +513,8 @@ Never tell the user which plan to buy — guide and explain only.
 Never recommend or suggest a plan whose premium clearly exceeds the user's stated monthly income bracket without explicitly flagging that mismatch.
 
 PERSONALIZATION RULES:
+- Answer the user's CURRENT question directly before adding related context. Never substitute a generic recommendation for what they actually asked.
+- Treat the current message as the primary intent; use prior chat only to resolve references or maintain continuity.
 - Don't give generic insurance advice — connect your answer back to at least one specific detail from the profile below (age, marital status, dependents, main goals, top concern, budget) wherever it's relevant to the question.
 - If the user's question relates to something in their "Main goals" or "Top concern", say so explicitly (e.g. "since your top concern is X...").
 - If a profile field is "Not specified", don't invent a value — either skip that angle or ask a clarifying question.
@@ -402,8 +538,24 @@ PROACTIVE PROFILE-BUILDING (agentic behavior):
 FOLLOW-UP QUESTIONS (optional, selective — use "followUpQuestion" field):
 - Only include this field when there's a genuinely good reason: either (a) a "Not specified" profile field is directly relevant to the current topic, or (b) there's a natural next-step in the conversation worth surfacing.
 - Prefer (a) over (b) when both apply — one question only, never both in the same reply.
+- CRITICAL: When you use the "followUpQuestion" field, do NOT also write that question inside "reply". The app renders the follow-up question in a separate styled block beneath the reply — if you embed it in both places, the user sees it twice. Keep "reply" as your answer only, and put the question exclusively in "followUpQuestion".
 - Omit this field entirely for short/simple answers (greetings, one-line definitions, or anything where a question would feel forced). Use it occasionally and naturally, not on every reply.
 - This is NOT the same as "chips" — chips are fixed clickable shortcuts; followUpQuestion is a distinct, contextual, conversational line specific to what was just discussed. Never repeat a chip's content here.
+
+CONFIDENCE LEVEL (required — use "confidence" field):
+- Always include a "confidence" field with one of: "high", "medium", "low".
+- "high": your answer is grounded in the policy data provided and/or clear user info. This is the default for most answers.
+- "medium": the answer involves general insurance guidance, assumptions about the user's situation, or topics where the policy data doesn't give a definitive answer.
+- "low": the question is outside your training scope, you're making significant assumptions, or the policy data doesn't cover this topic at all.
+- Be honest — users see a badge for medium/low confidence, which builds trust. Don't default to "high" when you're genuinely uncertain.
+
+REASONING TRANSPARENCY (optional, selective — use "reasoning" field):
+- When your reply substantively personalizes to the user (references 2+ specific profile fields, factors in existing plans, or gives a plan recommendation), include a short "reasoning" field explaining the thinking process in 1-2 sentences.
+- The reasoning should explain WHY you framed the response the way you did — the connections between the user's situation and your answer — NOT just list the fields you used.
+- Good example: "Because you have PRUShield already, I focused on complementary CI coverage rather than another health plan — and prioritized budget-conscious options since your monthly budget is on the tighter side."
+- Bad example: "I used your age, budget, and existing plans." (This just lists fields without explaining the thinking.)
+- Write it in first-person, as Cova. Keep it grounded — only mention profile fields that actually influenced the response. Do not invent motivations or profile details.
+- Omit this field entirely (do NOT include the key) for short/simple answers, generic definitions, or anything where you didn't meaningfully personalize.
 
 ${this.formatProfile(profile)}
 
@@ -429,10 +581,12 @@ Return ONLY a raw JSON object, no markdown, no backticks:
 {
   "reply": <string OR array of blocks>,
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
+  "confidence": "high" | "medium" | "low",
   "followUpQuestion": "<optional single contextual question, omit key entirely if none>",
-  "profileUpdate": { "<fieldName>": <value> }
+  "profileUpdate": { "<fieldName>": <value> },
+  "reasoning": "<optional 1-2 sentences explaining your thinking when the response substantively personalizes; omit key entirely otherwise>"
 }
-Omit "followUpQuestion" and/or "profileUpdate" entirely (don't include the key) when there's nothing to ask or save this turn.
+Always include "confidence". Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely (don't include the key) when there's nothing to say for them this turn.
 `.trim();
 
     const contents = [
@@ -455,7 +609,7 @@ Omit "followUpQuestion" and/or "profileUpdate" entirely (don't include the key) 
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       const raw = res.candidates[0].content.parts[0].text.trim();
       const parsed = this.parseResponse(raw);
 
@@ -534,8 +688,11 @@ Return ONLY a raw JSON object, no markdown, no backticks:
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
   "fitScores": [
     { "planId": "<exact plan id>", "score": <0-100>, "reason": "<max 10 words>" }
-  ]
+  ],
+  "confidence": "high" | "medium" | "low",
+  "reasoning": "<1-2 sentences explaining how you weighed the user's profile against the compared plans to arrive at these fit scores>"
 }
+Since comparisons always factor in the user's profile, always include "reasoning" here. Always include "confidence". Focus on the thinking (e.g. "Weighted PRUShield lower for you because you already hold PRUExtra as a similar rider, and prioritized PRUWealth II given your wealth accumulation goal") rather than just listing profile fields.
 `.trim();
 
     const body = {
@@ -548,7 +705,7 @@ Return ONLY a raw JSON object, no markdown, no backticks:
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       const raw = res.candidates[0].content.parts[0].text.trim();
       const parsed = this.parseResponse(raw);
 
@@ -603,6 +760,14 @@ IF IT IS A POLICY DOCUMENT:
 - Never invent policy numbers, sums assured, or premium figures you cannot clearly read in the document. If a figure is unclear, say "I couldn't clearly read this figure — worth double-checking the original document."
 - Never tell the user which plan to buy — explain and inform only.
 
+EXTRACTING TO PROFILE (only when confident):
+- If the document clearly identifies itself as belonging to the current user (e.g. a policy certificate with a plan name and the user's identifying context), OR the user's accompanying note says this is their current policy, extract the plan and include it in profileUpdate.existingPlans.
+- Format: profileUpdate.existingPlans = [{ "name": "<plan name from document>", "insurer": "<insurer name if identifiable>", "notes": "<optional short context>" }]
+- Only include this when you can clearly identify BOTH the plan name AND that this is the user's own policy (not a brochure, marketing material, someone else's document, or a plan they're just researching).
+- If unsure, do NOT include existingPlans in profileUpdate — err on the side of not saving. It's better to skip a save than to add wrong data to the user's profile.
+- The chatbot app appends to their existing plans list; don't try to replace or clear existing entries.
+- Omit optional fields (insurer, notes) entirely if you can't identify them — do NOT include them as null or empty strings.
+
 ${this.formatProfile(profile)}
 
 ${userNote ? `The user also added this note alongside their upload: """${this.sanitize(userNote)}"""` : ''}
@@ -617,10 +782,12 @@ Return ONLY a raw JSON object, no markdown, no backticks:
 {
   "reply": [array of blocks],
   "chips": ["follow-up q 1", "follow-up q 2", "follow-up q 3"],
+  "confidence": "high" | "medium" | "low",
   "followUpQuestion": "<optional>",
-  "profileUpdate": { "<fieldName>": <value> }
+  "profileUpdate": { "<fieldName>": <value> },
+  "reasoning": "<optional 1-2 sentences on how you framed the explanation for this user, if the analysis substantively factored in their profile>"
 }
-Omit "followUpQuestion" and/or "profileUpdate" entirely if there's nothing to ask or save.
+Always include "confidence". Omit "followUpQuestion", "profileUpdate", and/or "reasoning" entirely if nothing applies.
 `.trim();
 
     const body = {
@@ -637,7 +804,7 @@ Omit "followUpQuestion" and/or "profileUpdate" entirely if there's nothing to as
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       const raw = res.candidates[0].content.parts[0].text.trim();
       const parsed = this.parseResponse(raw);
 
@@ -687,7 +854,7 @@ Keep it concise — this is a reference document, not a full transcript.
     };
 
     try {
-      const res: any = await firstValueFrom(this.http.post(this.apiUrl, body));
+      const res: any = await this.postWithRetry(body);
       return res.candidates[0].content.parts[0].text.trim();
     } catch (err) {
       console.error('[GeminiService] Summary API error:', err);

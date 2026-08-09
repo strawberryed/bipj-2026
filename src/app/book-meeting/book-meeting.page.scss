@@ -1,5 +1,6 @@
 .book-meeting-page {
   .advisor-card {
+    width: 100%;
     display: flex;
     align-items: center;
     background: #f4f4f7;
@@ -8,11 +9,22 @@
     margin-bottom: 8px;
     border: 2px solid transparent;
     gap: 12px;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 
     ion-avatar { width: 44px; height: 44px; }
     h3 { font-weight: bold; margin: 0; font-size: 0.95rem; color: #111; }
     p { margin: 2px 0 0 0; font-size: 0.8rem; color: #666; }
   }
+
+  .advisor-card:active { transform: scale(0.99); }
+  .advisor-card:focus-visible { outline: 3px solid rgba(91, 37, 124, 0.22); outline-offset: 2px; }
+  .advisor-info { flex: 1; }
+  .selection-check { color: #8f72a6; font-size: 1.45rem; flex: 0 0 auto; }
+  .active-card .selection-check { color: #5b257c; }
 
   .active-card {
     background: #ffffff;
@@ -79,21 +91,27 @@
     font-weight: bold;
   }
 
-  .date-picker-item {
-    --padding-start: 0;
-    --padding-end: 0;
-    --inner-padding-end: 0;
+  .date-picker-field {
+    display: grid;
+    gap: 8px;
     margin-bottom: 16px;
+
+    > span { color: #4d4d59; font-size: 0.82rem; font-weight: 600; }
   }
 
   .date-input {
+    display: block;
+    width: 100%;
     border: 2px solid #d9dce7;
     border-radius: 8px;
     padding: 10px 12px;
     background: #f8f9fb;
     font-size: 0.95rem;
     color: #111;
-    --padding-start: 12px;
+    min-height: 48px;
+    outline: none;
+    cursor: pointer;
+    color-scheme: light;
   }
 
   .date-input:focus {

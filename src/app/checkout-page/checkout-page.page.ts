@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { EntitlementsService } from '../services/entitlement.service';
@@ -10,12 +10,17 @@ import { EntitlementsService } from '../services/entitlement.service';
   standalone: false,
 })
 export class CheckoutPage implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private fb = inject(FormBuilder);
+
   paymentForm!: FormGroup;
   includeReport: boolean = true;
   includeConsultant: boolean = true;
   totalPrice: number = 15.00;
   selectedMethod: 'card' | 'nets' = 'card';
 
+<<<<<<< HEAD
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -23,6 +28,8 @@ export class CheckoutPage implements OnInit {
     private entitlements: EntitlementsService
   ) { }
 
+=======
+>>>>>>> 054354e84264c9224e3ecea50e387a3a6e1bdfa4
   ngOnInit() {
     this.paymentForm = this.fb.group({
       cardName: ['', [Validators.required, Validators.minLength(2), Validators.pattern('^[a-zA-Z ]*$')]],

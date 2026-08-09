@@ -1,4 +1,4 @@
-import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { Injectable, EnvironmentInjector, runInInjectionContext, inject } from '@angular/core';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 
 export interface Plan {
@@ -19,27 +19,29 @@ export interface Plan {
 
 @Injectable({ providedIn: 'root' })
 export class PolicyDataService {
+
   private plans: Plan[] = [];
   private loaded = false;
   private loadingPromise: Promise<void> | null = null;
 
-  constructor(
-    private firestore: Firestore,
-    private injector: EnvironmentInjector
-  ) { }
+  constructor(private firestore: Firestore) { }
 
   async ensureLoaded(): Promise<void> {
     if (this.loaded) return;
     if (this.loadingPromise) return this.loadingPromise;
 
+    if (!this.firestore) {
+      this.loaded = true;
+      console.warn('[PolicyDataService] Firebase is not configured; no remote plans were loaded.');
+      return;
+    }
+
+    const firestore = this.firestore;
+
     this.loadingPromise = runInInjectionContext(this.injector, async () => {
       try {
-        const plansColRef = collection(this.firestore, 'plans');
-        const snapshot = await getDocs(plansColRef);
-        this.plans = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Plan));
+        const snapshot = await getDocs(collection(this.firestore, 'plans'));
+        this.plans = snapshot.docs.map(doc => doc.data() as Plan);
         this.loaded = true;
       } catch (err) {
         console.error('[PolicyDataService] Failed to load plans from Firestore:', err);

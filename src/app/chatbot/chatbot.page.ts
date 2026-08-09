@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit, OnDestroy } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewChecked, OnInit, OnDestroy, inject } from '@angular/core';
 import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gemini.service';
 import { UserProfileData, UserProfileService } from '../services/user-profile.service';
 import { PolicyDataService, Plan } from '../services/policy-data';
@@ -13,6 +13,7 @@ import { AlertController } from '@ionic/angular';
 
 const MAX_HISTORY = 50;
 const MAX_COMPARE_PLANS = 3;
+const CHAT_RESET_VERSION = 'fresh-chat-2026-08-06-v1';
 
 const PDF_PAGE_HEIGHT = 297;   // A4 mm
 const PDF_MARGIN = 16;
@@ -43,6 +44,12 @@ const DEFAULT_CHIPS = [
   standalone: false,
 })
 export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
+  private gemini = inject(GeminiService);
+  private profileService = inject(UserProfileService);
+  private policyData = inject(PolicyDataService);
+  private chatStorage = inject(ChatStorageService);
+  private alertCtrl = inject(AlertController);
+
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -55,7 +62,27 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   messages: Message[] = [];
   inputText = '';
-  isLoading = false;
+
+  // Contextual loading state — null when idle, otherwise indicates
+  // which operation is in progress. Used for showing meaningful
+  // "Analyzing your document..." vs "Preparing comparison..." messages
+  // in the typing indicator, rather than a generic spinner.
+  loadingState: 'sending' | 'analyzing' | 'comparing' | null = null;
+
+  /** Backwards-compat getter: true whenever any operation is in progress. */
+  get isLoading(): boolean {
+    return this.loadingState !== null;
+  }
+
+  /** Text shown in the typing indicator based on what's happening. */
+  get loadingLabel(): string {
+    switch (this.loadingState) {
+      case 'analyzing': return 'Analyzing your document...';
+      case 'comparing': return 'Preparing your comparison...';
+      default: return ''; // 'sending' uses the classic 3-dot indicator
+    }
+  }
+
   isGeneratingSummary = false;
   chips: string[] = [...DEFAULT_CHIPS];
 
@@ -72,15 +99,41 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   // True while policy data is being fetched from Firestore on first load.
   isPolicyDataLoading = true;
 
-  private lastMessageCount = 0;
+  // Tracks which reasoning panels are currently expanded (by message index
+  // in this.messages). Kept as a Set for O(1) toggle.
+  expandedReasoning = new Set<number>();
 
-  constructor(
-    private gemini: GeminiService,
-    private profileService: UserProfileService,
-    private policyData: PolicyDataService,
-    private chatStorage: ChatStorageService,
-    private alertCtrl: AlertController
-  ) { }
+  // ─────────────────────────────────────────────────────────
+  // Confidence badges — only shown for medium/low confidence
+  // ─────────────────────────────────────────────────────────
+
+  /**
+   * Whether to show a confidence badge on this message.
+   * High confidence is the default state and produces no badge (reduces clutter).
+   */
+  shouldShowConfidence(msg: Message): boolean {
+    return msg.role === 'assistant' && !!msg.confidence && msg.confidence !== 'high';
+  }
+
+  /** Returns a user-friendly label for the badge. */
+  getConfidenceLabel(confidence: string): string {
+    switch (confidence) {
+      case 'medium': return 'Moderate confidence';
+      case 'low': return 'Lower confidence';
+      default: return '';
+    }
+  }
+
+  /** Returns a CSS class for color-coding the badge. */
+  getConfidenceClass(confidence: string): string {
+    switch (confidence) {
+      case 'medium': return 'confidence-medium';
+      case 'low': return 'confidence-low';
+      default: return '';
+    }
+  }
+
+  private lastMessageCount = 0;
 
   async ngOnInit() {
     // NEW: get UID immediately from auth state, not from the Firestore profile pipe
@@ -91,7 +144,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       this.isAuthReady = true;   // auth has resolved at least once
 
       if (uidChanged || (uid && this.messages.length === 0)) {
-        this.loadChat();         // drop the await; let it run in background
+        void this.startChatSession(uid);
       }
     });
 
@@ -129,6 +182,23 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.messages = await this.chatStorage.loadChat(this.currentUid, MAX_HISTORY);
   }
 
+  private async startChatSession(uid: string | null): Promise<void> {
+    if (!uid) {
+      this.messages = [];
+      return;
+    }
+
+    // Only reset local UI state on version change — NEVER wipe Firestore
+    const resetKey = `cova_chat_reset_${CHAT_RESET_VERSION}_${uid}`;
+    if (!localStorage.getItem(resetKey)) {
+      localStorage.setItem(resetKey, 'done');
+      this.messages = [];
+      this.chips = [...DEFAULT_CHIPS];
+    }
+
+    await this.loadChat();
+  }
+
   async reset() {
     this.messages = [];
     this.chips = [...DEFAULT_CHIPS];
@@ -142,8 +212,23 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   private async applyProfileUpdate(update?: Record<string, any>) {
     if (!update || !this.currentUid) return;
     try {
-      await this.profileService.updateProfile(update);
-      console.log('[ChatbotPage] Profile updated:', update);
+      // Special-case existingPlans: Firestore merge treats arrays as scalars
+      // (replaces the whole array), but semantically the AI's extraction
+      // should ADD to the user's existing list, not replace it. So we merge
+      // manually here with a case-insensitive de-dupe on plan name.
+      const merged = { ...update };
+      if (Array.isArray(update['existingPlans'])) {
+        const freshProfile = await this.profileService.getCurrentProfile();
+        const currentPlans = freshProfile?.existingPlans ?? [];
+        const existingNames = new Set(currentPlans.map(p => p.name.toLowerCase().trim()));
+        const newPlans = update['existingPlans'].filter(
+          (p: any) => p?.name && !existingNames.has(p.name.toLowerCase().trim())
+        );
+        merged['existingPlans'] = [...currentPlans, ...newPlans];
+      }
+
+      await this.profileService.updateProfile(merged);
+      console.log('[ChatbotPage] Profile updated:', merged);
       // userProfile$ subscription above will fire and refresh this.profile
       // automatically once Firestore emits the updated document.
     } catch (err) {
@@ -165,7 +250,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     }
 
     this.inputText = '';
-    this.isLoading = true;
+    this.loadingState = 'sending';
 
     const userMsg: Message = { role: 'user', content: message };
     this.messages.push(userMsg);
@@ -177,6 +262,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       // Read profile fresh from Firestore to avoid stale/guest data
       // from the userProfile$ subscription not having emitted yet.
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
+      console.log('[send] liveProfile being sent to Gemini:', liveProfile);
       const res = await this.gemini.sendMessage(message, history, liveProfile);
 
       const newMessage: Message = Array.isArray(res.reply)
@@ -185,6 +271,12 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
       if (res.followUpQuestion) {
         newMessage.followUpQuestion = res.followUpQuestion;
+      }
+      if (res.reasoning) {
+        newMessage.reasoning = res.reasoning;
+      }
+      if (res.confidence) {
+        newMessage.confidence = res.confidence;
       }
 
       this.messages.push(newMessage);
@@ -203,7 +295,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       await this.persistMessage(errorMsg);
     }
 
-    this.isLoading = false;
+    this.loadingState = null;
   }
 
   // ─────────────────────────────────────────────────────────
@@ -240,20 +332,26 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.messages.push(uploadMsg);
     await this.persistMessage(uploadMsg);
 
-    this.isLoading = true;
+    this.loadingState = 'analyzing';
 
     try {
       const base64Data = await this.fileToBase64(file);
 
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
       const res = await this.gemini.analyzeDocument(base64Data, file.type, liveProfile);
-      
+
       const newMessage: Message = Array.isArray(res.reply)
         ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
         : { role: 'assistant', content: res.reply as string };
 
       if (res.followUpQuestion) {
         newMessage.followUpQuestion = res.followUpQuestion;
+      }
+      if (res.reasoning) {
+        newMessage.reasoning = res.reasoning;
+      }
+      if (res.confidence) {
+        newMessage.confidence = res.confidence;
       }
 
       this.messages.push(newMessage);
@@ -272,7 +370,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       await this.persistMessage(errorMsg);
     }
 
-    this.isLoading = false;
+    this.loadingState = null;
   }
 
   /** Converts a File to a raw base64 string (strips the data: URL prefix). */
@@ -352,7 +450,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.messages.push(userMsg);
     await this.persistMessage(userMsg);
 
-    this.isLoading = true;
+    this.loadingState = 'comparing';
     try {
       const history = this.messages.slice(0, -1);
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
@@ -375,6 +473,12 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
         },
         followUpQuestion: res.followUpQuestion
       };
+      if (res.reasoning) {
+        compareMsg.reasoning = res.reasoning;
+      }
+      if (res.confidence) {
+        compareMsg.confidence = res.confidence;
+      }
       this.messages.push(compareMsg);
       await this.persistMessage(compareMsg);
 
@@ -390,12 +494,38 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       await this.persistMessage(errorMsg);
     }
 
-    this.isLoading = false;
+    this.loadingState = null;
     this.selectedPlans = [];
   }
 
   getFitScore(card: CompareCard, planId: string): number {
     return card.fitScores?.find(f => f.planId === planId)?.score ?? 0;
+  }
+
+  /**
+   * Toggles whether the reasoning panel for a given message index is open.
+   */
+  toggleReasoning(messageIndex: number) {
+    if (this.expandedReasoning.has(messageIndex)) {
+      this.expandedReasoning.delete(messageIndex);
+    } else {
+      this.expandedReasoning.add(messageIndex);
+    }
+  }
+
+  isReasoningExpanded(messageIndex: number): boolean {
+    return this.expandedReasoning.has(messageIndex);
+  }
+
+  /**
+   * Maps a fit score to a color class used by the fit bar and percent text.
+   * Thresholds match the scoring anchors in gemini.service.ts's compareMessage
+   * prompt: 80-100 = strong, 50-79 = partial, below 50 = mismatch.
+   */
+  getFitScoreColorClass(score: number): string {
+    if (score >= 80) return 'fit-high';
+    if (score >= 50) return 'fit-mid';
+    return 'fit-low';
   }
 
   async showFitReason(card: CompareCard, planId: string) {

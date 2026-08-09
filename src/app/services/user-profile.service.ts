@@ -4,6 +4,12 @@ import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signO
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
+export interface ExistingPlan {
+  name: string;
+  insurer?: string;
+  notes?: string;
+}
+
 export interface UserProfileData {
   fullName: string;
   age?: number;
@@ -12,6 +18,7 @@ export interface UserProfileData {
   maritalStatus?: string;
   dependents?: number;
   hasExistingInsurance?: boolean;
+  existingPlans?: ExistingPlan[];
   mainGoals?: string[];
   monthlyBudget?: number;
   topConcern?: string;

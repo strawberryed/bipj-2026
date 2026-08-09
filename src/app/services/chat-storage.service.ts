@@ -85,6 +85,7 @@ export class ChatStorageService {
     if (data.compareCard) msg.compareCard = data.compareCard;
     if (data.followUpQuestion) msg.followUpQuestion = data.followUpQuestion;
     if (data.attachment) msg.attachment = data.attachment;
+    if (data.reasoning) msg.reasoning = data.reasoning;
     return msg;
   }
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { BookingService, Booking } from '../services/booking';
 import { Observable, Subscription } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -14,6 +14,11 @@ import { UserProfileService, UserProfileData } from '../services/user-profile.se
   standalone: false,
 })
 export class Tab1Page implements OnInit, OnDestroy {
+  private bookingService = inject(BookingService);
+  private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+  private userProfileService = inject(UserProfileService);
+
   todayDate: Date = new Date();
   activeBooking$: Observable<Booking | null>;
   isDetailsModalOpen: boolean = false;
@@ -25,13 +30,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   userProfile: UserProfileData | null = null;
   private profileSub!: Subscription;
 
-  constructor(
-    private bookingService: BookingService, 
-    private router: Router,
-    private cdr: ChangeDetectorRef,
-    private userProfileService: UserProfileService,
-    private toastCtrl: ToastController
-  ) { 
+  constructor() { 
     this.activeBooking$ = this.bookingService.activeBooking$.pipe(
       tap(booking => {
         if (booking) {
