@@ -75,8 +75,10 @@ export class UserProfileService {
     const current = this.userProfileSubject.value;
     const updated = { ...current, ...data };
 
-    const userDocRef = doc(this.firestore, `users/${user.uid}`);
-    await setDoc(userDocRef, updated, { merge: true });
+    await runInInjectionContext(this.injector, async () => {
+      const userDocRef = doc(this.firestore, `users/${user.uid}`);
+      await setDoc(userDocRef, updated, { merge: true });
+    });
 
     this.userProfileSubject.next(updated);
   }
@@ -89,21 +91,25 @@ export class UserProfileService {
     const uid = this.currentUserId;
     if (!uid) return null;
 
-    const userDocRef = doc(this.firestore, `users/${uid}`);
-    const snapshot = await getDoc(userDocRef);
-    return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
+    return runInInjectionContext(this.injector, async () => {
+      const userDocRef = doc(this.firestore, `users/${uid}`);
+      const snapshot = await getDoc(userDocRef);
+      return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
+    });
   }
 
   async signUp(email: string, pass: string, fullName: string) {
     const credential = await createUserWithEmailAndPassword(this.auth, email, pass);
     const uid = credential.user.uid;
 
-    const userDocRef = doc(this.firestore, `users/${uid}`);
-    await setDoc(userDocRef, {
-      fullName,
-      email,
-      isOnboardingCompleted: false,
-      createdAt: new Date().toISOString()
+    await runInInjectionContext(this.injector, async () => {
+      const userDocRef = doc(this.firestore, `users/${uid}`);
+      await setDoc(userDocRef, {
+        fullName,
+        email,
+        isOnboardingCompleted: false,
+        createdAt: new Date().toISOString()
+      });
     });
 
     return credential.user;
@@ -115,12 +121,14 @@ export class UserProfileService {
   }
 
   async isProfileComplete(uid: string): Promise<boolean> {
-    const userDocRef = doc(this.firestore, `users/${uid}`);
-    const snapshot = await getDoc(userDocRef);
-    if (snapshot.exists()) {
-      return !!snapshot.data()?.['isOnboardingCompleted'];
-    }
-    return false;
+    return runInInjectionContext(this.injector, async () => {
+      const userDocRef = doc(this.firestore, `users/${uid}`);
+      const snapshot = await getDoc(userDocRef);
+      if (snapshot.exists()) {
+        return !!snapshot.data()?.['isOnboardingCompleted'];
+      }
+      return false;
+    });
   }
 
   async saveOnboardingProfile(data: UserProfileData): Promise<void> {
@@ -134,8 +142,10 @@ export class UserProfileService {
       isOnboardingCompleted: true
     };
 
-    const userDocRef = doc(this.firestore, `users/${uid}`);
-    await setDoc(userDocRef, fullPayload, { merge: true });
+    await runInInjectionContext(this.injector, async () => {
+      const userDocRef = doc(this.firestore, `users/${uid}`);
+      await setDoc(userDocRef, fullPayload, { merge: true });
+    });
   }
 
   async logout() {

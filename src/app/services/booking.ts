@@ -46,19 +46,25 @@ export class BookingService {
 
   async setBooking(booking: Booking): Promise<void> {
     const uid = this.requireUid();
-    const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
-    await setDoc(bookingDocRef, booking);
+    await runInInjectionContext(this.injector, async () => {
+      const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
+      await setDoc(bookingDocRef, booking);
+    });
   }
 
   async updateBookingNotes(notes: string): Promise<void> {
     const uid = this.requireUid();
-    const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
-    await updateDoc(bookingDocRef, { notes });
+    await runInInjectionContext(this.injector, async () => {
+      const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
+      await updateDoc(bookingDocRef, { notes });
+    });
   }
 
   async clearBooking(): Promise<void> {
     const uid = this.requireUid();
-    const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
-    await deleteDoc(bookingDocRef);
+    await runInInjectionContext(this.injector, async () => {
+      const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
+      await deleteDoc(bookingDocRef);
+    });
   }
 }

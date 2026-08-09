@@ -43,16 +43,18 @@ export class EntitlementsService {
     const uid = this.auth.currentUser?.uid;
     if (!uid) throw new Error('No authenticated user found.');
 
-    const purchasesDocRef = doc(this.firestore, `purchases/${uid}`);
-    const snapshot = await getDoc(purchasesDocRef);
-    const current = { ...DEFAULT_ENTITLEMENTS, ...(snapshot.exists() ? snapshot.data() : {}) };
+    await runInInjectionContext(this.injector, async () => {
+      const purchasesDocRef = doc(this.firestore, `purchases/${uid}`);
+      const snapshot = await getDoc(purchasesDocRef);
+      const current = { ...DEFAULT_ENTITLEMENTS, ...(snapshot.exists() ? snapshot.data() : {}) };
 
-    const updated: Entitlements = {
-      consultantUnlocked: current.consultantUnlocked || !!purchase.consultant,
-      reportUnlocked: current.reportUnlocked || !!purchase.report,
-      lastPurchaseAt: new Date().toISOString()
-    };
+      const updated: Entitlements = {
+        consultantUnlocked: current.consultantUnlocked || !!purchase.consultant,
+        reportUnlocked: current.reportUnlocked || !!purchase.report,
+        lastPurchaseAt: new Date().toISOString()
+      };
 
-    await setDoc(purchasesDocRef, updated, { merge: true });
+      await setDoc(purchasesDocRef, updated, { merge: true });
+    });
   }
 }
