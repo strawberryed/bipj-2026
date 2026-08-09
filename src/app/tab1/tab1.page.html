@@ -33,7 +33,8 @@
         <ion-icon name="star-outline" class="brief-icon"></ion-icon>
         <div>
           <h3>PRIMARY FOCUS</h3>
-          <p>Targeting {{ userProfile?.topConcern || 'overall protection' }} within your S${{ userProfile?.monthlyBudget }}/mo budget</p>
+          <p>Targeting {{ userProfile?.topConcern || 'overall protection' }} within your S${{ userProfile?.monthlyBudget
+            }}/mo budget</p>
         </div>
       </div>
 
@@ -41,7 +42,8 @@
         <ion-icon name="alert-circle-outline" class="brief-icon"></ion-icon>
         <div>
           <h3>COVERAGE STATUS</h3>
-          <p>{{ userProfile?.hasExistingInsurance ? 'Existing policy integrated — gaps identified for optimization' : 'No active policy — high priority for basic hospitalization setup' }}</p>
+          <p>{{ userProfile?.hasExistingInsurance ? 'Existing policy integrated — gaps identified for optimization' :
+            'No active policy — high priority for basic hospitalization setup' }}</p>
         </div>
       </div>
 
@@ -170,9 +172,10 @@
               RESCHEDULE TIME SLOT
             </ion-button>
 
-            <ion-button expand="block" color="danger" fill="clear" class="cancel-session-btn"
+            <ion-button expand="block" color="danger" fill="clear" class="cancel-session-btn" [disabled]="isCancelling"
               (click)="handleCancellation()">
-              Cancel Appointment
+              <ion-spinner name="dots" *ngIf="isCancelling"></ion-spinner>
+              <span *ngIf="!isCancelling">Cancel Appointment</span>
             </ion-button>
           </div>
         </div>

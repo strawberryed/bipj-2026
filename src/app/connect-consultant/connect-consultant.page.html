@@ -44,53 +44,21 @@
 
   <div class="consultant-list-container">
 
-    <div class="protected-row" (click)="isPaidUser ? goToBooking() : upgradeUser()">
-      <ion-item lines="none" class="consultant-item" [detail]="isPaidUser">
-        <ion-avatar slot="start" class="consultant-avatar">
-          <img src="assets/sarah.jpg" alt="Brandon" />
-        </ion-avatar>
-        <ion-label>
-          <h3>SARAH LIM</h3>
-          <p class="role-text">Financial and Health Advisor</p>
-          <div class="tag-container">
-            <ion-badge class="custom-badge text-purple">Health</ion-badge>
-            <ion-badge class="custom-badge text-purple">Benefits optimisation</ion-badge>
-          </div>
-        </ion-label>
-      </ion-item>
-      <div class="center-lock-overlay" *ngIf="!isPaidUser">
-      </div>
-    </div>
-
-    <div class="protected-row" (click)="isPaidUser ? goToBooking() : upgradeUser()">
+    <div class="protected-row"
+         *ngFor="let consultant of matchedConsultants"
+         (click)="isPaidUser ? goToBooking(consultant) : upgradeUser()">
       <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
         <ion-avatar slot="start" class="consultant-avatar">
-          <img src="assets/brandon.jpg" alt="Brandon" />
+          <ion-icon name="person-circle" class="avatar-fallback-icon"></ion-icon>
         </ion-avatar>
         <ion-label>
-          <h3>BRANDON</h3>
-          <p class="role-text">Senior Financial Advisor</p>
+          <h3>{{ consultant.name }}</h3>
+          <p class="role-text">{{ consultant.title }}</p>
           <div class="tag-container">
-            <ion-badge class="custom-badge text-purple">Health</ion-badge>
-            <ion-badge class="custom-badge text-purple">Plan Switching</ion-badge>
-          </div>
-        </ion-label>
-      </ion-item>
-      <div class="center-lock-overlay" *ngIf="!isPaidUser">
-        <ion-icon name="lock-closed-outline"></ion-icon>
-      </div>
-    </div>
-
-    <div class="protected-row" (click)="isPaidUser ? goToBooking() : upgradeUser()">
-      <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
-        <ion-avatar slot="start" class="consultant-avatar">
-          <img src="assets/johnny.jpg" alt="Johnny Lee" />
-        </ion-avatar>
-        <ion-label>
-          <h3>JOHNNY LEE</h3>
-          <p class="role-text">Group and Individual Plans</p>
-          <div class="tag-container">
-            <ion-badge class="custom-badge text-purple">Wealth</ion-badge>
+            <ion-badge class="custom-badge text-purple"
+                       *ngFor="let tag of (consultant.matchReasons.length ? consultant.matchReasons : consultant.specialties) | slice:0:2">
+              {{ tag }}
+            </ion-badge>
           </div>
         </ion-label>
       </ion-item>

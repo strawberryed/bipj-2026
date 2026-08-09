@@ -3,6 +3,7 @@ import { BookingService, Booking } from '../services/booking';
 import { Observable, Subscription } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { ToastController } from '@ionic/angular';
 import { getCurrentUser } from '../../data/app-db';
 import { UserProfileService, UserProfileData } from '../services/user-profile.service';
 
@@ -18,6 +19,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   isDetailsModalOpen: boolean = false;
   currentUserName = '';
   userNotes: string = '';
+  isCancelling: boolean = false;
 
   // Dynamic Profile Properties for Dashboard
   userProfile: UserProfileData | null = null;
@@ -27,7 +29,8 @@ export class Tab1Page implements OnInit, OnDestroy {
     private bookingService: BookingService, 
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private userProfileService: UserProfileService
+    private userProfileService: UserProfileService,
+    private toastCtrl: ToastController
   ) { 
     this.activeBooking$ = this.bookingService.activeBooking$.pipe(
       tap(booking => {
@@ -77,8 +80,12 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  saveNotesChange() {
-    this.bookingService.updateBookingNotes(this.userNotes);
+  async saveNotesChange() {
+    try {
+      await this.bookingService.updateBookingNotes(this.userNotes);
+    } catch (error: any) {
+      await this.showErrorToast(error.message || 'Failed to save your notes. Please try again.');
+    }
   }
 
   goToProfile() {
@@ -96,8 +103,30 @@ export class Tab1Page implements OnInit, OnDestroy {
     });
   }
 
-  handleCancellation() {
-    this.bookingService.clearBooking();
-    this.isDetailsModalOpen = false; 
+  async handleCancellation() {
+    this.isCancelling = true;
+    try {
+      await this.bookingService.clearBooking();
+      // Only close the modal once the cancellation is confirmed to have
+      // gone through — closing it optimistically could tell the user their
+      // meeting was cancelled when the Firestore write actually failed
+      // (e.g. while offline).
+      this.isDetailsModalOpen = false;
+    } catch (error: any) {
+      await this.showErrorToast(error.message || 'Failed to cancel your booking. Please check your connection and try again.');
+    } finally {
+      this.isCancelling = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async showErrorToast(message: string) {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 3000,
+      color: 'danger',
+      position: 'bottom'
+    });
+    await toast.present();
   }
 }

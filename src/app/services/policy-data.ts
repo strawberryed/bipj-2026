@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 
 export interface Plan {
@@ -19,41 +19,41 @@ export interface Plan {
 
 @Injectable({ providedIn: 'root' })
 export class PolicyDataService {
-
   private plans: Plan[] = [];
   private loaded = false;
   private loadingPromise: Promise<void> | null = null;
 
-  constructor(private firestore: Firestore) { }
+  constructor(
+    private firestore: Firestore,
+    private injector: EnvironmentInjector
+  ) { }
 
-  /**
-   * Fetches all plans from Firestore if not already cached. Safe to call
-   * multiple times — concurrent calls share the same in-flight request.
-   */
   async ensureLoaded(): Promise<void> {
     if (this.loaded) return;
     if (this.loadingPromise) return this.loadingPromise;
 
-    this.loadingPromise = (async () => {
+    this.loadingPromise = runInInjectionContext(this.injector, async () => {
       try {
-        const snapshot = await getDocs(collection(this.firestore, 'plans'));
-        this.plans = snapshot.docs.map(doc => doc.data() as Plan);
+        const plansColRef = collection(this.firestore, 'plans');
+        const snapshot = await getDocs(plansColRef);
+        this.plans = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Plan));
         this.loaded = true;
       } catch (err) {
         console.error('[PolicyDataService] Failed to load plans from Firestore:', err);
         this.plans = [];
       }
-    })();
+    });
 
     return this.loadingPromise;
   }
 
-  /** All plans, flat — mirrors the old PLANS export. */
   getPlans(): Plan[] {
     return this.plans;
   }
 
-  /** Plans grouped by filterCategory — mirrors the old POLICIES export. */
   getPolicies(): Record<string, Plan[]> {
     return {
       life: this.plans.filter(p => p.filterCategory === 'life'),

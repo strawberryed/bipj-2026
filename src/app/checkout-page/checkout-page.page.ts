@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
+import { EntitlementsService } from '../services/entitlement.service';
 
 @Component({
   selector: 'app-checkout-page',
@@ -10,15 +11,16 @@ import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/fo
 })
 export class CheckoutPage implements OnInit {
   paymentForm!: FormGroup;
-  includeReport: boolean = true;     
-  includeConsultant: boolean = true; 
+  includeReport: boolean = true;
+  includeConsultant: boolean = true;
   totalPrice: number = 15.00;
   selectedMethod: 'card' | 'nets' = 'card';
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private entitlements: EntitlementsService
   ) { }
 
   ngOnInit() {
@@ -39,7 +41,6 @@ export class CheckoutPage implements OnInit {
   yearRangeValidator(control: AbstractControl) {
     if (!control.value || !control.value.includes('/')) return null;
     const yearSegment = parseInt(control.value.split('/')[1], 10);
-    // Limits inputs explicitly between 2026 and 2031
     if (yearSegment < 26 || yearSegment > 31) {
       return { invalidYearRange: true };
     }
@@ -65,7 +66,7 @@ export class CheckoutPage implements OnInit {
   blockNonNumbers(event: any, fieldName: string, maxLength: number) {
     let input = event.target.value;
     let cleaned = input.replace(/\D/g, '');
-    
+
     if (fieldName === 'cardNumber') {
       if (cleaned.length > 16) cleaned = cleaned.slice(0, 16);
       let match = cleaned.match(/.{1,4}/g);
@@ -92,9 +93,8 @@ export class CheckoutPage implements OnInit {
     return !!(field && field.invalid && (field.dirty || field.touched));
   }
 
-  processPayment() {
+  async processPayment() {
     if (this.selectedMethod === 'card') {
-      // Simulate typical card processor responses
       const cardNum = this.paymentForm.get('cardNumber')?.value.replace(/ /g, '');
       if (cardNum !== '4242424242424242') {
         alert('❌ Sandbox Error: Please use the designated test card details provided above.');
@@ -105,9 +105,16 @@ export class CheckoutPage implements OnInit {
       alert('🇸🇬 NETS QR Dynamic Broadcast Token Verified!');
     }
 
-    // Direct back to page with verification variables passed
-    this.router.navigate(['/connect-consultant'], {
-      queryParams: { unlocked: 'true' }
-    });
+    try {
+      // Persist entitlements based on what was actually purchased — previously
+      // this always unlocked the consultant regardless of includeConsultant.
+      await this.entitlements.grant({
+        consultant: this.includeConsultant,
+        report: this.includeReport
+      });
+      this.router.navigate(['/connect-consultant']);
+    } catch (error: any) {
+      alert(error.message || 'Payment succeeded but we couldn\'t save your purchase. Please contact support.');
+    }
   }
 }

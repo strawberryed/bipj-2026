@@ -13,15 +13,13 @@
   </div>
 
   <h2 class="section-title">YOUR MATCHED ADVISORS</h2>
-  
+
   <div class="advisor-list">
-    <div class="advisor-card" 
-         *ngFor="let advisor of advisors" 
-         [class.active-card]="selectedAdvisor?.name === advisor.name"
-         [class.recommended-card]="advisor.name === recommendedAdvisorName"
-         (click)="selectAdvisor(advisor)">
+    <div class="advisor-card" *ngFor="let advisor of advisors"
+      [class.active-card]="selectedAdvisor?.name === advisor.name"
+      [class.recommended-card]="advisor.name === recommendedAdvisorName" (click)="selectAdvisor(advisor)">
       <ion-avatar>
-        <img [src]="advisor.avatar" alt="advisor avatar" />
+        <ion-icon name="person-circle" class="avatar-fallback-icon"></ion-icon>
       </ion-avatar>
       <div class="advisor-info">
         <h3>{{ advisor.name }}</h3>
@@ -32,24 +30,18 @@
   </div>
 
   <h2 class="section-title ion-margin-top">SELECT DATE</h2>
-  
+
   <ion-item class="date-picker-item" lines="none">
     <ion-label position="stacked">Preferred Meeting Date</ion-label>
-    <ion-input 
-      type="date" 
-      [(ngModel)]="selectedDate"
-      placeholder="Choose a date"
-      class="date-input">
+    <ion-input type="date" [(ngModel)]="selectedDate" placeholder="Choose a date" class="date-input">
     </ion-input>
   </ion-item>
 
   <h2 class="section-title ion-margin-top">AVAILABLE SLOTS</h2>
-  
+
   <ion-row class="slots-grid">
     <ion-col size="6" *ngFor="let slot of slots" class="slot-col">
-      <div class="slot-box" 
-           [class.active-slot]="selectedSlot === slot"
-           (click)="selectSlot(slot)">
+      <div class="slot-box" [class.active-slot]="selectedSlot === slot" (click)="selectSlot(slot)">
         <span class="slot-time">{{ slot.time }}</span>
         <span class="slot-duration">{{ slot.duration }}</span>
       </div>
@@ -66,10 +58,8 @@
     </div>
   </div>
 
-  <ion-button expand="block" 
-              class="confirm-booking-btn" 
-              [disabled]="!selectedAdvisor || !selectedSlot || !selectedDate"
-              (click)="confirmBooking()">
+  <ion-button expand="block" class="confirm-booking-btn" [disabled]="!selectedAdvisor || !selectedSlot || !selectedDate"
+    (click)="confirmBooking()">
     CONFIRM BOOKING {{ selectedAdvisor ? '– ' + selectedAdvisor.name : '' }}
   </ion-button>
 </ion-content>

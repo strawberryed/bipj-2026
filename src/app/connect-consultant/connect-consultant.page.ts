@@ -1,5 +1,9 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router'; // 1. Import Angular Router
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subscription, firstValueFrom } from 'rxjs';
+import { EntitlementsService } from '../services/entitlement.service';
+import { UserProfileService } from '../services/user-profile.service';
+import { ConsultantMatchingService, MatchedConsultant } from '../services/consultant-matching.service';
 
 @Component({
   selector: 'app-consultant',
@@ -7,27 +11,41 @@ import { ActivatedRoute, Router } from '@angular/router'; // 1. Import Angular R
   styleUrls: ['./connect-consultant.page.scss'],
   standalone: false
 })
-export class ConsultantPage implements OnInit {
+export class ConsultantPage implements OnInit, OnDestroy {
   isPaidUser: boolean = false;
+  matchedConsultants: MatchedConsultant[] = [];
 
-  // 2. Inject router in constructor
-  constructor(private router: Router, private route: ActivatedRoute) { }
+  private entitlementsSub!: Subscription;
 
-  ngOnInit() {
-    this.route.queryParams.subscribe(params => {
-      if (params['unlocked'] === 'true') {
-        this.isPaidUser = true;
-      }
+  constructor(
+    private router: Router,
+    private entitlements: EntitlementsService,
+    private profileService: UserProfileService,
+    private matchingService: ConsultantMatchingService
+  ) { }
+
+  async ngOnInit() {
+    // Real-time: if a purchase completes elsewhere, this updates without a reload.
+    this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
+      this.isPaidUser = e.consultantUnlocked;
     });
+
+    // Rank consultants against the user's onboarding profile (mainGoals + topConcern).
+    const profile = await firstValueFrom(this.profileService.userProfile$);
+    this.matchedConsultants = this.matchingService.matchConsultants(profile);
   }
 
-  // 3. Update method to redirect the user
+  ngOnDestroy() {
+    this.entitlementsSub?.unsubscribe();
+  }
+
   upgradeUser() {
     this.router.navigate(['/upgrade']);
   }
 
-  goToBooking() {
-    // Navigates the window display stack directly into tab4
-    this.router.navigate(['/book-meeting']);
+  goToBooking(consultant: MatchedConsultant) {
+    this.router.navigate(['/book-meeting'], {
+      queryParams: { advisorName: consultant.name }
+    });
   }
 }

@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
-import { Firestore, doc, docData, setDoc, getDoc, updateDoc } from '@angular/fire/firestore';
-import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, user } from '@angular/fire/auth';
+import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { Firestore, doc, docData, setDoc, getDoc } from '@angular/fire/firestore';
+import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, user, User } from '@angular/fire/auth';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
@@ -25,8 +25,9 @@ export interface UserProfileData {
   providedIn: 'root'
 })
 export class UserProfileService {
-  // Real-time Firebase Auth state
-  authUser$ = user(this.auth);
+  authUser$: Observable<User | null>;
+  userProfile$: Observable<UserProfileData | null>;
+
   private userProfileSubject = new BehaviorSubject<UserProfileData>({
     fullName: '',
     age: 0,
@@ -38,21 +39,22 @@ export class UserProfileService {
     mainGoals: [],
     monthlyBudget: 0
   });
-  // Observable for current logged-in user's Firestore profile
-  userProfile$: Observable<UserProfileData | null>;
-
-
-
 
   constructor(
     private firestore: Firestore,
-    private auth: Auth
+    private auth: Auth,
+    private injector: EnvironmentInjector
   ) {
+    // Wrap inside injection context to clear AngularFire warnings
+    this.authUser$ = runInInjectionContext(this.injector, () => user(this.auth));
+
     this.userProfile$ = this.authUser$.pipe(
       switchMap((authUser) => {
         if (!authUser) return of(null);
-        const userDocRef = doc(this.firestore, `users/${authUser.uid}`);
-        return docData(userDocRef) as Observable<UserProfileData | null>;
+        return runInInjectionContext(this.injector, () => {
+          const userDocRef = doc(this.firestore, `users/${authUser.uid}`);
+          return docData(userDocRef) as Observable<UserProfileData | null>;
+        });
       })
     );
   }
@@ -63,33 +65,32 @@ export class UserProfileService {
       throw new Error('No authenticated user found.');
     }
 
-    // Firestore's merge:true handles per-field merging server-side —
-    // no need to combine with a local snapshot (which was previously
-    // pulling from a BehaviorSubject stuck on stale initial defaults,
-    // causing every update to overwrite good data with those defaults).
-    const userDocRef = doc(this.firestore, `users/${user.uid}`);
-    await setDoc(userDocRef, data, { merge: true });
-  }
-  async getCurrentProfile(): Promise<UserProfileData | null> {
-    const user = this.auth.currentUser;
-    if (!user) return null;
+    const current = this.userProfileSubject.value;
+    const updated = { ...current, ...data };
 
     const userDocRef = doc(this.firestore, `users/${user.uid}`);
-    const snapshot = await getDoc(userDocRef);
-    return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
+    await setDoc(userDocRef, updated, { merge: true });
+
+    this.userProfileSubject.next(updated);
   }
 
-  // Get current logged-in user ID
   get currentUserId(): string | null {
     return this.auth.currentUser ? this.auth.currentUser.uid : null;
   }
 
-  // Sign Up with Email & Password
+  async getCurrentProfile(): Promise<UserProfileData | null> {
+    const uid = this.currentUserId;
+    if (!uid) return null;
+
+    const userDocRef = doc(this.firestore, `users/${uid}`);
+    const snapshot = await getDoc(userDocRef);
+    return snapshot.exists() ? (snapshot.data() as UserProfileData) : null;
+  }
+
   async signUp(email: string, pass: string, fullName: string) {
     const credential = await createUserWithEmailAndPassword(this.auth, email, pass);
     const uid = credential.user.uid;
 
-    // Initialize user document in Firestore
     const userDocRef = doc(this.firestore, `users/${uid}`);
     await setDoc(userDocRef, {
       fullName,
@@ -101,13 +102,11 @@ export class UserProfileService {
     return credential.user;
   }
 
-  // Log In with Email & Password
   async login(email: string, pass: string) {
     const credential = await signInWithEmailAndPassword(this.auth, email, pass);
     return credential.user;
   }
 
-  // Check if current user has already completed profile needs
   async isProfileComplete(uid: string): Promise<boolean> {
     const userDocRef = doc(this.firestore, `users/${uid}`);
     const snapshot = await getDoc(userDocRef);
@@ -117,7 +116,6 @@ export class UserProfileService {
     return false;
   }
 
-  // Save onboarding questionnaire data
   async saveOnboardingProfile(data: UserProfileData): Promise<void> {
     const uid = this.currentUserId;
     if (!uid) throw new Error('No authenticated user found.');
@@ -133,7 +131,6 @@ export class UserProfileService {
     await setDoc(userDocRef, fullPayload, { merge: true });
   }
 
-  // Logout
   async logout() {
     await signOut(this.auth);
   }
