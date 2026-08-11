@@ -24,14 +24,14 @@ ion-content.upgrade-page {
     font-family: 'Georgia', serif;
     font-style: italic;
     font-size: 1.2rem;
-    color: #ebdcf5 !important;
+    color: #ece5f5 !important;
     margin: 0 0 16px 0;
     letter-spacing: 0.5px;
   }
 
   // Main Purple Wrapper Container
   .upgrades-section-container {
-    background: #5b257c !important; // Deep purple container
+    background: #7c5cbf !important; // Deep purple container
     border-radius: 20px;
     padding: 20px;
     margin: 16px 0;
@@ -56,7 +56,7 @@ ion-content.upgrade-page {
 
         .icon-badge {
           background: #ffffff;
-          color: #5b257c;
+          color: #7c5cbf;
           width: 40px;
           height: 40px;
           border-radius: 10px;
@@ -71,7 +71,7 @@ ion-content.upgrade-page {
           .category-tag {
             font-size: 0.65rem;
             letter-spacing: 0.5px;
-            color: #ebdcf5 !important;
+            color: #ece5f5 !important;
             font-weight: bold;
             display: block;
           }
@@ -107,8 +107,8 @@ ion-content.upgrade-page {
 
         ion-checkbox {
           --size: 22px;
-          --checkbox-background-checked: #ebdcf5;
-          --checkmark-color: #5b257c;
+          --checkbox-background-checked: #ece5f5;
+          --checkmark-color: #7c5cbf;
           --border-color: rgba(255, 255, 255, 0.6);
           --border-radius: 4px;
         }
@@ -131,7 +131,7 @@ ion-content.upgrade-page {
 // Fixed Footer Toolbar Styling
 ion-footer {
   ion-toolbar.cart-footer-toolbar {
-    --background: #5b257c;
+    --background: #7c5cbf;
     --border-color: transparent;
     padding: 10px 16px;
 
@@ -148,7 +148,7 @@ ion-footer {
 
       .items-count {
         font-size: 0.75rem;
-        color: #ebdcf5;
+        color: #ece5f5;
       }
 
       .running-total {
@@ -160,7 +160,7 @@ ion-footer {
 
     .checkout-btn {
       --background: #ffffff;
-      --color: #5b257c;
+      --color: #7c5cbf;
       --border-radius: 10px;
       font-weight: bold;
       font-size: 0.85rem;

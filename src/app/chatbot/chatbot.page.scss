@@ -11,8 +11,7 @@ $text-mid: #555555;
 $text-muted: #999999;
 $border: #e8e4ef;
 
-$user-bubble-start: #9b7ad8;
-$user-bubble-end: #7c5cbf;
+$user-bubble-color: #7c5cbf;
 
 // ── Fonts ───────────────────────────────────────────────────
 // <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -155,10 +154,10 @@ ion-content {
   }
 
   .msg-row.user & {
-    background: linear-gradient(135deg, $user-bubble-start, $user-bubble-end);
+    background: $user-bubble-color;
     border-radius: 18px 18px 4px 18px;
     color: #ffffff;
-    box-shadow: 0 2px 8px rgba(124, 92, 191, 0.25);
+    box-shadow: 0 2px 8px rgba(108, 92, 231, 0.22);
   }
 }
 
@@ -417,7 +416,7 @@ ion-modal {
   }
 
   &.checked .plan-checkbox {
-    background: linear-gradient(135deg, $user-bubble-start, $user-bubble-end);
+    background: $user-bubble-color;
     border-color: $lavender-text;
   }
 
@@ -445,7 +444,7 @@ ion-modal {
 
   .compare-run-btn {
     width: 100%;
-    background: linear-gradient(135deg, $user-bubble-start, $user-bubble-end);
+    background: $user-bubble-color;
     color: #ffffff;
     border: none;
     border-radius: 28px;
@@ -499,7 +498,7 @@ ion-modal {
     content: '';
     width: 3px;
     height: 12px;
-    background: linear-gradient(to bottom, $user-bubble-start, $user-bubble-end);
+    background: $user-bubble-color;
     border-radius: 2px;
   }
 }

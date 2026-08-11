@@ -1,46 +1,105 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>Profile Summary</ion-title>
+    <ion-title>Profile</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="logout()" color="danger">
-        <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+      <ion-button (click)="openSettings()">
+        <ion-icon name="settings-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding custom-theme" *ngIf="profile$ | async as profile">
-  <h1 class="page-title">Your Profile Summary</h1>
-  <p class="subtitle">Here’s what we’ve learned about you, {{ profile.fullName }}.</p>
+<ion-content class="ion-padding custom-theme">
+  <ng-container *ngIf="profile$ | async as profile; else loadingOrEmpty">
 
-  <!-- Persona Header Card -->
-  <div class="persona-card">
-    <div class="avatar-circle">
-      <ion-icon name="person"></ion-icon>
+  <!-- ── Avatar + Name Header ── -->
+  <div class="profile-header">
+    <div class="avatar-wrap">
+      <!-- Uploaded photo -->
+      <img
+        *ngIf="profile.profilePhoto"
+        [src]="profile.profilePhoto"
+        class="avatar-photo"
+        alt="Profile photo"
+      />
+      <!-- Preset avatar icon -->
+      <div
+        *ngIf="!profile.profilePhoto && profile.avatar"
+        class="avatar-preset"
+        [style.background]="getAvatarBg(profile.avatar)"
+      >
+        <ion-icon [name]="getAvatarIcon(profile.avatar)" [style.color]="getAvatarColor(profile.avatar)"></ion-icon>
+      </div>
+      <!-- Fallback: initials -->
+      <div *ngIf="!profile.profilePhoto && !profile.avatar" class="avatar-initials">
+        {{ getInitials(profile.displayName || profile.fullName) }}
+      </div>
     </div>
-    <div class="persona-details">
-      <h2>{{ profile.personaTag || 'Young Working Adult' }}</h2>
-      <div class="badge-list">
-        <span class="badge purple-bg">{{ profile.riskProfile || 'Moderate Risk' }}</span>
-        <span class="badge green-bg">Health Focused</span>
-        <span class="badge blue-bg">Future Planning</span>
+
+    <h2 class="profile-name">{{ profile.displayName || profile.fullName }}</h2>
+    <p class="profile-email">{{ profile.email || '' }}</p>
+
+    <div class="badge-list">
+      <span class="badge purple-bg">{{ profile.personaTag || 'Young Working Adult' }}</span>
+      <span class="badge green-bg">{{ profile.riskProfile || 'Moderate Risk' }}</span>
+    </div>
+  </div>
+
+  <!-- ── Financial Summary ── -->
+  <div class="summary-section">
+    <h3>Financial Summary</h3>
+    <div class="summary-row"><span>Full Name</span>     <strong>{{ profile.fullName }}</strong></div>
+    <div class="summary-row"><span>Age</span>           <strong>{{ profile.age || 'N/A' }}</strong></div>
+    <div class="summary-row"><span>Monthly Income</span><strong>S$ {{ profile.monthlyIncome | number }}</strong></div>
+    <div class="summary-row"><span>Dependents</span>    <strong>{{ profile.dependents ?? 0 }}</strong></div>
+    <div class="summary-row"><span>Marital Status</span><strong>{{ profile.maritalStatus || 'Single' }}</strong></div>
+    <div class="summary-row"><span>Employment</span>    <strong>{{ profile.occupation || 'N/A' }}</strong></div>
+    <div class="summary-row"><span>Main Goals</span>    <strong>{{ profile.mainGoals?.join(', ') || 'None selected' }}</strong></div>
+  </div>
+
+  <!-- ── Insurance Needs Card ── -->
+  <div class="needs-card">
+    <div class="needs-card-header">
+      <div class="needs-card-title">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        <h3>Insurance Needs</h3>
+      </div>
+      <button class="needs-edit-btn" (click)="navigateToEditProfile()">
+        <ion-icon name="create-outline"></ion-icon>
+        <span>Edit</span>
+      </button>
+    </div>
+
+    <div class="needs-grid">
+      <div class="needs-item">
+        <span class="needs-label">Budget</span>
+        <strong class="needs-value">S$ {{ profile.monthlyBudget }} / mo</strong>
+      </div>
+      <div class="needs-item">
+        <span class="needs-label">Main Goal</span>
+        <strong class="needs-value">{{ profile.mainGoals?.[0] || 'N/A' }}</strong>
+      </div>
+      <div class="needs-item">
+        <span class="needs-label">Top Concern</span>
+        <strong class="needs-value">{{ profile.topConcern || 'N/A' }}</strong>
+      </div>
+      <div class="needs-item">
+        <span class="needs-label">Has Insurance</span>
+        <strong class="needs-value">{{ profile.hasExistingInsurance ? 'Yes' : 'No' }}</strong>
+      </div>
+    </div>
+
+    <!-- Existing plans (if any) -->
+    <div class="existing-plans-list" *ngIf="profile.hasExistingInsurance && profile.existingPlans?.length">
+      <p class="existing-plans-label">Current plans</p>
+      <div class="existing-plan-chip" *ngFor="let plan of profile.existingPlans">
+        <ion-icon name="document-text-outline"></ion-icon>
+        <span>{{ plan.name }}<span *ngIf="plan.insurer"> · {{ plan.insurer }}</span></span>
       </div>
     </div>
   </div>
 
-  <!-- Financial Summary Section -->
-  <div class="summary-section">
-    <h3>Financial Summary</h3>
-    <div class="summary-row"><span>Full Name</span> <strong>{{ profile.fullName }}</strong></div>
-    <div class="summary-row"><span>Age</span> <strong>{{ profile.age || 'N/A' }}</strong></div>
-    <div class="summary-row"><span>Monthly Income</span> <strong>S$ {{ profile.monthlyIncome | number }}</strong></div>
-    <div class="summary-row"><span>Dependents</span> <strong>{{ profile.dependents ?? 0 }}</strong></div>
-    <div class="summary-row"><span>Marital Status</span> <strong>{{ profile.maritalStatus || 'Single' }}</strong></div>
-    <div class="summary-row"><span>Insurance Budget</span> <strong>S$ {{ profile.monthlyBudget }} / month</strong></div>
-    <div class="summary-row"><span>Main Goals</span> <strong>{{ profile.mainGoals?.join(', ') || 'None selected' }}</strong></div>
-  </div>
-
-  <!-- AI Insights Card -->
+  <!-- ── AI Insights ── -->
   <div class="ai-insights-card" *ngIf="profile.aiInsights && profile.aiInsights.length > 0">
     <h3><ion-icon name="sparkles-outline"></ion-icon> AI Insights</h3>
     <ul>
@@ -51,12 +110,20 @@
     </ul>
   </div>
 
-  <!-- Primary Nav Actions -->
+  <!-- ── Actions ── -->
   <ion-button expand="block" class="primary-btn" (click)="navigateToLandingPage()">
     View Recommended Plans <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
   </ion-button>
 
-  <ion-button expand="block" fill="outline" class="secondary-btn" (click)="navigateToEditProfile()">
-    <ion-icon name="create-outline" slot="start"></ion-icon> Edit Profile
-  </ion-button>
+
+
+  </ng-container>
+
+  <ng-template #loadingOrEmpty>
+    <div class="empty-state">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p>Loading your profile...</p>
+    </div>
+  </ng-template>
+
 </ion-content>

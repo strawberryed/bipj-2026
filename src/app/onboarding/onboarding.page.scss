@@ -1,7 +1,7 @@
 // Brand Theme Variables
-$purple-primary: #6c5ce7;
-$purple-hover: #5b4bc4;
-$purple-light: #f3f0ff;
+$purple-primary: #7c5cbf;
+$purple-hover: #5a3d9e;
+$purple-light: #ece5f5;
 $text-dark: #1e1e2d;
 $text-muted: #6c757d;
 $bg-light: #f8f9fa;
@@ -56,7 +56,7 @@ $bg-light: #f8f9fa;
 .form-card {
     background: #ffffff;
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(108, 92, 231, 0.08);
+    box-shadow: 0 10px 30px rgba(124, 92, 191, 0.08);
     border: 1px solid #eef0f3;
     margin: 0;
 
@@ -97,7 +97,7 @@ $bg-light: #f8f9fa;
 
     &:focus-within {
         border-color: $purple-primary;
-        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+        box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.15);
     }
 
     ion-input,
@@ -176,7 +176,7 @@ $bg-light: #f8f9fa;
     font-weight: 700;
     font-size: 0.95rem;
     letter-spacing: 0.5px;
-    box-shadow: 0 8px 20px rgba(108, 92, 231, 0.3);
+    box-shadow: 0 8px 20px rgba(124, 92, 191, 0.3);
 }
 
 .security-note {
@@ -327,5 +327,92 @@ $bg-light: #f8f9fa;
 
     &:active {
         background: rgba(124, 92, 191, 0.1);
+    }
+}
+
+// ─── Paste this block at the bottom of your existing onboarding.page.scss ───
+
+.step-progress {
+    margin: 16px auto 24px;
+    max-width: 280px;
+
+    .step-track {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .step-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 2px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+
+        .step-num {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        ion-icon {
+            font-size: 1rem;
+            color: #ffffff;
+        }
+
+        // Currently active step — solid purple fill
+        &.active {
+            background: $purple-primary;
+            border-color: $purple-primary;
+
+            .step-num {
+                color: #ffffff;
+            }
+        }
+
+        // Completed step — solid purple with checkmark
+        &.done {
+            background: $purple-primary;
+            border-color: $purple-primary;
+        }
+    }
+
+    .step-line {
+        flex: 1;
+        height: 2px;
+        background: #e2e8f0;
+        margin: 0 6px;
+        transition: background 0.3s ease;
+
+        &.done {
+            background: $purple-primary;
+        }
+    }
+
+    .step-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+
+        span {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-align: center;
+            flex: 1;
+
+            &.active {
+                color: $purple-primary;
+            }
+
+            &.done-label {
+                color: $purple-primary;
+            }
+        }
     }
 }

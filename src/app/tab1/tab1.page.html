@@ -11,9 +11,18 @@
       <p class="date-text">{{ todayDate | date:'d MMMM yyyy' }}</p>
       <h1>Good Afternoon <span class="bold-text">{{ currentUserName }}</span></h1>
     </div>
-    <ion-avatar class="profile-avatar">
-      <img src="assets/avatar.jpg" alt="Profile Picture" />
-    </ion-avatar>
+    <!-- Dynamic avatar from Firestore profile -->
+    <div class="profile-avatar" (click)="goToProfile()">
+      <img *ngIf="userProfile?.profilePhoto" [src]="userProfile?.profilePhoto" class="avatar-img" alt="Profile photo" />
+      <div *ngIf="!userProfile?.profilePhoto && userProfile?.avatar" class="avatar-preset"
+        [style.background]="getAvatarBg(userProfile?.avatar!)">
+        <ion-icon [name]="getAvatarIcon(userProfile?.avatar!)"
+          [style.color]="getAvatarColor(userProfile?.avatar!)"></ion-icon>
+      </div>
+      <div *ngIf="!userProfile?.profilePhoto && !userProfile?.avatar" class="avatar-initials">
+        {{ getInitials(userProfile?.displayName || userProfile?.fullName || '') }}
+      </div>
+    </div>
   </div>
 
   <!-- Dynamic Dashboard / Today's Brief Card -->

@@ -1,0 +1,119 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="setup-toolbar">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="back-btn">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Set Up Your Profile</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="setup-content">
+  <div class="step-container">
+
+    <!-- Step Progress Indicator -->
+    <div class="step-progress">
+      <div class="step-track">
+        <div class="step-dot active">
+          <span class="step-num">1</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-dot">
+          <span class="step-num">2</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-dot">
+          <span class="step-num">3</span>
+        </div>
+      </div>
+      <div class="step-labels">
+        <span class="active">Profile</span>
+        <span>About You</span>
+        <span>Needs</span>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header-section">
+      <h2>Make it yours</h2>
+      <p>Upload a photo or pick an avatar. This is how Cova will recognise you.</p>
+    </div>
+
+    <ion-card class="form-card">
+      <ion-card-content>
+
+        <!-- Avatar / Photo Section -->
+        <div class="avatar-section">
+          <label class="section-label">Profile picture</label>
+
+          <!-- Upload button — shows photo preview once picked, otherwise upload prompt -->
+          <div class="photo-upload-area" (click)="pickPhoto()">
+            <!-- Photo preview state -->
+            <ng-container *ngIf="uploadedPhotoBase64; else uploadPrompt">
+              <img [src]="uploadedPhotoBase64" class="photo-preview" alt="Profile photo" />
+              <div class="photo-overlay">
+                <ion-icon name="camera-outline"></ion-icon>
+                <span>Change</span>
+              </div>
+              <!-- Remove photo button -->
+              <button class="remove-photo-btn" (click)="removePhoto($event)">
+                <ion-icon name="close-outline"></ion-icon>
+              </button>
+            </ng-container>
+
+            <!-- Empty / prompt state -->
+            <ng-template #uploadPrompt>
+              <div class="upload-prompt">
+                <div class="upload-icon-wrap">
+                  <ion-icon name="camera-outline"></ion-icon>
+                </div>
+                <span class="upload-label">Upload a photo</span>
+                <span class="upload-hint">JPG or PNG, max 5 MB</span>
+              </div>
+            </ng-template>
+          </div>
+
+          <!-- Hidden file input -->
+          <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" style="display: none"
+            (change)="onFileSelected($event)" />
+
+          <!-- Divider -->
+          <div class="avatar-divider">
+            <span>or choose a preset</span>
+          </div>
+
+          <!-- Preset avatar grid -->
+          <div class="avatar-grid" [class.dimmed]="!!uploadedPhotoBase64">
+            <button *ngFor="let avatar of avatarOptions" class="avatar-option"
+              [class.selected]="!uploadedPhotoBase64 && selectedAvatar === avatar.id" [style.background]="avatar.bg"
+              (click)="selectAvatar(avatar.id)">
+              <ion-icon [name]="avatar.icon" [style.color]="avatar.iconColor"></ion-icon>
+              <div class="select-ring" *ngIf="!uploadedPhotoBase64 && selectedAvatar === avatar.id"></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Display Name -->
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="person-outline"></ion-icon> Display Name
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-input [(ngModel)]="displayName" type="text" placeholder="How should Cova greet you?"
+              [maxlength]="30"></ion-input>
+          </ion-item>
+          <span class="char-count">{{ displayName.length }}/30</span>
+        </div>
+
+        <!-- Continue Button -->
+        <ion-button expand="block" shape="round" class="action-btn" (click)="continue()">
+          CONTINUE
+        </ion-button>
+
+        <p class="skip-link" (click)="skipSetup()">Skip for now</p>
+
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

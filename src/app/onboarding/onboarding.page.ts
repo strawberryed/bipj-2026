@@ -24,6 +24,7 @@ export class OnboardingPage {
   occupation: string = '';
   monthlyIncome: number | null = null;
   maritalStatus: string = '';
+  dependents: number = 0;
 
   // Step 2 Form Fields
   hasInsurance: boolean | null = null;
@@ -72,7 +73,7 @@ export class OnboardingPage {
     this.ageError = '';
 
     // Check if required fields are filled
-    if (!this.fullName || !this.age || !this.occupation || !this.monthlyIncome || !this.maritalStatus) {
+    if (!this.fullName || !this.age || !this.occupation || !this.monthlyIncome || !this.maritalStatus || this.dependents === null || this.dependents === undefined) {
       this.showToast('Please fill in all fields before proceeding.');
       return;
     }
@@ -85,6 +86,10 @@ export class OnboardingPage {
 
     // Move to step 2 if valid
     this.currentStep = 2;
+  }
+
+  goBack() {
+    this.router.navigate(['/setup-profile']);
   }
 
   prevStep() {
@@ -131,6 +136,7 @@ export class OnboardingPage {
         occupation: this.occupation,
         monthlyIncome: Number(this.monthlyIncome),
         maritalStatus: this.maritalStatus,
+        dependents: Number(this.dependents),
         hasExistingInsurance: !!this.hasInsurance,
         existingPlans: cleanedExistingPlans,
         mainGoals: this.mainGoal ? [this.mainGoal] : [],

@@ -1,0 +1,329 @@
+$purple-primary: #7c5cbf;
+$purple-hover: #5a3d9e;
+$purple-light: #ece5f5;
+$text-dark: #1e1e2d;
+$text-muted: #6c757d;
+$bg-light: #f8f9fa;
+
+.edit-toolbar {
+    --background: #ffffff;
+    --color: #{$text-dark};
+    border-bottom: 1px solid #eef0f3;
+
+    ion-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .back-btn {
+        --color: #{$purple-primary};
+    }
+
+    .save-btn {
+        --color: #{$purple-primary};
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+}
+
+.edit-content {
+    --background: #{$bg-light};
+}
+
+.edit-container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+}
+
+// ── Avatar Section ──
+.avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.avatar-wrap {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 16px rgba(124, 92, 191, 0.18);
+
+    .avatar-photo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .avatar-preset {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        ion-icon {
+            font-size: 38px;
+        }
+    }
+
+    .avatar-initials {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: $purple-light;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: $purple-primary;
+    }
+
+    .avatar-edit-badge {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 28px;
+        height: 28px;
+        background: $purple-primary;
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        ion-icon {
+            font-size: 0.85rem;
+            color: #ffffff;
+        }
+    }
+}
+
+.avatar-hint {
+    font-size: 0.78rem;
+    color: $text-muted;
+    margin: 0 0 16px;
+}
+
+.avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.avatar-option {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    outline: none;
+    transition: transform 0.15s ease, border-color 0.2s ease;
+
+    ion-icon {
+        font-size: 22px;
+        pointer-events: none;
+    }
+
+    &:active {
+        transform: scale(0.9);
+    }
+
+    &.selected {
+        border-color: $purple-primary;
+        box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.2);
+    }
+
+    .select-ring {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 18px;
+        height: 18px;
+        background: $purple-primary;
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &::after {
+            content: '✓';
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 700;
+        }
+    }
+}
+
+// ── Section Cards ──
+.section-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid #eef0f3;
+    box-shadow: 0 4px 16px rgba(124, 92, 191, 0.06);
+}
+
+.section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+    margin: 0 0 16px;
+}
+
+// ── Fields ──
+.field-group {
+    margin-bottom: 16px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    .field-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: $text-dark;
+        margin-bottom: 6px;
+
+        ion-icon {
+            color: $purple-primary;
+            font-size: 1rem;
+        }
+    }
+}
+
+.custom-input {
+    --background: #{$bg-light};
+    --color: #{$text-dark};
+    --border-radius: 12px;
+    --padding-start: 14px;
+    --padding-end: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+
+    &:focus-within {
+        border-color: $purple-primary;
+        box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.15);
+    }
+
+    &.readonly {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    ion-input,
+    ion-select {
+        --padding-top: 12px;
+        --padding-bottom: 12px;
+        font-size: 0.92rem;
+        --placeholder-color: #a0aec0;
+        --placeholder-opacity: 1;
+    }
+}
+
+.field-hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 5px;
+}
+
+// ── Budget Range ──
+.budget-display {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: $purple-primary;
+    text-align: center;
+    margin: 10px 0 4px;
+}
+
+.purple-range {
+    --bar-background: #e2e8f0;
+    --bar-background-active: #{$purple-primary};
+    --knob-background: #{$purple-primary};
+
+    ion-label {
+        color: $text-muted;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+}
+
+// ── Radio Items ──
+.radio-item {
+    --background: #{$bg-light};
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 8px;
+
+    ion-radio {
+        --color-checked: #{$purple-primary};
+    }
+}
+
+// ── Danger Zone ──
+.danger-section {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.danger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1.5px solid #fee2e2;
+    background: #fff5f5;
+    color: #dc2626;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    ion-icon {
+        font-size: 1.1rem;
+    }
+
+    &:active {
+        background: #fee2e2;
+    }
+}
+
+// ── Loading ──
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
+}
+
+.delete-btn {
+    border-color: #fca5a5;
+    background: #fff1f1;
+    color: #b91c1c;
+}

@@ -1,20 +1,54 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="purple-toolbar">
     <ion-buttons slot="start">
+      <ion-button *ngIf="currentStep === 1" (click)="goBack()" class="back-btn">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
       <ion-button *ngIf="currentStep === 2" (click)="prevStep()" class="back-btn">
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>{{ currentStep === 1 ? 'Build Your Profile' : 'Insurance Needs' }}</ion-title>
+    <ion-title>{{ currentStep === 1 ? 'About You' : 'Insurance Needs' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="onboarding-content">
-  <!-- STEP 1 -->
+
+  <!-- Step Progress Indicator (shared across both steps) -->
+  <div class="step-progress">
+    <div class="step-track">
+
+      <!-- Step 1: Profile (always done — came from setup-profile) -->
+      <div class="step-dot done">
+        <ion-icon name="checkmark-outline"></ion-icon>
+      </div>
+      <div class="step-line done"></div>
+
+      <!-- Step 2: About You — active on step 1, done on step 2 -->
+      <div class="step-dot" [class.active]="currentStep === 1" [class.done]="currentStep === 2">
+        <ion-icon name="checkmark-outline" [style.display]="currentStep === 2 ? 'block' : 'none'"></ion-icon>
+        <span class="step-num" [style.display]="currentStep === 1 ? 'block' : 'none'">2</span>
+      </div>
+      <div class="step-line" [class.done]="currentStep === 2"></div>
+
+      <!-- Step 3: Insurance Needs — inactive on step 1, active on step 2 -->
+      <div class="step-dot" [class.active]="currentStep === 2">
+        <span class="step-num">3</span>
+      </div>
+
+    </div>
+    <div class="step-labels">
+      <span class="done-label">Profile</span>
+      <span [class.active]="currentStep === 1" [class.done-label]="currentStep === 2">About You</span>
+      <span [class.active]="currentStep === 2">Needs</span>
+    </div>
+  </div>
+
+  <!-- STEP 1: About You -->
   <div *ngIf="currentStep === 1" class="step-container">
     <div class="header-section">
-      <h2>Build Your Profile</h2>
-      <p>Let's get to know you. We'll use this information to build your insurance profile.</p>
+      <h2>About You</h2>
+      <p>Let's get to know you. We'll use this to build your insurance profile.</p>
     </div>
 
     <ion-card class="form-card">
@@ -36,7 +70,6 @@
             <ion-input [(ngModel)]="age" type="number" placeholder="e.g. 25" (ionInput)="ageError = ''">
             </ion-input>
           </ion-item>
-          <!-- Inline Error Message -->
           <div *ngIf="ageError" class="error-message">
             <ion-icon name="alert-circle-outline"></ion-icon>
             <span>{{ ageError }}</span>
@@ -83,6 +116,22 @@
           </ion-item>
         </div>
 
+        <div class="field-group">
+          <ion-label class="field-label">
+            <ion-icon name="people-outline"></ion-icon> Number of Dependents
+          </ion-label>
+          <ion-item lines="none" class="custom-input">
+            <ion-select [(ngModel)]="dependents" placeholder="Select number" interface="popover">
+              <ion-select-option [value]="0">0 — No dependents</ion-select-option>
+              <ion-select-option [value]="1">1</ion-select-option>
+              <ion-select-option [value]="2">2</ion-select-option>
+              <ion-select-option [value]="3">3</ion-select-option>
+              <ion-select-option [value]="4">4</ion-select-option>
+              <ion-select-option [value]="5">5+</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </div>
+
         <ion-button expand="block" shape="round" class="action-btn" (click)="nextStep()">
           CONTINUE
         </ion-button>
@@ -95,7 +144,7 @@
     </ion-card>
   </div>
 
-  <!-- STEP 2 -->
+  <!-- STEP 2: Insurance Needs -->
   <div *ngIf="currentStep === 2" class="step-container">
     <div class="header-section">
       <h2>Insurance Needs</h2>
@@ -120,7 +169,6 @@
           </ion-radio-group>
         </div>
 
-        <!-- Existing insurance plans — only shown when hasInsurance is Yes. -->
         <div class="field-group existing-plans-section" *ngIf="hasInsurance === true">
           <ion-label class="field-label">
             <ion-icon name="document-text-outline"></ion-icon> Your current plans
@@ -196,4 +244,5 @@
       </ion-card-content>
     </ion-card>
   </div>
+
 </ion-content>

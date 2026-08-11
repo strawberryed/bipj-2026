@@ -46,7 +46,7 @@
 
   // Top Brief Purple Card Container
   .brief-card {
-    background: #5b257c !important; // Forces iconic deep dark purple background
+    background: #7c5cbf !important; // Cool purple matching app theme
     border-radius: 16px;
     margin: 0 0 20px 0;
     box-shadow: none;
@@ -60,7 +60,7 @@
     }
 
     .brief-subtitle {
-      color: #ebdcf5; // Soft light purple text
+      color: #ece5f5; // Soft light purple text
       font-size: 0.9rem;
     }
 
@@ -236,7 +236,7 @@ ion-modal {
     .consultant-highlight {
       font-size: 1.3rem;
       font-weight: bold;
-      color: #5b257c;
+      color: #7c5cbf;
       margin: 4px 0 2px 0;
     }
 
@@ -262,14 +262,14 @@ ion-modal {
         gap: 6px;
 
         ion-icon {
-          color: #5b257c;
+          color: #7c5cbf;
           font-size: 1.1rem;
         }
       }
 
       .edit-phone-link {
         font-size: 0.8rem;
-        color: #5b257c;
+        color: #7c5cbf;
         font-weight: 600;
         text-decoration: underline;
         cursor: pointer;
@@ -278,7 +278,7 @@ ion-modal {
 
     .detail-pill {
       background: #ebdcf5;
-      color: #5b257c;
+      color: #7c5cbf;
       padding: 8px 12px;
       border-radius: 8px;
       display: inline-block;
@@ -294,12 +294,12 @@ ion-modal {
 
       ion-item {
         --background: #fdfcff;
-        --color: #5b257c;
+        --color: #7c5cbf;
         font-weight: 600;
         font-size: 0.9rem;
 
         .accordion-icon {
-          color: #5b257c;
+          color: #7c5cbf;
         }
       }
 
@@ -365,8 +365,8 @@ ion-modal {
 
     // Reschedule & Cancel Buttons
     .reschedule-btn {
-      --border-color: #5b257c;
-      --color: #5b257c;
+      --border-color: #7c5cbf;
+      --color: #7c5cbf;
       --border-radius: 10px;
       --border-width: 1.5px;
       font-weight: 700;

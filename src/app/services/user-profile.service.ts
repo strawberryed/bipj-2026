@@ -1,6 +1,6 @@
 import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
-import { Firestore, doc, docData, setDoc, getDoc } from '@angular/fire/firestore';
-import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, user, User } from '@angular/fire/auth';
+import { Firestore, doc, docData, setDoc, getDoc, onSnapshot, deleteDoc, collection, getDocs } from '@angular/fire/firestore';
+import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser, user, User } from '@angular/fire/auth';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
@@ -12,6 +12,12 @@ export interface ExistingPlan {
 
 export interface UserProfileData {
   fullName: string;
+  email?: string;                   // saved at sign-up
+  displayName?: string;             // chosen display name (shown in greetings, profile)
+  avatar?: string | null;           // preset avatar ID (e.g. 'avatar-1'), null if photo uploaded
+  profilePhoto?: string | null;     // base64 data URL of uploaded photo, null if using preset
+  dateOfBirth?: string;             // ISO date string
+  isProfileSetupComplete?: boolean; // gates setup-profile → onboarding transition
   age?: number;
   occupation?: string;
   monthlyIncome?: number;
@@ -52,15 +58,31 @@ export class UserProfileService {
     private auth: Auth,
     private injector: EnvironmentInjector
   ) {
-    // Wrap inside injection context to clear AngularFire warnings
     this.authUser$ = runInInjectionContext(this.injector, () => user(this.auth));
 
     this.userProfile$ = this.authUser$.pipe(
       switchMap((authUser) => {
         if (!authUser) return of(null);
+        // Use native onSnapshot instead of docData() — docData() has a
+        // breaking change in @angular/fire 20.x that misidentifies a
+        // DocumentReference as a Query and throws an error.
         return runInInjectionContext(this.injector, () => {
-          const userDocRef = doc(this.firestore, `users/${authUser.uid}`);
-          return docData(userDocRef) as Observable<UserProfileData | null>;
+          return new Observable<UserProfileData | null>(observer => {
+            const userDocRef = doc(this.firestore, `users/${authUser.uid}`);
+            const unsubscribe = onSnapshot(
+              userDocRef,
+              (snapshot) => {
+                if (snapshot.exists()) {
+                  observer.next(snapshot.data() as UserProfileData);
+                } else {
+                  observer.next(null);
+                }
+              },
+              (error) => observer.error(error)
+            );
+            // Return teardown logic so the listener is removed on unsubscribe
+            return () => unsubscribe();
+          });
         });
       })
     );
@@ -107,6 +129,7 @@ export class UserProfileService {
       await setDoc(userDocRef, {
         fullName,
         email,
+        isProfileSetupComplete: false,
         isOnboardingCompleted: false,
         createdAt: new Date().toISOString()
       });
@@ -145,6 +168,29 @@ export class UserProfileService {
     await runInInjectionContext(this.injector, async () => {
       const userDocRef = doc(this.firestore, `users/${uid}`);
       await setDoc(userDocRef, fullPayload, { merge: true });
+    });
+  }
+
+  async deleteAccount(): Promise<void> {
+    const currentUser = this.auth.currentUser;
+    if (!currentUser) throw new Error('No authenticated user found.');
+
+    const uid = currentUser.uid;
+
+    await runInInjectionContext(this.injector, async () => {
+      // 1. Delete chatHistory subcollection docs
+      const chatRef = collection(this.firestore, `users/${uid}/chatHistory`);
+      const chatSnap = await getDocs(chatRef);
+      for (const d of chatSnap.docs) {
+        await deleteDoc(d.ref);
+      }
+
+      // 2. Delete the user Firestore doc
+      const userDocRef = doc(this.firestore, `users/${uid}`);
+      await deleteDoc(userDocRef);
+
+      // 3. Delete the Firebase Auth account
+      await deleteUser(currentUser);
     });
   }
 

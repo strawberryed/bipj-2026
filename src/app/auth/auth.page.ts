@@ -44,41 +44,36 @@ export class AuthPage {
 
     try {
       if (this.isSignUpMode) {
-        // Create the Firebase Auth account + initial Firestore doc first,
-        // THEN send them into the questionnaire. Previously this just
-        // navigated to /onboarding without ever creating an account, so
-        // onboarding's save call had no authenticated user to attach to.
         const user = await this.profileService.signUp(this.email, this.password, this.fullName);
         establishLocalSession(user.email || this.email, this.fullName);
 
-        // Wait briefly for auth state to fully register before onboarding
-        // tries to read auth.currentUser (same reason as the login flow).
         await new Promise(resolve => setTimeout(resolve, 500));
-
         await loader.dismiss();
-        this.router.navigate(['/onboarding']);
+
+        // ── NEW: Route to profile setup first, then onboarding ──
+        this.router.navigate(['/setup-profile']);
       } else {
         // --- LOG IN FLOW ---
         const user = await this.profileService.login(this.email, this.password);
-
-        // Tab 3 uses the local workspace database for its timeline and policy
-        // data. Reuse this login there instead of presenting another sign-in.
         establishLocalSession(user.email || this.email, user.displayName || undefined);
 
-        // Wait for Firebase Auth to fully register the session before reading
-        // Firestore. Without this, isProfileComplete()'s Firestore read can fire
-        // under a not-yet-authenticated state and return false even when the doc
-        // exists with isOnboardingCompleted: true.
         await new Promise(resolve => setTimeout(resolve, 500));
-
         await loader.dismiss();
 
-        const isComplete = await this.profileService.isProfileComplete(user.uid);
-        if (isComplete) {
+        // ── UPDATED: Check both profile setup AND onboarding completion ──
+        const profile = await this.profileService.getCurrentProfile();
+
+        if (profile?.isOnboardingCompleted) {
+          // Fully completed user → main app
           this.router.navigate(['/tabs/tab1']);
-        } else {
-          this.showToast('No completed profile found. Please complete sign up.');
+        } else if (profile?.isProfileSetupComplete) {
+          // Set up profile but didn't finish onboarding → resume onboarding
+          this.showToast('Let\'s finish setting up your profile.');
           this.router.navigate(['/onboarding']);
+        } else {
+          // Account exists but never set up profile → start from profile setup
+          this.showToast('Let\'s set up your profile.');
+          this.router.navigate(['/setup-profile']);
         }
       }
     } catch (error: any) {

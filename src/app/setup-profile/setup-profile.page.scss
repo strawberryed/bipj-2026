@@ -1,0 +1,465 @@
+// ─── Theme Variables (matching onboarding) ───
+$purple-primary: #7c5cbf;
+$purple-hover: #5a3d9e;
+$purple-light: #ece5f5;
+$text-dark: #1e1e2d;
+$text-muted: #6c757d;
+$bg-light: #f8f9fa;
+
+// ─── Toolbar ───
+.setup-toolbar {
+  --background: #ffffff;
+  --color: #{$text-dark};
+  border-bottom: 1px solid #eef0f3;
+
+  ion-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: $text-dark;
+  }
+}
+
+.setup-content {
+  --background: #{$bg-light};
+  padding: 20px 16px;
+}
+
+.step-container {
+  max-width: 520px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+// ─── Step Progress Indicator ───
+.step-progress {
+  margin: 8px auto 28px;
+  max-width: 280px;
+
+  .step-track {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+
+    .step-num {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+
+    &.active {
+      background: $purple-primary;
+      border-color: $purple-primary;
+
+      .step-num {
+        color: #ffffff;
+      }
+    }
+  }
+
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: #e2e8f0;
+    margin: 0 6px;
+  }
+
+  .step-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 0 2px;
+
+    span {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-align: center;
+      flex: 1;
+
+      &.active {
+        color: $purple-primary;
+      }
+    }
+  }
+}
+
+// ─── Header ───
+.header-section {
+  text-align: center;
+  margin-bottom: 24px;
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: $text-dark;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 0.95rem;
+    color: $text-muted;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+// ─── Card ───
+.form-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(124, 92, 191, 0.08);
+  border: 1px solid #eef0f3;
+  margin: 0;
+
+  ion-card-content {
+    padding: 28px 24px;
+  }
+}
+
+// ─── Avatar / Photo Section ───
+.avatar-section {
+  margin-bottom: 28px;
+
+  .section-label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: $text-dark;
+    margin-bottom: 14px;
+  }
+}
+
+// ─── Photo Upload Area ───
+.photo-upload-area {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  cursor: pointer;
+  overflow: hidden;
+  border: 2px dashed rgba(124, 92, 191, 0.35);
+  background: $purple-light;
+  transition: border-color 0.2s ease;
+
+  &:active {
+    border-color: $purple-primary;
+  }
+
+  // Live photo preview
+  .photo-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 50%;
+  }
+
+  // Hover overlay on top of preview — "Change" prompt
+  .photo-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.38);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+    gap: 4px;
+
+    ion-icon {
+      font-size: 1.4rem;
+      color: #ffffff;
+    }
+
+    span {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #ffffff;
+    }
+  }
+
+  &:hover .photo-overlay {
+    opacity: 1;
+  }
+
+  // Empty / upload prompt
+  .upload-prompt {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px;
+
+    .upload-icon-wrap {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(124, 92, 191, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2px;
+
+      ion-icon {
+        font-size: 1.2rem;
+        color: $purple-primary;
+      }
+    }
+
+    .upload-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: $purple-primary;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .upload-hint {
+      font-size: 0.62rem;
+      color: $text-muted;
+      text-align: center;
+      line-height: 1.2;
+    }
+  }
+}
+
+// Remove photo button — top-right corner of the circle
+.remove-photo-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  padding: 0;
+  transition: background 0.15s ease;
+
+  ion-icon {
+    font-size: 0.85rem;
+    color: #ffffff;
+    pointer-events: none;
+  }
+
+  &:active {
+    background: rgba(0, 0, 0, 0.75);
+  }
+}
+
+// ─── Divider between upload and preset grid ───
+.avatar-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+
+  span {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #94a3b8;
+    white-space: nowrap;
+  }
+}
+
+// ─── Preset Avatar Grid ───
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  justify-items: center;
+  transition: opacity 0.2s ease;
+
+  // Dim the preset grid when a custom photo is active
+  &.dimmed {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+}
+
+.avatar-option {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+  outline: none;
+
+  ion-icon {
+    font-size: 30px;
+    pointer-events: none;
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  &.selected {
+    border-color: $purple-primary;
+    box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.2);
+  }
+
+  .select-ring {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 22px;
+    height: 22px;
+    background: $purple-primary;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &::after {
+      content: '✓';
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+  }
+}
+
+// ─── Form Fields ───
+.field-group {
+  margin-bottom: 20px;
+
+  .field-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: $text-dark;
+    margin-bottom: 8px;
+
+    ion-icon {
+      color: $purple-primary;
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.optional-tag {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+
+.custom-input {
+  --background: #{$bg-light};
+  --color: #{$text-dark};
+  --border-radius: 12px;
+  --padding-start: 14px;
+  --padding-end: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+
+  &:focus-within {
+    border-color: $purple-primary;
+    box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.15);
+  }
+
+  ion-input {
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+    font-size: 0.95rem;
+    color: $text-dark;
+    --placeholder-color: #a0aec0;
+    --placeholder-opacity: 1;
+  }
+
+  // Style the datetime button to match the input aesthetic
+  ion-datetime-button {
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+  }
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+// ─── Action Button ───
+.action-btn {
+  --background: #{$purple-primary};
+  --background-hover: #{$purple-hover};
+  --background-activated: #{$purple-hover};
+  --color: #ffffff;
+  --border-radius: 30px;
+  margin-top: 28px;
+  height: 52px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 8px 20px rgba(124, 92, 191, 0.3);
+}
+
+// ─── Skip Link ───
+.skip-link {
+  text-align: center;
+  font-size: 0.88rem;
+  color: $text-muted;
+  margin-top: 16px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:active {
+    color: $purple-primary;
+  }
+}

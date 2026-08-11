@@ -18,8 +18,9 @@
       font-style: italic;
       font-size: 1.8rem;
       margin-bottom: 8px;
-      color: white; 
+      color: #111111;
     }
+
     p {
       color: #555555; // Darker gray for clear reading contrast
       font-size: 0.9rem;
@@ -29,10 +30,10 @@
 
   // Purple Summary Card Setup
   .summary-card {
-    background: #5b257c;
+    background: #7c5cbf;
     border-radius: 16px;
     margin: 0 0 24px 0;
-    box-shadow: 0 4px 12px rgba(91, 37, 124, 0.15); // Subtle purple tint shadow
+    box-shadow: 0 4px 12px rgba(124, 92, 191, 0.15); // Subtle purple tint shadow
 
     ion-card-title {
       color: white;
@@ -56,7 +57,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 6px 12px;
-      
+
       .banner-left {
         display: flex;
         align-items: center;
@@ -68,8 +69,8 @@
       }
 
       .upgrade-btn {
-        --background: #bfa3d4;
-        --color: #5b257c;
+        --background: #d4c8e8;
+        --color: #7c5cbf;
         --border-radius: 8px;
         font-weight: bold;
         text-transform: none;
@@ -98,7 +99,7 @@
 
     .consultant-item {
       --background: #ffffff; // Card color override for item rows
-      --color: #111111;      // Text color override for list labels
+      --color: #111111; // Text color override for list labels
       --padding-start: 0px;
       --inner-padding-end: 0px;
       border-bottom: 1px solid #e5e5ea; // Standard light gray borders
@@ -113,13 +114,13 @@
       h3 {
         font-size: 0.85rem; // Slightly larger for light mode emphasis
         font-weight: bold;
-        color: #111111;    // Solid header text line
+        color: #111111; // Solid header text line
         margin: 0 0 2px 0;
       }
 
       .role-text {
         font-size: 0.95rem;
-        color: #555555;   // Visible subtext color
+        color: #555555; // Visible subtext color
         margin-bottom: 6px;
       }
 
@@ -129,8 +130,8 @@
       }
 
       .custom-badge {
-        --background: #ebdcf5; // Soft lavender/purple color tint
-        --color: #5b257c;      // Rich brand purple text
+        --background: #ece5f5; // Soft lavender/purple color tint
+        --color: #7c5cbf; // Rich brand purple text
         font-size: 0.75rem;
         font-weight: 600;
         text-transform: none;
@@ -143,8 +144,8 @@
   // Blur UI Mechanism
   .blurred-content {
     filter: blur(5px) grayscale(30%); // Grayscales lightly for locked state representation
-    opacity: 0.5;                     // Light opacity overlay look
-    pointer-events: none;             // Disables interaction with blurred fields
+    opacity: 0.5; // Light opacity overlay look
+    pointer-events: none; // Disables interaction with blurred fields
     user-select: none;
   }
 
@@ -167,7 +168,7 @@
       padding: 10px;
       border-radius: 12px;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); // Clean shadow line
-      color: #5b257c; // Swapped to brand purple to emphasize clickability
+      color: #7c5cbf; // Swapped to brand purple to emphasize clickability
       border: 1px solid #e5e5ea;
     }
   }

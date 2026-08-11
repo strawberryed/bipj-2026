@@ -7,6 +7,18 @@ import { ToastController } from '@ionic/angular';
 import { getCurrentUser } from '../../data/app-db';
 import { UserProfileService, UserProfileData } from '../services/user-profile.service';
 
+const AVATAR_MAP: Record<string, { icon: string; bg: string; color: string }> = {
+  'avatar-1': { icon: 'person', bg: '#ede9fe', color: '#7c3aed' },
+  'avatar-2': { icon: 'happy', bg: '#fce7f3', color: '#db2777' },
+  'avatar-3': { icon: 'planet', bg: '#dbeafe', color: '#2563eb' },
+  'avatar-4': { icon: 'leaf', bg: '#d1fae5', color: '#059669' },
+  'avatar-5': { icon: 'flame', bg: '#ffedd5', color: '#ea580c' },
+  'avatar-6': { icon: 'diamond', bg: '#e0e7ff', color: '#4f46e5' },
+  'avatar-7': { icon: 'paw', bg: '#fef3c7', color: '#d97706' },
+  'avatar-8': { icon: 'rocket', bg: '#f3e8ff', color: '#9333ea' },
+  'avatar-9': { icon: 'musical-notes', bg: '#cffafe', color: '#0891b2' },
+};
+
 @Component({
   selector: 'app-tab1',
   templateUrl: 'tab1.page.html',
@@ -31,7 +43,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   userProfile: UserProfileData | null = null;
   private profileSub!: Subscription;
 
-  constructor() { 
+  constructor() {
     this.activeBooking$ = this.bookingService.activeBooking$.pipe(
       tap(booking => {
         if (booking) {
@@ -70,13 +82,13 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.currentUserName = this.userProfile?.fullName ?? getCurrentUser()?.name ?? 'User';
   }
 
-  openDetailsModal() { 
-    this.isDetailsModalOpen = true; 
+  openDetailsModal() {
+    this.isDetailsModalOpen = true;
     this.cdr.detectChanges();
   }
-  
-  closeDetailsModal() { 
-    this.isDetailsModalOpen = false; 
+
+  closeDetailsModal() {
+    this.isDetailsModalOpen = false;
     this.cdr.detectChanges();
   }
 
@@ -90,16 +102,16 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   goToProfile() {
     this.closeDetailsModal();
-    this.router.navigate(['/tabs/tab3']); 
+    this.router.navigate(['/tabs/tab3']);
   }
 
   rescheduleBooking(currentBooking: Booking) {
-    this.closeDetailsModal(); 
-    this.router.navigate(['/book-meeting'], { 
-      queryParams: { 
+    this.closeDetailsModal();
+    this.router.navigate(['/book-meeting'], {
+      queryParams: {
         reschedule: true,
-        advisorName: currentBooking.consultantName 
-      } 
+        advisorName: currentBooking.consultantName
+      }
     });
   }
 
@@ -118,6 +130,23 @@ export class Tab1Page implements OnInit, OnDestroy {
       this.isCancelling = false;
       this.cdr.detectChanges();
     }
+  }
+
+  getAvatarIcon(avatarId: string): string {
+    return AVATAR_MAP[avatarId]?.icon ?? 'person';
+  }
+
+  getAvatarBg(avatarId: string): string {
+    return AVATAR_MAP[avatarId]?.bg ?? '#ede9fe';
+  }
+
+  getAvatarColor(avatarId: string): string {
+    return AVATAR_MAP[avatarId]?.color ?? '#7c3aed';
+  }
+
+  getInitials(name: string): string {
+    if (!name) return '?';
+    return name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
   }
 
   private async showErrorToast(message: string) {

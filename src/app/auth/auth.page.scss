@@ -1,6 +1,6 @@
 .custom-theme {
   --background: #f8f9fe;
-  
+
   .auth-container {
     display: flex;
     flex-direction: column;
@@ -18,7 +18,7 @@
       width: 64px;
       height: 64px;
       border-radius: 20px;
-      background: #5025d1;
+      background: #7c5cbf;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -57,8 +57,8 @@
 
       .field-icon {
         font-size: 22px;
-        color: #5025d1;
-        background: #f0ebff;
+        color: #7c5cbf;
+        background: #ece5f5;
         padding: 10px;
         border-radius: 12px;
         margin-right: 14px;
@@ -86,7 +86,7 @@
     }
 
     .primary-btn {
-      --background: #5025d1;
+      --background: #7c5cbf;
       --border-radius: 16px;
       --padding-top: 18px;
       --padding-bottom: 18px;
@@ -98,11 +98,13 @@
 
     .toggle-mode {
       text-align: center;
+
       p {
         font-size: 14px;
         color: #6b7280;
+
         a {
-          color: #5025d1;
+          color: #7c5cbf;
           font-weight: 600;
           cursor: pointer;
           text-decoration: underline;

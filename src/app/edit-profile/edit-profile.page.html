@@ -1,0 +1,207 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="edit-toolbar">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="back-btn">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Account Settings</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()" [disabled]="isSaving" class="save-btn">
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="edit-content">
+  <div class="edit-container" *ngIf="loaded; else loadingTpl">
+
+    <!-- ── Avatar / Photo ── -->
+    <div class="avatar-section">
+      <div class="avatar-wrap" (click)="pickPhoto()">
+        <img *ngIf="uploadedPhotoBase64" [src]="uploadedPhotoBase64" class="avatar-photo" alt="Profile photo" />
+        <div *ngIf="!uploadedPhotoBase64 && selectedAvatar" class="avatar-preset"
+          [style.background]="getAvatarBg(selectedAvatar)">
+          <ion-icon [name]="getAvatarIcon(selectedAvatar)" [style.color]="getAvatarColor(selectedAvatar)"></ion-icon>
+        </div>
+        <div *ngIf="!uploadedPhotoBase64 && !selectedAvatar" class="avatar-initials">
+          {{ getInitials(displayName || fullName) }}
+        </div>
+        <div class="avatar-edit-badge">
+          <ion-icon name="camera-outline"></ion-icon>
+        </div>
+      </div>
+      <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" style="display:none"
+        (change)="onFileSelected($event)" />
+      <p class="avatar-hint">Tap to change photo</p>
+
+      <!-- Preset grid -->
+      <div class="avatar-grid">
+        <button *ngFor="let a of avatarOptions" class="avatar-option"
+          [class.selected]="!uploadedPhotoBase64 && selectedAvatar === a.id" [style.background]="a.bg"
+          (click)="selectAvatar(a.id)">
+          <ion-icon [name]="a.icon" [style.color]="a.iconColor"></ion-icon>
+          <div class="select-ring" *ngIf="!uploadedPhotoBase64 && selectedAvatar === a.id"></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Account Details ── -->
+    <div class="section-card">
+      <h3 class="section-title">Account Details</h3>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="person-outline"></ion-icon> Display Name</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-input [(ngModel)]="displayName" placeholder="How Cova greets you" [maxlength]="30"></ion-input>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="id-card-outline"></ion-icon> Full Name</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-input [(ngModel)]="fullName" placeholder="Your full name"></ion-input>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="mail-outline"></ion-icon> Email</ion-label>
+        <ion-item lines="none" class="custom-input readonly">
+          <ion-input [value]="email" readonly></ion-input>
+        </ion-item>
+        <span class="field-hint">Email cannot be changed here.</span>
+      </div>
+    </div>
+
+    <!-- ── Personal Info ── -->
+    <div class="section-card">
+      <h3 class="section-title">Personal Info</h3>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="calendar-outline"></ion-icon> Age</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-input [(ngModel)]="age" type="number" placeholder="e.g. 25"></ion-input>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="heart-outline"></ion-icon> Marital Status</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-select [(ngModel)]="maritalStatus" interface="popover">
+            <ion-select-option value="Single">Single</ion-select-option>
+            <ion-select-option value="Married">Married</ion-select-option>
+            <ion-select-option value="Divorced">Divorced</ion-select-option>
+            <ion-select-option value="Widowed">Widowed</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="briefcase-outline"></ion-icon> Employment</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-select [(ngModel)]="occupation" interface="popover">
+            <ion-select-option value="Full-time">Full-time</ion-select-option>
+            <ion-select-option value="Part-time">Part-time</ion-select-option>
+            <ion-select-option value="Freelancer / Self-Employed">Freelancer / Self-Employed</ion-select-option>
+            <ion-select-option value="Business Owner">Business Owner</ion-select-option>
+            <ion-select-option value="Student">Student</ion-select-option>
+            <ion-select-option value="Unemployed / Between Jobs">Unemployed / Between Jobs</ion-select-option>
+            <ion-select-option value="Retired">Retired</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="wallet-outline"></ion-icon> Monthly Income (S$)</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-input [(ngModel)]="monthlyIncome" type="number" placeholder="e.g. 3500"></ion-input>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="people-outline"></ion-icon> Number of Dependents</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-select [(ngModel)]="dependents" interface="popover">
+            <ion-select-option [value]="0">0 — No dependents</ion-select-option>
+            <ion-select-option [value]="1">1</ion-select-option>
+            <ion-select-option [value]="2">2</ion-select-option>
+            <ion-select-option [value]="3">3</ion-select-option>
+            <ion-select-option [value]="4">4</ion-select-option>
+            <ion-select-option [value]="5">5+</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- ── Insurance Needs ── -->
+    <div class="section-card">
+      <h3 class="section-title">Insurance Needs</h3>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="disc-outline"></ion-icon> Main Goal</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-select [(ngModel)]="mainGoal" interface="popover">
+            <ion-select-option value="Health Protection">Health Protection</ion-select-option>
+            <ion-select-option value="Retirement">Retirement</ion-select-option>
+            <ion-select-option value="Savings">Savings</ion-select-option>
+            <ion-select-option value="Family Protection">Family Protection</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="help-circle-outline"></ion-icon> Primary Concern</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-select [(ngModel)]="topConcern" interface="popover">
+            <ion-select-option value="Medical Expenses">Medical Expenses</ion-select-option>
+            <ion-select-option value="Income Loss">Income Loss</ion-select-option>
+            <ion-select-option value="Critical Illness">Critical Illness</ion-select-option>
+            <ion-select-option value="Wealth Accumulation">Wealth Accumulation</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="cash-outline"></ion-icon> Monthly Budget</ion-label>
+        <div class="budget-display">S$ {{ monthlyBudget }} / month</div>
+        <ion-range min="100" max="1000" step="50" [(ngModel)]="monthlyBudget" class="purple-range">
+          <ion-label slot="start">S$100</ion-label>
+          <ion-label slot="end">S$1,000</ion-label>
+        </ion-range>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="shield-checkmark-outline"></ion-icon> Has Existing
+          Insurance?</ion-label>
+        <ion-radio-group [(ngModel)]="hasExistingInsurance">
+          <ion-item lines="none" class="radio-item">
+            <ion-label>Yes</ion-label>
+            <ion-radio slot="end" [value]="true"></ion-radio>
+          </ion-item>
+          <ion-item lines="none" class="radio-item">
+            <ion-label>No</ion-label>
+            <ion-radio slot="end" [value]="false"></ion-radio>
+          </ion-item>
+        </ion-radio-group>
+      </div>
+    </div>
+
+    <!-- ── Danger Zone ── -->
+    <div class="danger-section">
+      <button class="danger-btn" (click)="confirmLogout()">
+        <ion-icon name="log-out-outline"></ion-icon> Log Out
+      </button>
+      <button class="danger-btn delete-btn" (click)="confirmDeleteAccount()">
+        <ion-icon name="trash-outline"></ion-icon> Delete Account
+      </button>
+    </div>
+
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="loading-state">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+    </div>
+  </ng-template>
+</ion-content>
