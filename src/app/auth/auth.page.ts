@@ -21,9 +21,28 @@ export class AuthPage {
   fullName: string = '';
   email: string = '';
   password: string = '';
+  phoneNumber: string = '';
 
   toggleMode() {
     this.isSignUpMode = !this.isSignUpMode;
+  }
+
+  // Very light validation: Singapore-style 8-digit local numbers (starting
+  // 6/8/9) or full international E.164 (+ followed by 8-15 digits). This is
+  // a UX guard, not a security control — real phone verification would need
+  // Firebase Phone Auth (SMS OTP), which is a separate, heavier feature.
+  private isValidPhoneNumber(value: string): boolean {
+    const trimmed = value.trim();
+    return /^\+?[0-9]{8,15}$/.test(trimmed.replace(/[\s-]/g, ''));
+  }
+
+  // Normalizes to E.164-ish format for storage. Assumes Singapore (+65) if
+  // no country code was given — adjust the default country code if your
+  // user base isn't primarily SG-based.
+  private normalizePhoneNumber(value: string): string {
+    const digitsOnly = value.trim().replace(/[\s-]/g, '');
+    if (digitsOnly.startsWith('+')) return digitsOnly;
+    return `+65${digitsOnly}`;
   }
 
   async handleAuth() {
@@ -37,6 +56,16 @@ export class AuthPage {
       return;
     }
 
+    if (this.isSignUpMode && !this.phoneNumber) {
+      this.showToast('Please enter your phone number — it\'s used for your consultant bookings.');
+      return;
+    }
+
+    if (this.isSignUpMode && !this.isValidPhoneNumber(this.phoneNumber)) {
+      this.showToast('Please enter a valid phone number.');
+      return;
+    }
+
     const loader = await this.loadingCtrl.create({
       message: this.isSignUpMode ? 'Validating credentials...' : 'Logging in...'
     });
@@ -44,34 +73,28 @@ export class AuthPage {
 
     try {
       if (this.isSignUpMode) {
-        const user = await this.profileService.signUp(this.email, this.password, this.fullName);
+        const user = await this.profileService.signUp(this.email, this.password, this.fullName, this.normalizePhoneNumber(this.phoneNumber));
         establishLocalSession(user.email || this.email, this.fullName);
 
         await new Promise(resolve => setTimeout(resolve, 500));
         await loader.dismiss();
 
-        // ── NEW: Route to profile setup first, then onboarding ──
         this.router.navigate(['/setup-profile']);
       } else {
-        // --- LOG IN FLOW ---
         const user = await this.profileService.login(this.email, this.password);
         establishLocalSession(user.email || this.email, user.displayName || undefined);
 
         await new Promise(resolve => setTimeout(resolve, 500));
         await loader.dismiss();
 
-        // ── UPDATED: Check both profile setup AND onboarding completion ──
         const profile = await this.profileService.getCurrentProfile();
 
         if (profile?.isOnboardingCompleted) {
-          // Fully completed user → main app
           this.router.navigate(['/tabs/tab1']);
         } else if (profile?.isProfileSetupComplete) {
-          // Set up profile but didn't finish onboarding → resume onboarding
           this.showToast('Let\'s finish setting up your profile.');
           this.router.navigate(['/onboarding']);
         } else {
-          // Account exists but never set up profile → start from profile setup
           this.showToast('Let\'s set up your profile.');
           this.router.navigate(['/setup-profile']);
         }

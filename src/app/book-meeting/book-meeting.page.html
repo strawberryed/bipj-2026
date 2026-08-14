@@ -61,6 +61,26 @@
     </div>
   </div>
 
+  <div class="ai-banner ion-margin-vertical" *ngIf="selectedAdvisor && userPhoneNumber">
+    <div class="banner-icon">
+      <ion-icon name="call"></ion-icon>
+    </div>
+    <div class="banner-text">
+      <strong>CALLBACK NUMBER</strong>
+      <p>Your consultant meeting will be called on {{ userPhoneNumber }}</p>
+    </div>
+  </div>
+
+  <div class="ai-banner ion-margin-vertical" *ngIf="selectedAdvisor && !userPhoneNumber">
+    <div class="banner-icon">
+      <ion-icon name="alert-circle"></ion-icon>
+    </div>
+    <div class="banner-text">
+      <strong>NO PHONE NUMBER ON FILE</strong>
+      <p>Add a phone number in your profile so your consultant can call you.</p>
+    </div>
+  </div>
+
   <ion-button expand="block" class="confirm-booking-btn" [disabled]="!selectedAdvisor || !selectedSlot || !selectedDate"
     (click)="confirmBooking()">
     CONFIRM BOOKING {{ selectedAdvisor ? '– ' + selectedAdvisor.name : '' }}

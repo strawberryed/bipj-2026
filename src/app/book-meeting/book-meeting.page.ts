@@ -29,6 +29,7 @@ export class BookMeetingPage implements OnInit {
   selectedDate: string = '';
   recommendedAdvisorName = '';
   minimumDate: string = '';
+  userPhoneNumber: string = '';
 
   constructor(
     private bookingService: BookingService,
@@ -51,8 +52,14 @@ export class BookMeetingPage implements OnInit {
       return;
     }
 
+    // Fetch the profile once — used for the phone number display, and as a
+    // fallback source for advisor matching below.
+    const profile = await firstValueFrom(this.profileService.userProfile$);
+    this.userPhoneNumber = profile?.phoneNumber || '';
+
     const params = this.route.snapshot.queryParams;
     const inboundAdvisorName: string | undefined = params['advisorName'] || params['recommendedAdvisor'];
+    const isReschedule = params['reschedule'] === 'true' || params['reschedule'] === true;
 
     if (inboundAdvisorName) {
       this.recommendedAdvisorName = inboundAdvisorName.toString().toUpperCase();
@@ -61,26 +68,40 @@ export class BookMeetingPage implements OnInit {
     } else {
       // No advisor specified (e.g. a direct visit to this page) — fall back
       // to computing the best match from the user's profile ourselves.
-      const profile = await firstValueFrom(this.profileService.userProfile$);
       const topMatch = this.matchingService.bestMatch(profile);
       this.recommendedAdvisorName = topMatch.matchScore > 0 ? topMatch.name : '';
       this.selectedAdvisor = topMatch;
     }
+
+    // Reschedule flow: pre-fill the date/slot from the user's EXISTING
+    // booking, so they see what they currently have instead of a blank
+    // form that looks identical to booking fresh. This was previously
+    // read (`reschedule` param) but never actually used anywhere.
+    if (isReschedule) {
+      const currentBooking = await firstValueFrom(this.bookingService.activeBooking$);
+      if (currentBooking) {
+        this.selectedDate = currentBooking.bookingDate;
+        const matchingSlot = this.slots.find(s => s.time === currentBooking.timeSlot);
+        if (matchingSlot) {
+          this.selectedSlot = matchingSlot;
+        }
+      }
+    }
   }
 
-      selectAdvisor(advisor: any) {
-        this.selectedAdvisor = advisor;
-      }
-      selectSlot(slot: any) { this.selectedSlot = slot; }
+  selectAdvisor(advisor: any) {
+    this.selectedAdvisor = advisor;
+  }
+  selectSlot(slot: any) { this.selectedSlot = slot; }
 
-      onDateChange(event: Event) {
-        this.selectedDate = (event.target as HTMLInputElement).value;
-      }
+  onDateChange(event: Event) {
+    this.selectedDate = (event.target as HTMLInputElement).value;
+  }
 
-      private toLocalDateInputValue(date: Date): string {
-        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-        return offsetDate.toISOString().slice(0, 10);
-      }
+  private toLocalDateInputValue(date: Date): string {
+    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return offsetDate.toISOString().slice(0, 10);
+  }
 
   async presentSuccessToast(advisorName: string) {
     const toast = await this.toastController.create({

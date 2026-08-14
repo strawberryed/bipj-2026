@@ -13,6 +13,7 @@ export interface ExistingPlan {
 export interface UserProfileData {
   fullName: string;
   email?: string;                   // saved at sign-up
+  phoneNumber?: string;              // E.164 format, e.g. +6591234567 — used to display "you'll be called on..." for consultant bookings
   displayName?: string;             // chosen display name (shown in greetings, profile)
   avatar?: string | null;           // preset avatar ID (e.g. 'avatar-1'), null if photo uploaded
   profilePhoto?: string | null;     // base64 data URL of uploaded photo, null if using preset
@@ -63,9 +64,6 @@ export class UserProfileService {
     this.userProfile$ = this.authUser$.pipe(
       switchMap((authUser) => {
         if (!authUser) return of(null);
-        // Use native onSnapshot instead of docData() — docData() has a
-        // breaking change in @angular/fire 20.x that misidentifies a
-        // DocumentReference as a Query and throws an error.
         return runInInjectionContext(this.injector, () => {
           return new Observable<UserProfileData | null>(observer => {
             const userDocRef = doc(this.firestore, `users/${authUser.uid}`);
@@ -80,7 +78,6 @@ export class UserProfileService {
               },
               (error) => observer.error(error)
             );
-            // Return teardown logic so the listener is removed on unsubscribe
             return () => unsubscribe();
           });
         });
@@ -120,7 +117,7 @@ export class UserProfileService {
     });
   }
 
-  async signUp(email: string, pass: string, fullName: string) {
+  async signUp(email: string, pass: string, fullName: string, phoneNumber?: string) {
     const credential = await createUserWithEmailAndPassword(this.auth, email, pass);
     const uid = credential.user.uid;
 
@@ -129,6 +126,7 @@ export class UserProfileService {
       await setDoc(userDocRef, {
         fullName,
         email,
+        ...(phoneNumber ? { phoneNumber } : {}),
         isProfileSetupComplete: false,
         isOnboardingCompleted: false,
         createdAt: new Date().toISOString()
@@ -178,18 +176,15 @@ export class UserProfileService {
     const uid = currentUser.uid;
 
     await runInInjectionContext(this.injector, async () => {
-      // 1. Delete chatHistory subcollection docs
       const chatRef = collection(this.firestore, `users/${uid}/chatHistory`);
       const chatSnap = await getDocs(chatRef);
       for (const d of chatSnap.docs) {
         await deleteDoc(d.ref);
       }
 
-      // 2. Delete the user Firestore doc
       const userDocRef = doc(this.firestore, `users/${uid}`);
       await deleteDoc(userDocRef);
 
-      // 3. Delete the Firebase Auth account
       await deleteUser(currentUser);
     });
   }

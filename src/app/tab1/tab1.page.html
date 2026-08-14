@@ -134,10 +134,15 @@
           <p class="title-sub">{{ booking.consultantTitle }}</p>
 
           <div class="logistics-box ion-margin-vertical">
-            <p class="logistics-text">
+            <p class="logistics-text" *ngIf="userProfile?.phoneNumber">
               <ion-icon name="call-outline"></ion-icon>
-              {{ booking.consultantName }} will call you directly at <strong>+65 9123 4567</strong> at the selected
+              {{ booking.consultantName }} will call you directly at <strong>{{ userProfile?.phoneNumber }}</strong> at
+              the selected
               time.
+            </p>
+            <p class="logistics-text" *ngIf="!userProfile?.phoneNumber">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              No phone number on file — add one so {{ booking.consultantName }} can call you.
             </p>
             <a class="edit-phone-link" (click)="goToProfile()">Verify or Change Number</a>
           </div>
