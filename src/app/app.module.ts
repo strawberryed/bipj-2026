@@ -11,6 +11,7 @@ import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 import { environment } from 'src/environments/environment';
 import { getAuth, provideAuth } from '@angular/fire/auth';
+import { getFunctions, provideFunctions } from '@angular/fire/functions';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBBYaEfIG5lp1lSS2lU8Ke_cDMImhCHlbE",
@@ -31,6 +32,7 @@ const firebaseConfig = {
           provideFirebaseApp(() => initializeApp(firebaseConfig)),
           provideFirestore(() => getFirestore()),
           provideAuth(() => getAuth()),
+          provideFunctions(() => getFunctions()),
         ]
       : []),
   ],

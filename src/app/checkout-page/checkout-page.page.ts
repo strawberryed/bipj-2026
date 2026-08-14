@@ -1,6 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
+import { Functions, httpsCallable } from '@angular/fire/functions';
+import { Auth } from '@angular/fire/auth';
+import { loadStripe, Stripe, StripeElements, StripeCardElement } from '@stripe/stripe-js';
+import { environment } from 'src/environments/environment';
 import { EntitlementsService } from '../services/entitlement.service';
 
 @Component({
@@ -9,11 +13,13 @@ import { EntitlementsService } from '../services/entitlement.service';
   styleUrls: ['./checkout-page.page.scss'],
   standalone: false,
 })
-export class CheckoutPage implements OnInit {
+export class CheckoutPage implements OnInit, AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fb = inject(FormBuilder);
   private entitlements = inject(EntitlementsService);
+  private functions = inject(Functions);
+  private auth = inject(Auth);
 
   paymentForm!: FormGroup;
   includeReport: boolean = true;
@@ -21,15 +27,18 @@ export class CheckoutPage implements OnInit {
   totalPrice: number = 15.00;
   selectedMethod: 'card' | 'nets' = 'card';
 
+  isProcessing = false;
+  cardErrorMessage = '';
 
-
-
+  private stripe: Stripe | null = null;
+  private elements: StripeElements | null = null;
+  private cardElement: StripeCardElement | null = null;
   ngOnInit() {
+    // Card number, expiry, and CVV are now collected by Stripe's own Card
+    // Element (mounted in ngAfterViewInit) — never by our own form fields,
+    // so raw card data never touches this component or our server.
     this.paymentForm = this.fb.group({
       cardName: ['', [Validators.required, Validators.minLength(2), Validators.pattern('^[a-zA-Z ]*$')]],
-      cardNumber: ['', [Validators.required, Validators.pattern('^([0-9]{4}[ ]){3}[0-9]{4}$')]],
-      expiry: ['', [Validators.required, Validators.pattern('^(0[1-9]|1[0-2])\/[0-9]{2}$'), this.yearRangeValidator]],
-      cvv: ['', [Validators.required, Validators.pattern('^[0-9]{3}$')]]
     });
 
     this.route.queryParams.subscribe(params => {
@@ -39,13 +48,27 @@ export class CheckoutPage implements OnInit {
     });
   }
 
-  yearRangeValidator(control: AbstractControl) {
-    if (!control.value || !control.value.includes('/')) return null;
-    const yearSegment = parseInt(control.value.split('/')[1], 10);
-    if (yearSegment < 26 || yearSegment > 31) {
-      return { invalidYearRange: true };
+  async ngAfterViewInit() {
+    this.stripe = await loadStripe(environment.stripePublishableKey);
+    if (this.selectedMethod === 'card') {
+      this.mountCardElement();
     }
-    return null;
+  }
+
+  ngOnDestroy() {
+    this.cardElement?.unmount();
+  }
+
+  private mountCardElement() {
+    if (!this.stripe) return;
+    this.elements = this.stripe.elements();
+    this.cardElement = this.elements.create('card', {
+      style: { base: { fontSize: '16px' } },
+    });
+    this.cardElement.mount('#card-element');
+    this.cardElement.on('change', (event) => {
+      this.cardErrorMessage = event.error ? event.error.message : '';
+    });
   }
 
   calculateTotal() {
@@ -59,33 +82,12 @@ export class CheckoutPage implements OnInit {
     this.selectedMethod = method;
     if (method === 'nets') {
       this.paymentForm.disable();
+      this.cardElement?.unmount();
     } else {
       this.paymentForm.enable();
+      // Re-mount on the next tick so #card-element exists in the DOM again.
+      setTimeout(() => this.mountCardElement());
     }
-  }
-
-  blockNonNumbers(event: any, fieldName: string, maxLength: number) {
-    let input = event.target.value;
-    let cleaned = input.replace(/\D/g, '');
-
-    if (fieldName === 'cardNumber') {
-      if (cleaned.length > 16) cleaned = cleaned.slice(0, 16);
-      let match = cleaned.match(/.{1,4}/g);
-      let formatted = match ? match.join(' ') : cleaned;
-      this.paymentForm.get(fieldName)?.setValue(formatted, { emitEvent: false });
-    } else {
-      if (cleaned.length > maxLength) cleaned = cleaned.slice(0, maxLength);
-      this.paymentForm.get(fieldName)?.setValue(cleaned, { emitEvent: false });
-    }
-  }
-
-  formatExpiry(event: any) {
-    let input = event.target.value.replace(/\D/g, '');
-    if (input.length > 4) input = input.slice(0, 4);
-    if (input.length > 2) {
-      input = input.slice(0, 2) + '/' + input.slice(2);
-    }
-    this.paymentForm.get('expiry')?.setValue(input, { emitEvent: false });
   }
 
   isFieldInvalid(fieldName: string): boolean {
@@ -95,27 +97,65 @@ export class CheckoutPage implements OnInit {
   }
 
   async processPayment() {
-    if (this.selectedMethod === 'card') {
-      const cardNum = this.paymentForm.get('cardNumber')?.value.replace(/ /g, '');
-      if (cardNum !== '4242424242424242') {
-        alert('❌ Sandbox Error: Please use the designated test card details provided above.');
-        return;
-      }
-      alert('💳 Sandbox Authorization Successful! Card processed successfully.');
-    } else {
-      alert('🇸🇬 NETS QR Dynamic Broadcast Token Verified!');
-    }
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+    this.cardErrorMessage = '';
 
     try {
-      // Persist entitlements based on what was actually purchased — previously
-      // this always unlocked the consultant regardless of includeConsultant.
+      if (this.selectedMethod === 'card') {
+        await this.payWithCard();
+      } else {
+        // NETS QR stays simulated here — Stripe doesn't support NETS, so a real
+        // NETS integration would go through a separate SG payment gateway.
+        alert('🇸🇬 NETS QR Dynamic Broadcast Token Verified! (simulated)');
+      }
+
+      // Persist entitlements based on what was actually purchased.
       await this.entitlements.grant({
         consultant: this.includeConsultant,
         report: this.includeReport
       });
       this.router.navigate(['/connect-consultant']);
     } catch (error: any) {
-      alert(error.message || 'Payment succeeded but we couldn\'t save your purchase. Please contact support.');
+      this.cardErrorMessage = error.message || 'Something went wrong. Please try again.';
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  private async payWithCard(): Promise<void> {
+    if (!this.stripe || !this.cardElement) {
+      throw new Error('Payment form is still loading — please try again in a moment.');
+    }
+    if (!this.auth.currentUser) {
+      throw new Error('Please sign in before checking out.');
+    }
+
+    // Ask our Cloud Function for a PaymentIntent. The amount is computed
+    // server-side from includeReport/includeConsultant — the client never
+    // gets to say how much to charge.
+    const createPaymentIntent = httpsCallable<
+      { includeReport: boolean; includeConsultant: boolean },
+      { clientSecret: string }
+    >(this.functions, 'createPaymentIntent');
+
+    const { data } = await createPaymentIntent({
+      includeReport: this.includeReport,
+      includeConsultant: this.includeConsultant,
+    });
+
+    const result = await this.stripe.confirmCardPayment(data.clientSecret, {
+      payment_method: {
+        card: this.cardElement,
+        billing_details: { name: this.paymentForm.get('cardName')?.value },
+      },
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message || 'Card was declined.');
+    }
+    if (result.paymentIntent?.status !== 'succeeded') {
+      throw new Error(`Payment status: ${result.paymentIntent?.status}. Please try again.`);
     }
   }
 }
