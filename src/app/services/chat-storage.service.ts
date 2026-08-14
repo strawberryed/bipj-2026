@@ -86,6 +86,9 @@ export class ChatStorageService {
     if (data.followUpQuestion) msg.followUpQuestion = data.followUpQuestion;
     if (data.attachment) msg.attachment = data.attachment;
     if (data.reasoning) msg.reasoning = data.reasoning;
+    if (data.createdAt instanceof Timestamp) {
+      msg.timestamp = data.createdAt.toDate();
+    }
     return msg;
   }
 }

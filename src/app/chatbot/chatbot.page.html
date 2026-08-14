@@ -19,7 +19,8 @@
 
   <!-- Messages -->
   <div class="messages-area">
-    <div class="time-divider">TODAY {{ nowTime() }}</div>
+    <!-- Date divider anchored to the first message's actual date -->
+    <div class="time-divider">{{ sessionDateLabel }}</div>
 
     <!-- Welcome message -->
     <div class="msg-row bot">
@@ -33,6 +34,10 @@
 
     <!-- Conversation -->
     <ng-container *ngFor="let msg of messages; let msgIndex = index">
+      <!-- Day boundary divider (shown when date changes between messages) -->
+      <div class="time-divider" *ngIf="getDayDivider(msgIndex) as dividerLabel">
+        {{ dividerLabel }}
+      </div>
 
       <!-- Compare card message -->
       <ng-container *ngIf="msg.compareCard; else plainBubble">
@@ -70,7 +75,7 @@
             </tr>
           </table>
 
-          <div class="compare-card-time">{{ nowTime() }}</div>
+          <div class="compare-card-time">{{ msgTime(msg) }}</div>
         </div>
 
         <!-- AI summary below card -->
@@ -91,7 +96,7 @@
               <div class="reasoning-panel-text">{{ msg.reasoning }}</div>
             </div>
           </div>
-          <span class="msg-time">{{ nowTime() }}</span>
+          <span class="msg-time">{{ msgTime(msg) }}</span>
         </div>
       </ng-container>
 
@@ -179,7 +184,7 @@
             </div>
           </div>
 
-          <span class="msg-time">{{ nowTime() }}</span>
+          <span class="msg-time">{{ msgTime(msg) }}</span>
         </div>
       </ng-template>
 
