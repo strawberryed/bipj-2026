@@ -3,9 +3,11 @@ import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gem
 import { UserProfileData, UserProfileService } from '../services/user-profile.service';
 import { PolicyDataService, Plan } from '../services/policy-data';
 import { ChatStorageService } from '../services/chat-storage.service';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
+import { Router, ActivatedRoute } from '@angular/router';
+import { EntitlementsService } from '../services/entitlement.service';
 
 const MAX_HISTORY = 50;
 const MAX_COMPARE_PLANS = 3;
@@ -45,7 +47,11 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   private policyData = inject(PolicyDataService);
   private chatStorage = inject(ChatStorageService);
   private alertCtrl = inject(AlertController);
-
+  private entitlements = inject(EntitlementsService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private entitlementsSub?: Subscription;
+  reportUnlocked = false;
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -138,10 +144,31 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
     await this.policyData.ensureLoaded();
     this.isPolicyDataLoading = false;
+
+this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
+  this.reportUnlocked = e.reportUnlocked;
+  console.log('[Entitlements] received:', e); // ADD THIS
+});
+
+    this.route.queryParams.subscribe(async params => {
+      if (params['downloadSummary'] === 'true') {
+        // Clear the param immediately so it doesn't retrigger on future visits
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: {},
+          replaceUrl: true
+        });
+
+        // Give Firestore ~1.5s to emit the real entitlements value
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await this.downloadSummary();
+      }
+    });
   }
 
   ngOnDestroy() {
     this.profileSub?.unsubscribe();
+    this.entitlementsSub?.unsubscribe();
   }
 
   ngAfterViewChecked() {
@@ -502,6 +529,26 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   // Summary & PDF
   async downloadSummary() {
     if (this.messages.length === 0) return;
+
+    if (!this.reportUnlocked) {
+      const alert = await this.alertCtrl.create({
+        header: 'Unlock Summary Report',
+        message: 'Get a personalised PDF summary of your insurance conversation for just $5.00.',
+        buttons: [
+          { text: 'Not now', role: 'cancel' },
+          {
+            text: 'Unlock for $5',
+            handler: () => {
+              this.router.navigate(['/checkout-page'], {
+                queryParams: { report: 'true', consultant: 'false' }
+              });
+            }
+          }
+        ]
+      });
+      await alert.present();
+      return;
+    }
 
     this.isGeneratingSummary = true;
     try {

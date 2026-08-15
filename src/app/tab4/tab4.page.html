@@ -109,6 +109,35 @@
       </li>
     </ul>
   </div>
+  
+  <!-- ── Premium Features ── -->
+<div class="premium-card">
+  <h3><ion-icon name="star-outline"></ion-icon> Premium Features</h3>
+
+  <div class="premium-item">
+    <div class="premium-item-left">
+      <ion-icon name="document-text-outline"></ion-icon>
+      <div>
+        <span class="premium-item-title">AI Summary Report</span>
+        <span class="premium-item-desc">Download a full PDF summary of your Cova session</span>
+      </div>
+    </div>
+    <ion-badge *ngIf="reportUnlocked" color="success">Unlocked</ion-badge>
+    <ion-badge *ngIf="!reportUnlocked" color="medium">Locked</ion-badge>
+  </div>
+
+  <div class="premium-item">
+    <div class="premium-item-left">
+      <ion-icon name="people-outline"></ion-icon>
+      <div>
+        <span class="premium-item-title">Consultant Connection</span>
+        <span class="premium-item-desc">Get matched with a Prudential advisor</span>
+      </div>
+    </div>
+    <ion-badge *ngIf="consultantUnlocked" color="success">Unlocked</ion-badge>
+    <ion-badge *ngIf="!consultantUnlocked" color="medium">Locked</ion-badge>
+  </div>
+</div>
 
   <!-- ── Actions ── -->
   <ion-button expand="block" class="primary-btn" (click)="navigateToLandingPage()">

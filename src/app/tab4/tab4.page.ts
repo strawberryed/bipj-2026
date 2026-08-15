@@ -1,9 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ActionSheetController } from '@ionic/angular';
 import { UserProfileService, UserProfileData } from '../services/user-profile.service';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { EntitlementsService } from '../services/entitlement.service';
 
 const AVATAR_MAP: Record<string, { icon: string; bg: string; color: string }> = {
   'avatar-1': { icon: 'person', bg: '#ede9fe', color: '#7c3aed' },
@@ -23,10 +24,14 @@ const AVATAR_MAP: Record<string, { icon: string; bg: string; color: string }> = 
   styleUrls: ['./tab4.page.scss'],
   standalone: false,
 })
-export class Tab4Page implements OnInit {
+export class Tab4Page implements OnInit, OnDestroy {
   private profileService = inject(UserProfileService);
   private router = inject(Router);
   private actionSheetCtrl = inject(ActionSheetController);
+  private entitlements = inject(EntitlementsService);
+  private entitlementsSub?: Subscription;
+  reportUnlocked = false;
+  consultantUnlocked = false;
 
   profile$: Observable<UserProfileData | null>;
 
@@ -48,7 +53,14 @@ export class Tab4Page implements OnInit {
         }, 1000);
       }
     });
+    this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
+      this.reportUnlocked = e.reportUnlocked;
+      this.consultantUnlocked = e.consultantUnlocked;
+    });
   }
+  ngOnDestroy() {
+  this.entitlementsSub?.unsubscribe();
+}
 
   // ── Avatar helpers ──────────────────────────────────────────
 
