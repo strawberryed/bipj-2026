@@ -1,6 +1,6 @@
 import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import {
-  Firestore, collection, addDoc, getDocs, query,
+  Firestore, collection, doc, getDocs, query,
   orderBy, limit, writeBatch, Timestamp
 } from '@angular/fire/firestore';
 import { Message } from './gemini.service';
@@ -38,7 +38,10 @@ export class ChatStorageService {
     return runInInjectionContext(this.injector, async () => {
       try {
         const historyRef = collection(this.firestore, 'users', uid, 'chatHistory');
-        await addDoc(historyRef, this.messageToDoc(message));
+        const messageDocRef = doc(historyRef);
+        const batch = writeBatch(this.firestore);
+        batch.set(messageDocRef, this.messageToDoc(message));
+        await batch.commit();
       } catch (err) {
         console.error('[ChatStorageService] appendMessage failed:', err);
       }

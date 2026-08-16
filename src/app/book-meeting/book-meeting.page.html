@@ -12,9 +12,9 @@
     <p class="subtitle">Your Cova AI Session Will Be Shared Before The Call</p>
   </div>
 
-  <h2 class="section-title">YOUR MATCHED ADVISORS</h2>
+  <h2 class="section-title">{{ advisorLocked ? 'BOOK WITH YOUR RECOMMENDED CONSULTANT' : 'YOUR MATCHED ADVISORS' }}</h2>
 
-  <div class="advisor-list">
+  <div class="advisor-list" *ngIf="advisors.length; else advisorUnavailable">
     <button type="button" class="advisor-card" 
          *ngFor="let advisor of advisors" 
          [class.active-card]="selectedAdvisor?.name === advisor.name"
@@ -32,6 +32,7 @@
       <ion-icon class="selection-check" [name]="selectedAdvisor?.name === advisor.name ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
     </button>
   </div>
+  <ng-template #advisorUnavailable><div class="advisor-unavailable"><strong>Recommended consultant unavailable</strong><p>Please return to your timeline and try again.</p></div></ng-template>
 
   <h2 class="section-title ion-margin-top">SELECT DATE</h2>
   

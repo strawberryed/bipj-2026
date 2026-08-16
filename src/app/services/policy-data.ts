@@ -41,7 +41,7 @@ export class PolicyDataService {
     this.loadingPromise = runInInjectionContext(this.injector, async () => {
       try {
         const snapshot = await getDocs(collection(this.firestore, 'plans'));
-        this.plans = snapshot.docs.map(doc => doc.data() as Plan);
+        this.plans = snapshot.docs.map(snapshotDoc => ({ ...snapshotDoc.data(), id: snapshotDoc.id } as Plan));
         this.loaded = true;
       } catch (err) {
         console.error('[PolicyDataService] Failed to load plans from Firestore:', err);

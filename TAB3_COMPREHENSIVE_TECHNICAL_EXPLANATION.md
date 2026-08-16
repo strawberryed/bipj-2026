@@ -46,7 +46,7 @@ User Authentication (getCurrentUser)
 
 ### Why This Architecture Works
 - **Single Responsibility**: One component, two distinct workflows
-- **Shared Data Layer**: Both roles use identical data persistence (app-db.ts)
+- **Shared Data Layer**: Both roles use identical data persistence (Firebase/Firestore)
 - **Reduced Code Duplication**: Common utilities (formatting, timeline events, meetings)
 - **Seamless Role Switching**: Same session can test both roles without page refresh
 
@@ -546,7 +546,7 @@ useEffect(() => {
 
 **Integration Architecture**:
 1. **Initial Load**: `refreshWorkspace()` runs immediately on component mount
-2. **Polling**: Every 1.5 seconds, fetch fresh data from persistent store (app-db.ts)
+2. **Polling**: Every 1.5 seconds, fetch fresh data from persistent store (Firebase/Firestore)
 3. **Cross-Tab Sync**: Storage events trigger refresh (user switches to auth tab, logs out → immediately reflected here)
 4. **Dependency on changingMeetingId**: When meeting form changes, restart polling cycle
 
@@ -558,7 +558,7 @@ useEffect(() => {
 ### Database Integration Points
 
 ```
-app-db.ts (Persistent Storage)
+Firebase/Firestore (Persistent Storage)
   ├─ getCurrentUser() → Get logged-in user
   ├─ getCustomers() → Get all registered customers
   ├─ getTimelineEventsForUser(userId) → Get user's events
@@ -691,7 +691,7 @@ submitMeetingChange()
   │  ├─ At least 1 slot with date AND time
   │  ├─ Reason must be non-empty
   │  └─ At least 1 guidance option selected
-  ├─ Create request via app-db
+  ├─ Create request via Firebase/Firestore
   │  └─ requestMeetingChange({
   │       meetingId: string,
   │       customerId: string,
@@ -844,7 +844,7 @@ if (selectedClientPendingProposalRequests.length > 0) {
 ```typescript
 const personalizedPolicies = useMemo(() => {
   if (!activeUser || activeUser.role !== 'customer') return customerPolicies;
-  return createCustomerPolicies(activeUser); // Function from app-db
+  return createCustomerPolicies(activeUser); // Function from Firebase/Firestore
 }, [activeUser]);
 ```
 
@@ -1476,7 +1476,7 @@ const submitAction = () => {
 - ✅ **Memory Management**: useEffect cleanup functions, interval clearing
 - ✅ **Accessibility**: aria-labels on date/time inputs, title tooltips on tags
 - ✅ **Performance**: Memoization, lazy loading, local storage caching
-- ✅ **Data Integrity**: Single source of truth (app-db.ts), post-action refresh
+- ✅ **Data Integrity**: Single source of truth (Firebase/Firestore), post-action refresh
 - ✅ **Cross-Platform**: localStorage polling for multi-tab sync
 - ✅ **Maintainability**: Clear naming conventions, logical component breakdown
 
@@ -1504,7 +1504,7 @@ const submitAction = () => {
 7. **Error Handling**: Graceful fallbacks, user-facing feedback, state consistency
 
 ### Integration Strength
-- ✅ Seamless DB integration (app-db.ts) as single source of truth
+- ✅ Seamless DB integration (Firebase/Firestore) as single source of truth
 - ✅ Cross-tab synchronization via localStorage events
 - ✅ Automatic state refresh after every mutation
 - ✅ Role-based access patterns (customer vs consultant)

@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserProfileService } from '../services/user-profile.service';
 import { ToastController, LoadingController } from '@ionic/angular';
-import { establishLocalSession } from '../../data/app-db';
 
 @Component({
   selector: 'app-auth',
@@ -17,13 +16,20 @@ export class AuthPage {
   private loadingCtrl = inject(LoadingController);
 
   isSignUpMode: boolean = false;
+  loginRole: 'customer' | 'consultant' = 'customer';
 
   fullName: string = '';
   email: string = '';
   password: string = '';
 
   toggleMode() {
+    if (this.loginRole === 'consultant') return;
     this.isSignUpMode = !this.isSignUpMode;
+  }
+
+  selectLoginRole(role: 'customer' | 'consultant'): void {
+    this.loginRole = role;
+    if (role === 'consultant') this.isSignUpMode = false;
   }
 
   async handleAuth() {
@@ -45,7 +51,6 @@ export class AuthPage {
     try {
       if (this.isSignUpMode) {
         const user = await this.profileService.signUp(this.email, this.password, this.fullName);
-        establishLocalSession(user.email || this.email, this.fullName);
 
         await new Promise(resolve => setTimeout(resolve, 500));
         await loader.dismiss();
@@ -54,14 +59,27 @@ export class AuthPage {
         this.router.navigate(['/setup-profile']);
       } else {
         // --- LOG IN FLOW ---
-        const user = await this.profileService.login(this.email, this.password);
-        establishLocalSession(user.email || this.email, user.displayName || undefined);
+        await this.profileService.login(this.email, this.password);
 
         await new Promise(resolve => setTimeout(resolve, 500));
-        await loader.dismiss();
 
         // ── UPDATED: Check both profile setup AND onboarding completion ──
         const profile = await this.profileService.getCurrentProfile();
+
+        const accountRole = profile?.role ?? 'customer';
+        if (accountRole !== this.loginRole) {
+          await this.profileService.logout();
+          throw new Error(this.loginRole === 'consultant'
+            ? 'This account is not registered as a consultant.'
+            : 'This is a consultant account. Choose Consultant login instead.');
+        }
+
+        await loader.dismiss();
+
+        if (accountRole === 'consultant') {
+          this.router.navigate(['/tabs/tab3']);
+          return;
+        }
 
         if (profile?.isOnboardingCompleted) {
           // Fully completed user → main app

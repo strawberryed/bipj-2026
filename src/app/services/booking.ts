@@ -1,5 +1,5 @@
 import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
-import { Firestore, doc, docData, setDoc, updateDoc, deleteDoc } from '@angular/fire/firestore';
+import { Firestore, collection, doc, docData, getDoc, updateDoc, writeBatch } from '@angular/fire/firestore';
 import { Auth, user, User } from '@angular/fire/auth';
 import { Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -47,8 +47,29 @@ export class BookingService {
   async setBooking(booking: Booking): Promise<void> {
     const uid = this.requireUid();
     await runInInjectionContext(this.injector, async () => {
+      const now = new Date().toISOString();
+      const consultantId = booking.consultantName.toLowerCase().replace(/\s+/g, '-');
       const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
-      await setDoc(bookingDocRef, booking);
+      const timelineDocRef = doc(collection(this.firestore, 'timeline'));
+      const batch = writeBatch(this.firestore);
+      batch.set(bookingDocRef, {
+        ...booking,
+        customerId: uid,
+        consultantId,
+        status: 'confirmed',
+        updatedAt: now,
+      });
+      batch.set(timelineDocRef, {
+        customerId: uid,
+        consultantId,
+        type: 'consultation',
+        channel: 'meeting',
+        title: 'Consultant meeting booked',
+        detail: `Meeting with ${booking.consultantName} confirmed for ${booking.bookingDate} at ${booking.timeSlot}.`,
+        createdAt: now,
+        readBy: [],
+      });
+      await batch.commit();
     });
   }
 
@@ -60,11 +81,52 @@ export class BookingService {
     });
   }
 
+  async rescheduleBooking(bookingDate: string): Promise<void> {
+    const uid = this.requireUid();
+    await runInInjectionContext(this.injector, async () => {
+      const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
+      const snapshot = await getDoc(bookingDocRef);
+      if (!snapshot.exists()) throw new Error('No active booking was found.');
+      const booking = snapshot.data() as Partial<Booking>;
+      const now = new Date().toISOString();
+      const timelineDocRef = doc(collection(this.firestore, 'timeline'));
+      const batch = writeBatch(this.firestore);
+      batch.update(bookingDocRef, { bookingDate, status: 'confirmed', updatedAt: now });
+      batch.set(timelineDocRef, {
+        customerId: uid,
+        consultantId: String(snapshot.data()['consultantId'] ?? ''),
+        type: 'consultation',
+        channel: 'meeting',
+        title: 'Consultant meeting rescheduled',
+        detail: `Meeting with ${booking.consultantName ?? 'your consultant'} rescheduled to ${bookingDate} at ${booking.timeSlot ?? 'the scheduled time'}.`,
+        createdAt: now,
+        readBy: [],
+      });
+      await batch.commit();
+    });
+  }
+
   async clearBooking(): Promise<void> {
     const uid = this.requireUid();
     await runInInjectionContext(this.injector, async () => {
       const bookingDocRef = doc(this.firestore, `bookings/${uid}`);
-      await deleteDoc(bookingDocRef);
+      const snapshot = await getDoc(bookingDocRef);
+      const booking = snapshot.data() as Partial<Booking> | undefined;
+      const timelineDocRef = doc(collection(this.firestore, 'timeline'));
+      const batch = writeBatch(this.firestore);
+      batch.delete(bookingDocRef);
+      batch.set(timelineDocRef, {
+        customerId: uid,
+        type: 'consultation',
+        channel: 'meeting',
+        title: 'Consultant meeting cancelled',
+        detail: booking?.consultantName
+          ? `Meeting with ${booking.consultantName} was cancelled.`
+          : 'The upcoming consultant meeting was cancelled.',
+        createdAt: new Date().toISOString(),
+        readBy: [],
+      });
+      await batch.commit();
     });
   }
 }

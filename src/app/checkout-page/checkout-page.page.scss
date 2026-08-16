@@ -215,4 +215,89 @@
       margin-top: 24px;
     }
   }
+  /* High-contrast, wrapping checkout text */
+  color: #17151c;
+
+  p, span, small, label, h1, h2, h3, strong {
+    opacity: 1;
+  }
+
+  .summary-box {
+    background: #f1f0f4;
+    border: 1px solid #d8d5df;
+  }
+
+  .summary-row {
+    min-width: 0;
+    gap: 16px;
+  }
+
+  .row-left {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .booking-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .booking-copy .item-name {
+    color: #17151c;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .booking-slot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #4f465d;
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .booking-slot ion-icon {
+    flex: 0 0 auto;
+    color: #5b257c;
+    font-size: 1rem;
+  }
+
+  .item-price,
+  .total-label,
+  .total-price,
+  .section-title,
+  .payment-form label {
+    color: #17151c !important;
+    opacity: 1;
+  }
+
+  .item-price,
+  .total-price {
+    flex: 0 0 auto;
+    font-weight: 750;
+  }
+
+  @media (max-width: 520px) {
+    .summary-box .summary-row {
+      align-items: flex-start;
+      padding: 14px 12px;
+    }
+
+    .summary-box .item-row {
+      flex-wrap: wrap;
+    }
+
+    .summary-box .item-price {
+      margin-left: 56px;
+    }
+  }
 }

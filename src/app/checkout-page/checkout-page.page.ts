@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { EntitlementsService } from '../services/entitlement.service';
+import { BookingService } from '../services/booking';
 
 @Component({
   selector: 'app-checkout-page',
@@ -14,12 +15,14 @@ export class CheckoutPage implements OnInit {
   private router = inject(Router);
   private fb = inject(FormBuilder);
   private entitlements = inject(EntitlementsService);
+  private bookingService = inject(BookingService);
 
   paymentForm!: FormGroup;
   includeReport: boolean = true;
   includeConsultant: boolean = true;
   totalPrice: number = 15.00;
   selectedMethod: 'card' | 'nets' = 'card';
+  bookingQueryParams: Record<string, string> | null = null;
 
 
 
@@ -35,6 +38,20 @@ export class CheckoutPage implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (params['report'] !== undefined) this.includeReport = params['report'] === 'true';
       if (params['consultant'] !== undefined) this.includeConsultant = params['consultant'] === 'true';
+      if (params['fromTab3'] === 'true') {
+        this.bookingQueryParams = {
+          recommendedAdvisor: String(params['recommendedAdvisor'] ?? ''),
+          consultantId: String(params['consultantId'] ?? ''),
+          consultantTitle: String(params['consultantTitle'] ?? ''),
+          bookingDate: String(params['bookingDate'] ?? ''),
+          timeSlot: String(params['timeSlot'] ?? ''),
+          bookingType: String(params['bookingType'] ?? ''),
+          fromTab3: 'true',
+          lockAdvisor: 'true',
+        };
+      } else {
+        this.bookingQueryParams = null;
+      }
       this.calculateTotal();
     });
   }
@@ -113,7 +130,18 @@ export class CheckoutPage implements OnInit {
         consultant: this.includeConsultant,
         report: this.includeReport
       });
-      this.router.navigate(['/connect-consultant']);
+      if (this.bookingQueryParams) {
+        await this.bookingService.setBooking({
+          consultantName: this.bookingQueryParams['recommendedAdvisor'],
+          consultantTitle: this.bookingQueryParams['consultantTitle'],
+          bookingDate: this.bookingQueryParams['bookingDate'],
+          timeSlot: this.bookingQueryParams['timeSlot'],
+          type: this.bookingQueryParams['bookingType'],
+        });
+        await this.router.navigate(['/tabs/tab1']);
+      } else {
+        await this.router.navigate(['/connect-consultant']);
+      }
     } catch (error: any) {
       alert(error.message || 'Payment succeeded but we couldn\'t save your purchase. Please contact support.');
     }

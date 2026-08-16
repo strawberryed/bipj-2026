@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserProfileService, ExistingPlan } from '../services/user-profile.service';
 import { ToastController, LoadingController } from '@ionic/angular';
-import { updateCurrentLocalUserProfile } from '../../data/app-db';
 
 @Component({
   selector: 'app-onboarding',
@@ -150,15 +149,6 @@ export class OnboardingPage {
       // Profile Summary both depend on.
       await this.profileService.saveOnboardingProfile(profileData);
 
-      // Keep the local Tab 3 workspace profile aligned with onboarding so its
-      // recommendation can be generated without asking for the details again.
-      updateCurrentLocalUserProfile({
-        name: this.fullName,
-        monthlyIncome: Number(this.monthlyIncome),
-        financialPriorities: [this.mainGoal, this.primaryConcern],
-        monthlyBudget: this.monthlyBudget,
-        hasExistingInsurance: this.hasInsurance,
-      });
 
       await loader.dismiss();
       this.router.navigate(['/tabs/tab1']); // Navigate to Landing Page after onboarding

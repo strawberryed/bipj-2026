@@ -7,11 +7,15 @@
         <ion-icon name="shield-checkmark"></ion-icon>
       </div>
       <h1>Cova</h1>
-      <p>{{ isSignUpMode ? 'Create an account to build your personalised profile.' : 'Welcome back! Log in to access your recommendations.' }}</p>
+      <p>{{ isSignUpMode ? 'Create an account to build your personalised profile.' : loginRole === 'consultant' ? 'Sign in to manage your customers, meetings and applications.' : 'Welcome back! Log in to access your recommendations.' }}</p>
     </div>
 
     <!-- Auth Form -->
     <div class="form-section">
+      <div class="role-switch" *ngIf="!isSignUpMode" role="group" aria-label="Choose login type">
+        <button type="button" [class.active]="loginRole === 'customer'" [attr.aria-pressed]="loginRole === 'customer'" (click)="selectLoginRole('customer')"><ion-icon name="person-outline"></ion-icon><span><strong>Customer</strong><small>My coverage</small></span></button>
+        <button type="button" [class.active]="loginRole === 'consultant'" [attr.aria-pressed]="loginRole === 'consultant'" (click)="selectLoginRole('consultant')"><ion-icon name="briefcase-outline"></ion-icon><span><strong>Consultant</strong><small>Client workspace</small></span></button>
+      </div>
       
       <!-- Full Name (Sign Up only) -->
       <div class="input-card" *ngIf="isSignUpMode">
@@ -42,7 +46,7 @@
 
       <!-- Action Button -->
       <ion-button expand="block" class="primary-btn" (click)="handleAuth()">
-        {{ isSignUpMode ? 'Sign Up' : 'Log In' }}
+        {{ isSignUpMode ? 'Sign Up' : loginRole === 'consultant' ? 'Log In as Consultant' : 'Log In' }}
       </ion-button>
 
       <!-- Mode Toggle Link -->

@@ -29,7 +29,7 @@
     <div class="summary-row item-row" *ngIf="includeConsultant">
       <div class="row-left">
         <div class="icon-container"><ion-icon name="person-add-outline"></ion-icon></div>
-        <span class="item-name">Consultant Connection</span>
+        <div class="booking-copy"><span class="item-name">Consultant Booking<span *ngIf="bookingQueryParams?.['recommendedAdvisor']"> with {{ bookingQueryParams?.['recommendedAdvisor'] }}</span></span><small class="booking-slot" *ngIf="bookingQueryParams?.['bookingDate']"><ion-icon name="calendar-outline"></ion-icon>{{ bookingQueryParams?.['bookingDate'] }} at {{ bookingQueryParams?.['timeSlot'] }}</small></div>
       </div>
       <span class="item-price">$10.00</span>
     </div>

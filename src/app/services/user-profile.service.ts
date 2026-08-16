@@ -12,6 +12,7 @@ export interface ExistingPlan {
 
 export interface UserProfileData {
   fullName: string;
+  role?: 'customer' | 'consultant';
   email?: string;                   // saved at sign-up
   displayName?: string;             // chosen display name (shown in greetings, profile)
   avatar?: string | null;           // preset avatar ID (e.g. 'avatar-1'), null if photo uploaded
@@ -129,6 +130,7 @@ export class UserProfileService {
       await setDoc(userDocRef, {
         fullName,
         email,
+        role: 'customer',
         isProfileSetupComplete: false,
         isOnboardingCompleted: false,
         createdAt: new Date().toISOString()

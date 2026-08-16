@@ -4,7 +4,6 @@ import { Observable, Subscription } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { ToastController } from '@ionic/angular';
-import { getCurrentUser } from '../../data/app-db';
 import { UserProfileService, UserProfileData } from '../services/user-profile.service';
 
 const AVATAR_MAP: Record<string, { icon: string; bg: string; color: string }> = {
@@ -78,8 +77,7 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   private refreshViewModel() {
     this.todayDate = new Date();
-    // Prioritize sign-up/profile full name, then local app DB user, then default fallback
-    this.currentUserName = this.userProfile?.fullName ?? getCurrentUser()?.name ?? 'User';
+    this.currentUserName = this.userProfile?.fullName ?? 'User';
   }
 
   openDetailsModal() {

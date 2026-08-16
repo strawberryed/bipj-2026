@@ -28,6 +28,7 @@ export class BookMeetingPage implements OnInit {
   selectedSlot: any = null;
   selectedDate: string = '';
   recommendedAdvisorName = '';
+  advisorLocked = false;
   minimumDate: string = '';
 
   constructor(
@@ -40,34 +41,58 @@ export class BookMeetingPage implements OnInit {
     private matchingService: ConsultantMatchingService
   ) { }
 
-  async ngOnInit() {
-    // Guard direct/deep-link access: without this, a user could navigate
-    // straight to /book-meeting and book even without having purchased the
-    // consultant add-on.
+  ngOnInit(): void { }
+
+  async ionViewWillEnter(): Promise<void> {
+    // Ionic keeps tab-adjacent pages alive. Re-read the route every time this
+    // view opens so a recommendation link cannot reuse an old advisor list.
+    this.advisors = [...CONSULTANTS];
+    this.selectedAdvisor = null;
+    this.selectedSlot = null;
+    this.selectedDate = '';
+    this.recommendedAdvisorName = '';
+    this.advisorLocked = false;
     this.minimumDate = this.toLocalDateInputValue(new Date());
-    const entitlements = await firstValueFrom(this.entitlements.entitlements$);
-    if (!entitlements.consultantUnlocked) {
-      this.router.navigate(['/upgrade']);
+
+    const params = this.route.snapshot.queryParams;
+    const isTab3Recommendation = params['fromTab3'] === 'true';
+    if (!isTab3Recommendation) {
+      const entitlements = await firstValueFrom(this.entitlements.entitlements$);
+      if (!entitlements.consultantUnlocked) {
+        await this.router.navigate(['/upgrade']);
+        return;
+      }
+    }
+
+    const consultantId = String(params['consultantId'] ?? '').trim().toLowerCase();
+    const inboundAdvisorName = String(params['advisorName'] ?? params['recommendedAdvisor'] ?? '').trim();
+    const matched = consultantId
+      ? CONSULTANTS.find(advisor => advisor.id.toLowerCase() === consultantId)
+      : CONSULTANTS.find(advisor => advisor.name.toLowerCase() === inboundAdvisorName.toLowerCase());
+
+    // Any Tab 3 recommendation is a single-consultant booking. The explicit
+    // flag remains supported, but fromTab3 also enforces the lock so a missing
+    // or stale query parameter can never expose the full directory.
+    this.advisorLocked = params['fromTab3'] === 'true' || params['lockAdvisor'] === 'true';
+
+    if (this.advisorLocked) {
+      this.advisors = matched ? [matched] : [];
+      this.selectedAdvisor = matched ?? null;
+      this.recommendedAdvisorName = matched?.name ?? inboundAdvisorName.toUpperCase();
       return;
     }
 
-    const params = this.route.snapshot.queryParams;
-    const inboundAdvisorName: string | undefined = params['advisorName'] || params['recommendedAdvisor'];
-
-    if (inboundAdvisorName) {
-      this.recommendedAdvisorName = inboundAdvisorName.toString().toUpperCase();
-      const matched = this.advisors.find(a => a.name.toLowerCase() === inboundAdvisorName.toLowerCase());
-      this.selectedAdvisor = matched ?? this.advisors[0];
-    } else {
-      // No advisor specified (e.g. a direct visit to this page) — fall back
-      // to computing the best match from the user's profile ourselves.
-      const profile = await firstValueFrom(this.profileService.userProfile$);
-      const topMatch = this.matchingService.bestMatch(profile);
-      this.recommendedAdvisorName = topMatch.matchScore > 0 ? topMatch.name : '';
-      this.selectedAdvisor = topMatch;
+    if (matched) {
+      this.selectedAdvisor = matched;
+      this.recommendedAdvisorName = matched.name;
+      return;
     }
-  }
 
+    const profile = await firstValueFrom(this.profileService.userProfile$);
+    const topMatch = this.matchingService.bestMatch(profile);
+    this.recommendedAdvisorName = topMatch.matchScore > 0 ? topMatch.name : '';
+    this.selectedAdvisor = topMatch;
+  }
       selectAdvisor(advisor: any) {
         this.selectedAdvisor = advisor;
       }
@@ -107,21 +132,38 @@ export class BookMeetingPage implements OnInit {
   }
 
   async confirmBooking() {
-    if (this.selectedAdvisor && this.selectedSlot && this.selectedDate) {
-      try {
-        await this.bookingService.setBooking({
-          consultantName: this.selectedAdvisor.name,
+    if (!this.selectedAdvisor || !this.selectedSlot || !this.selectedDate) return;
+
+    if (this.advisorLocked) {
+      await this.router.navigate(['/checkout-page'], {
+        queryParams: {
+          report: false,
+          consultant: true,
+          recommendedAdvisor: this.selectedAdvisor.name,
+          consultantId: this.selectedAdvisor.id,
           consultantTitle: this.selectedAdvisor.title,
           bookingDate: this.selectedDate,
           timeSlot: this.selectedSlot.time,
-          type: this.selectedSlot.duration
-        });
+          bookingType: this.selectedSlot.duration,
+          fromTab3: 'true',
+          lockAdvisor: 'true',
+        },
+      });
+      return;
+    }
 
-        await this.presentSuccessToast(this.selectedAdvisor.name);
-        this.router.navigate(['/tabs/tab1']);
-      } catch (error: any) {
-        await this.presentErrorToast(error.message || 'Failed to save booking. Please try again.');
-      }
+    try {
+      await this.bookingService.setBooking({
+        consultantName: this.selectedAdvisor.name,
+        consultantTitle: this.selectedAdvisor.title,
+        bookingDate: this.selectedDate,
+        timeSlot: this.selectedSlot.time,
+        type: this.selectedSlot.duration
+      });
+      await this.presentSuccessToast(this.selectedAdvisor.name);
+      await this.router.navigate(['/tabs/tab1']);
+    } catch (error: any) {
+      await this.presentErrorToast(error.message || 'Failed to save booking. Please try again.');
     }
   }
 }

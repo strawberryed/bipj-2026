@@ -118,4 +118,32 @@
     border-color: #5b257c;
     background: #fdfcff;
   }
+  .header-section,
+  .section-title,
+  .advisor-info,
+  .advisor-info h3,
+  .advisor-info p,
+  .ai-banner,
+  .banner-text,
+  .banner-text p {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+
+  .advisor-card {
+    min-height: 76px;
+    height: auto;
+  }
+
+  .advisor-unavailable {
+    padding: 18px;
+    border-radius: 10px;
+    background: #fff4f4;
+    color: #7a2525;
+  }
+
+  .advisor-unavailable p { margin: 6px 0 0; }
 }
