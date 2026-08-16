@@ -7,12 +7,12 @@
         <ion-icon name="shield-checkmark"></ion-icon>
       </div>
       <h1>Cova</h1>
-      <p>{{ isSignUpMode ? 'Create an account to build your personalised profile.' : loginRole === 'consultant' ? 'Sign in to manage your customers, meetings and applications.' : 'Welcome back! Log in to access your recommendations.' }}</p>
+      <p>{{ isSignUpMode ? (loginRole === 'consultant' ? 'Create a consultant account to manage customers, meetings and applications.' : 'Create an account to build your personalised profile.') : loginRole === 'consultant' ? 'Sign in to manage your customers, meetings and applications.' : 'Welcome back! Log in to access your recommendations.' }}</p>
     </div>
 
     <!-- Auth Form -->
     <div class="form-section">
-      <div class="role-switch" *ngIf="!isSignUpMode" role="group" aria-label="Choose login type">
+      <div class="role-switch" role="group" aria-label="Choose account type">
         <button type="button" [class.active]="loginRole === 'customer'" [attr.aria-pressed]="loginRole === 'customer'" (click)="selectLoginRole('customer')"><ion-icon name="person-outline"></ion-icon><span><strong>Customer</strong><small>My coverage</small></span></button>
         <button type="button" [class.active]="loginRole === 'consultant'" [attr.aria-pressed]="loginRole === 'consultant'" (click)="selectLoginRole('consultant')"><ion-icon name="briefcase-outline"></ion-icon><span><strong>Consultant</strong><small>Client workspace</small></span></button>
       </div>
@@ -27,7 +27,7 @@
       </div>
 
       <!-- Phone Number (Sign Up only) — used so consultants can call you for booked meetings -->
-      <div class="input-card" *ngIf="isSignUpMode">
+      <div class="input-card" *ngIf="isSignUpMode && loginRole === 'customer'">
         <ion-icon name="call-outline" class="field-icon"></ion-icon>
         <div class="field-body">
           <label>Phone Number</label>

@@ -24,13 +24,11 @@ export class AuthPage {
   phoneNumber: string = '';
 
   toggleMode() {
-    if (this.loginRole === 'consultant') return;
     this.isSignUpMode = !this.isSignUpMode;
   }
 
   selectLoginRole(role: 'customer' | 'consultant'): void {
     this.loginRole = role;
-    if (role === 'consultant') this.isSignUpMode = false;
   }
 
   // Very light validation: Singapore-style 8-digit local numbers (starting
@@ -62,12 +60,12 @@ export class AuthPage {
       return;
     }
 
-    if (this.isSignUpMode && !this.phoneNumber) {
+    if (this.isSignUpMode && this.loginRole === 'customer' && !this.phoneNumber) {
       this.showToast('Please enter your phone number — it\'s used for your consultant bookings.');
       return;
     }
 
-    if (this.isSignUpMode && !this.isValidPhoneNumber(this.phoneNumber)) {
+    if (this.isSignUpMode && this.phoneNumber && !this.isValidPhoneNumber(this.phoneNumber)) {
       this.showToast('Please enter a valid phone number.');
       return;
     }
@@ -79,12 +77,18 @@ export class AuthPage {
 
     try {
       if (this.isSignUpMode) {
-        await this.profileService.signUp(this.email, this.password, this.fullName, this.normalizePhoneNumber(this.phoneNumber));
+        await this.profileService.signUp(
+          this.email.trim(),
+          this.password,
+          this.fullName.trim(),
+          this.loginRole,
+          this.phoneNumber ? this.normalizePhoneNumber(this.phoneNumber) : undefined
+        );
 
         await new Promise(resolve => setTimeout(resolve, 500));
         await loader.dismiss();
 
-        this.router.navigate(['/setup-profile']);
+        this.router.navigate([this.loginRole === 'consultant' ? '/tabs/tab3' : '/setup-profile']);
       } else {
         await this.profileService.login(this.email, this.password);
 
@@ -92,7 +96,7 @@ export class AuthPage {
 
         const profile = await this.profileService.getCurrentProfile();
 
-        const accountRole = profile?.role ?? 'customer';
+        const accountRole = profile?.role?.toLowerCase() === 'consultant' ? 'consultant' : 'customer';
         if (accountRole !== this.loginRole) {
           await this.profileService.logout();
           throw new Error(this.loginRole === 'consultant'
