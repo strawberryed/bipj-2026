@@ -1,4 +1,4 @@
-import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { Injectable, EnvironmentInjector, runInInjectionContext, inject } from '@angular/core';
 import { Firestore, collection, doc, docData, getDoc, updateDoc, writeBatch } from '@angular/fire/firestore';
 import { Auth, user, User } from '@angular/fire/auth';
 import { Observable, of } from 'rxjs';
@@ -17,14 +17,14 @@ export interface Booking {
   providedIn: 'root'
 })
 export class BookingService {
+  private firestore = inject(Firestore);
+  private auth = inject(Auth);
+  private injector = inject(EnvironmentInjector);
+
   private authUser$: Observable<User | null>;
   activeBooking$: Observable<Booking | null>;
 
-  constructor(
-    private firestore: Firestore,
-    private auth: Auth,
-    private injector: EnvironmentInjector
-  ) {
+  constructor() {
     this.authUser$ = runInInjectionContext(this.injector, () => user(this.auth));
 
     this.activeBooking$ = this.authUser$.pipe(

@@ -3,6 +3,9 @@
 import 'zone.js/testing';
 import { getTestBed, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
+import { Auth } from '@angular/fire/auth';
+import { Firestore } from '@angular/fire/firestore';
+import { Functions } from '@angular/fire/functions';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -27,6 +30,18 @@ beforeEach(() => {
   TestBed.configureTestingModule({
     imports: [CommonModule, FormsModule, ReactiveFormsModule],
     providers: [
+      { provide: Firestore, useValue: {} },
+      { provide: Functions, useValue: {} },
+      {
+        provide: Auth,
+        useValue: {
+          currentUser: null,
+          onAuthStateChanged: (next: (user: null) => void) => {
+            next(null);
+            return () => undefined;
+          },
+        },
+      },
       {
         provide: ActivatedRoute,
         useValue: {

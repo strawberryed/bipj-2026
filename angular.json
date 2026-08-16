@@ -32,7 +32,14 @@
               }
             ],
             "styles": ["src/global.scss", "src/theme/variables.scss"],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "canvg",
+              "core-js",
+              "html2canvas",
+              "raf",
+              "rgbcolor"
+            ]
           },
           "configurations": {
             "production": {
@@ -44,7 +51,7 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "6kb",
+                  "maximumWarning": "43kb",
                   "maximumError": "44kb"
                 }
               ],

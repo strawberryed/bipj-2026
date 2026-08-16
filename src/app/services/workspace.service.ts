@@ -1,4 +1,4 @@
-import { EnvironmentInjector, Injectable, runInInjectionContext } from '@angular/core';
+import { EnvironmentInjector, Injectable, runInInjectionContext, inject } from '@angular/core';
 import { Auth, onAuthStateChanged, signOut } from '@angular/fire/auth';
 import { Firestore, collection, collectionData, doc, getDoc, onSnapshot, query, updateDoc, where, writeBatch } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
@@ -14,9 +14,13 @@ export interface ApplicationSubmission { id: string; reference: string; planName
 
 @Injectable({ providedIn: 'root' })
 export class WorkspaceService {
+  private firestore = inject(Firestore);
+  private auth = inject(Auth);
+  private injector = inject(EnvironmentInjector);
+
   readonly currentUser$: Observable<UserRecord | null>;
 
-  constructor(private firestore: Firestore, private auth: Auth, private injector: EnvironmentInjector) {
+  constructor() {
     this.currentUser$ = new Observable<UserRecord | null>(observer => {
       const unsubscribe = onAuthStateChanged(this.auth, async authUser => {
         if (!authUser) {

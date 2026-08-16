@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { EntitlementsService } from '../services/entitlement.service';
@@ -12,17 +12,15 @@ import { ConsultantMatchingService, MatchedConsultant } from '../services/consul
   standalone: false
 })
 export class ConsultantPage implements OnInit, OnDestroy {
+  private router = inject(Router);
+  private entitlements = inject(EntitlementsService);
+  private profileService = inject(UserProfileService);
+  private matchingService = inject(ConsultantMatchingService);
+
   isPaidUser: boolean = false;
   matchedConsultants: MatchedConsultant[] = [];
 
   private entitlementsSub!: Subscription;
-
-  constructor(
-    private router: Router,
-    private entitlements: EntitlementsService,
-    private profileService: UserProfileService,
-    private matchingService: ConsultantMatchingService
-  ) { }
 
   async ngOnInit() {
     // Real-time: if a purchase completes elsewhere, this updates without a reload.

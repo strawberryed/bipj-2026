@@ -4,6 +4,7 @@ import { IonicModule } from '@ionic/angular';
 import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
 
 import { Tab3Page } from './tab3.page';
+import { PolicyDataService } from '../services/policy-data';
 
 describe('Tab3Page', () => {
   let component: Tab3Page;
@@ -12,7 +13,8 @@ describe('Tab3Page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [Tab3Page],
-      imports: [IonicModule.forRoot(), ExploreContainerComponentModule]
+      imports: [IonicModule.forRoot(), ExploreContainerComponentModule],
+      providers: [{ provide: PolicyDataService, useValue: { ensureLoaded: async () => undefined, getPlans: () => [] } }]
     }).compileComponents();
 
     fixture = TestBed.createComponent(Tab3Page);

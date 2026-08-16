@@ -1,4 +1,4 @@
-import { Injectable, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { Injectable, EnvironmentInjector, runInInjectionContext, inject } from '@angular/core';
 import {
   Firestore, collection, doc, getDocs, query,
   orderBy, limit, writeBatch, Timestamp
@@ -7,11 +7,9 @@ import { Message } from './gemini.service';
 
 @Injectable({ providedIn: 'root' })
 export class ChatStorageService {
+  private firestore = inject(Firestore);
+  private injector = inject(EnvironmentInjector);
 
-  constructor(
-    private firestore: Firestore,
-    private injector: EnvironmentInjector
-  ) { }
 
   async loadChat(uid: string | null, maxMessages = 50): Promise<Message[]> {
     if (!uid) return [];

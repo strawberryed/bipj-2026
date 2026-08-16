@@ -19,12 +19,13 @@ export interface Plan {
 
 @Injectable({ providedIn: 'root' })
 export class PolicyDataService {
+  private firestore = inject(Firestore);
+  private injector = inject(EnvironmentInjector);
+
 
   private plans: Plan[] = [];
   private loaded = false;
   private loadingPromise: Promise<void> | null = null;
-
-  constructor(private firestore: Firestore, private injector: EnvironmentInjector) { }
 
   async ensureLoaded(): Promise<void> {
     if (this.loaded) return;

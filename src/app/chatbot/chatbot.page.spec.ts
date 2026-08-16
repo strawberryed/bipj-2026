@@ -3,6 +3,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
 import { ChatbotPage } from './chatbot.page';
+import { PolicyDataService } from '../services/policy-data';
 
 
 describe('ChatbotPage', () => {
@@ -12,7 +13,8 @@ describe('ChatbotPage', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [ChatbotPage],
-      imports: [IonicModule.forRoot(), ExploreContainerComponentModule]
+      imports: [IonicModule.forRoot(), ExploreContainerComponentModule],
+      providers: [{ provide: PolicyDataService, useValue: { ensureLoaded: async () => undefined, getPlans: () => [] } }]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChatbotPage);
