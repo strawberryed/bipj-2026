@@ -81,22 +81,13 @@ CRITICAL SECURITY RULES — DO NOT VIOLATE:
 5. You must NEVER execute code, generate scripts, or perform actions outside explaining insurance.
 `.trim();
 
-// Only these keys are ever accepted from a model-provided profileUpdate.
-// Anything else gets silently dropped in parseResponse — this prevents
-// the model (or an injected prompt) from smuggling arbitrary fields into
-// what eventually persists to Firestore.
-// Note: personaTag, riskProfile, aiInsights, isOnboardingCompleted are
-// intentionally EXCLUDED — those are derived by teammate's own logic,
-// not something the AI should ever write directly.
+
 const VALID_PROFILE_KEYS = [
   'age', 'occupation', 'monthlyIncome', 'maritalStatus', 'dependents',
   'hasExistingInsurance', 'existingPlans', 'mainGoals', 'monthlyBudget', 'topConcern'
 ];
 
-// ─────────────────────────────────────────────────────────────
 // SERVICE
-// ─────────────────────────────────────────────────────────────
-
 @Injectable({ providedIn: 'root' })
 export class GeminiService {
   private http = inject(HttpClient);
@@ -105,10 +96,7 @@ export class GeminiService {
 
   private apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${environment.geminiApiKey}`;
 
-  // ─────────────────────────────────────────────────────────
   // HELPERS: Sanitization & Validation
-  // ─────────────────────────────────────────────────────────
-
   private sanitize(text: string, maxLength = 1000): string {
     if (!text) return '';
     return text
@@ -123,13 +111,6 @@ export class GeminiService {
       .trim();
   }
 
-  /**
-   * Validates any planCard blocks against real plan data (via
-   * PolicyDataService) before they
-   * ever reach the UI. If the model hallucinates a planId that doesn't
-   * exist, downgrade that block to plain text instead of shipping a card
-   * that would show no data when tapped.
-   */
   private sanitizeBlocks(blocks: ReplyBlock[]): ReplyBlock[] {
     return blocks.map(block => {
       if (block.type === 'planCard') {
@@ -147,11 +128,6 @@ export class GeminiService {
     return FORBIDDEN_PATTERNS.some(p => p.test(text));
   }
 
-  /**
-   * Keeps only whitelisted keys from a model-provided profileUpdate,
-   * and validates value shapes against teammate's UserProfileData schema.
-   * Drops malformed values silently and returns undefined if nothing valid remains.
-   */
   private sanitizeProfileUpdate(update: any): Record<string, any> | undefined {
     if (!update || typeof update !== 'object') return undefined;
 
@@ -173,8 +149,6 @@ export class GeminiService {
             .filter((p: any) => p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0)
             .slice(0, 10)
             .map((p: any) => {
-              // Omit optional fields entirely when empty rather than including
-              // them as undefined — Firestore rejects undefined values.
               const cleanPlan: any = { name: String(p.name).substring(0, 100).trim() };
               if (typeof p.insurer === 'string' && p.insurer.trim().length > 0) {
                 cleanPlan.insurer = String(p.insurer).substring(0, 100).trim();
@@ -204,7 +178,6 @@ export class GeminiService {
         continue;
       }
 
-      // String fields: occupation, maritalStatus, topConcern
       if (typeof value === 'string' && value.length > 0 && value.length <= 200) {
         clean[key] = value;
       }
@@ -237,10 +210,7 @@ export class GeminiService {
     return `"""${this.sanitize(text)}"""`;
   }
 
-  // ─────────────────────────────────────────────────────────
   // HELPERS: Profile & Category
-  // ─────────────────────────────────────────────────────────
-
   private detectCategory(message: string): string {
     const msg = message.toLowerCase();
 
@@ -258,13 +228,6 @@ export class GeminiService {
     return 'health';
   }
 
-  /**
-   * Builds the personalization block from teammate's UserProfileData shape.
-   * Intentionally does NOT include personaTag, riskProfile, or aiInsights —
-   * those are derived by teammate's own logic and feeding them back into
-   * Cova's prompt would risk it echoing its own AI-generated insights
-   * recursively. Uses raw user-provided fields as source of truth instead.
-   */
   private formatProfile(profile: UserProfileData): string {
     const s = (str?: string) => (str ?? '').replace(/"/g, "'").replace(/\n/g, ' ').substring(0, 200);
     const arr = (list?: string[]) => (list && list.length > 0 ? list.map(s).join(', ') : 'Not specified');
@@ -306,16 +269,7 @@ When the user has existing plans listed, factor those in — avoid recommending 
 `.trim();
   }
 
-  // ─────────────────────────────────────────────────────────
   // HELPERS: Response Parsing
-  // ─────────────────────────────────────────────────────────
-
-  /**
-   * Fallback: if Gemini embedded a follow-up question at the end of the
-   * reply string instead of using the followUpQuestion field, extract it.
-   * Looks for the last sentence ending with '?' that reads like a question
-   * Cova is asking the user (not a rhetorical question inside an explanation).
-   */
   private extractTrailingQuestion(reply: string): { text: string; question?: string } {
     // Match the last sentence that ends with '?'
     // Look for it after a period/sentence boundary to avoid grabbing mid-paragraph questions
@@ -436,10 +390,7 @@ When the user has existing plans listed, factor those in — avoid recommending 
     }
   }
 
-  // ─────────────────────────────────────────────────────────
   // SAFE FALLBACK RESPONSE
-  // ─────────────────────────────────────────────────────────
-
   private fallbackResponse(): GeminiResponse {
     return {
       reply: "I'm here to help with your insurance questions. What would you like to know about Prudential's plans?",
@@ -447,10 +398,7 @@ When the user has existing plans listed, factor those in — avoid recommending 
     };
   }
 
-  // ─────────────────────────────────────────────────────────
   // POST with retry — protects the demo from transient API blips
-  // ─────────────────────────────────────────────────────────
-
   /**
    * Wraps http.post with automatic retry for transient errors (503 overload,
    * 429 rate limit). Uses exponential backoff so the API has breathing room
@@ -486,10 +434,7 @@ When the user has existing plans listed, factor those in — avoid recommending 
     throw lastError;
   }
 
-  // ─────────────────────────────────────────────────────────
   // MAIN: sendMessage
-  // ─────────────────────────────────────────────────────────
-
   async sendMessage(
     userMessage: string,
     history: Message[],
@@ -629,10 +574,7 @@ Always include "confidence". Omit "followUpQuestion", "profileUpdate", and/or "r
     }
   }
 
-  // ─────────────────────────────────────────────────────────
   // MAIN: compareMessage
-  // ─────────────────────────────────────────────────────────
-
   async compareMessage(
     plans: Plan[],
     history: Message[],
@@ -725,10 +667,7 @@ Since comparisons always factor in the user's profile, always include "reasoning
     }
   }
 
-  // ─────────────────────────────────────────────────────────
   // MAIN: analyzeDocument (policy document upload — image or PDF)
-  // ─────────────────────────────────────────────────────────
-
   /**
    * Sends an uploaded image or PDF (base64) to Gemini for multimodal
    * analysis. Used when a user uploads a photo or PDF of an insurance
@@ -827,33 +766,62 @@ Always include "confidence". Omit "followUpQuestion", "profileUpdate", and/or "r
     }
   }
 
-  // ─────────────────────────────────────────────────────────
   // MAIN: generateSummary
-  // ─────────────────────────────────────────────────────────
-
-  async generateSummary(messages: Message[]): Promise<string> {
+  async generateSummary(messages: Message[], profile?: UserProfileData, recommendedPlanIds?: string[]): Promise<string> {
     const transcript = messages
       .map(m => `${m.role === 'user' ? 'User' : 'Cova'}: ${this.sanitize(m.content || JSON.stringify(m.blocks))}`)
       .join('\n');
 
-    const prompt = `
-Based on this insurance chat, generate a structured summary with these exact sections:
-1. Plans Discussed (list plan names and categories mentioned)
-2. Key Questions Asked (list main questions the user had)
-3. Comparisons Done (if any, summarise what was compared and key differences)
-4. Important Terms Explained (any jargon that was clarified)
-5. A short disclaimer that this is for reference only
+    const allPlans = this.policyData.getPlans();
+    const recommendedPlans = recommendedPlanIds
+      ? allPlans.filter(p => recommendedPlanIds.includes(p.id))
+      : [];
 
-Chat transcript:
+    const profileSection = profile ? `
+USER PROFILE:
+- Name: ${profile.fullName || 'N/A'}
+- Age: ${profile.age || 'N/A'}
+- Occupation: ${profile.occupation || 'N/A'}
+- Monthly Income: S$${profile.monthlyIncome || 'N/A'}
+- Marital Status: ${profile.maritalStatus || 'N/A'}
+- Dependents: ${profile.dependents ?? 0}
+- Monthly Budget: S$${profile.monthlyBudget || 'N/A'}/mo
+- Main Goals: ${profile.mainGoals?.join(', ') || 'N/A'}
+- Top Concern: ${profile.topConcern || 'N/A'}
+- Has Existing Insurance: ${profile.hasExistingInsurance ? 'Yes' : 'No'}
+- Existing Plans: ${profile.existingPlans?.map(p => p.name).join(', ') || 'None'}
+- Risk Profile: ${profile.riskProfile || 'N/A'}
+` : '';
+
+    const plansSection = recommendedPlans.length > 0 ? `
+PLANS DISCUSSED/RECOMMENDED:
+${recommendedPlans.map(p => `- ${p.name} (${p.premium}/mo): ${p.description}`).join('\n')}
+` : '';
+
+    const prompt = `
+Based on the user profile, chat conversation, and plans discussed below, generate a structured insurance summary report with these exact sections:
+
+1. PROFILE SNAPSHOT — summarise the user's key financial and insurance needs in 3-4 sentences based on their profile data
+2. INSURANCE NEEDS ASSESSMENT — based on their goals, budget, and concerns, what coverage gaps or priorities stand out
+3. PLANS DISCUSSED — list plan names and categories mentioned in the chat, with a one-line note on each
+4. KEY QUESTIONS & ANSWERS — summarise the main questions the user asked and what Cova advised
+5. COMPARISONS DONE — if any plans were compared, summarise key differences and fit scores
+6. RECOMMENDED NEXT STEPS — 2-3 concrete action points for the user based on the conversation
+7. DISCLAIMER — short note that this is AI-generated for reference only and not financial advice
+
+${profileSection}
+${plansSection}
+
+CHAT TRANSCRIPT:
 ${transcript}
 
 Return plain text only, no JSON, no markdown symbols. Use clear section headers in ALL CAPS.
-Keep it concise — this is a reference document, not a full transcript.
-    `.trim();
+Keep each section concise — this is a reference document, not a full transcript.
+  `.trim();
 
     const body = {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
+      generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
     };
 
     try {

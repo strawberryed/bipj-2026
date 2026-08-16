@@ -145,10 +145,10 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     await this.policyData.ensureLoaded();
     this.isPolicyDataLoading = false;
 
-this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
-  this.reportUnlocked = e.reportUnlocked;
-  console.log('[Entitlements] received:', e); // ADD THIS
-});
+    this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
+      this.reportUnlocked = e.reportUnlocked;
+      console.log('[Entitlements] received:', e); // ADD THIS
+    });
 
     this.route.queryParams.subscribe(async params => {
       if (params['downloadSummary'] === 'true') {
@@ -205,9 +205,23 @@ this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
   }
 
   async reset() {
-    this.messages = [];
-    this.chips = [...DEFAULT_CHIPS];
-    await this.chatStorage.clearChat(this.currentUid);
+    const alert = await this.alertCtrl.create({
+      header: 'Clear chat?',
+      message: 'This will permanently delete your entire chat history.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Clear',
+          role: 'destructive',
+          handler: async () => {
+            this.messages = [];
+            this.chips = [...DEFAULT_CHIPS];
+            await this.chatStorage.clearChat(this.currentUid);
+          }
+        }
+      ]
+    });
+    await alert.present();
   }
 
   // Profile updates (agentic profile-building)
@@ -299,10 +313,24 @@ this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
     this.loadingState = null;
   }
   async deleteMessage(index: number) {
-  const msg = this.messages[index];
-  this.messages.splice(index, 1);
-  await this.chatStorage.deleteMessage(this.currentUid, msg);
-}
+    const alert = await this.alertCtrl.create({
+      header: 'Delete message?',
+      message: 'This will permanently remove this message from your chat history.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: async () => {
+            const msg = this.messages[index];
+            this.messages.splice(index, 1);
+            await this.chatStorage.deleteMessage(this.currentUid, msg);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
 
   // Document upload (policy document photo/PDF explanation)
   triggerFileUpload() {
@@ -557,7 +585,7 @@ this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
 
     this.isGeneratingSummary = true;
     try {
-      const summaryText = await this.gemini.generateSummary(this.messages);
+      const summaryText = await this.gemini.generateSummary(this.messages, this.profile);
       this.buildPDF(summaryText);
     } catch (e) {
       console.error('[ChatbotPage] Summary generation failed:', e);
