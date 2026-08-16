@@ -1,7 +1,7 @@
 import { Injectable, EnvironmentInjector, runInInjectionContext, inject } from '@angular/core';
 import {
   Firestore, collection, doc, getDocs, query,
-  orderBy, limit, writeBatch, Timestamp
+  orderBy, limit, writeBatch, Timestamp, deleteDoc
 } from '@angular/fire/firestore';
 import { Message } from './gemini.service';
 
@@ -21,7 +21,7 @@ export class ChatStorageService {
         const snap = await getDocs(q);
 
         return snap.docs
-          .map(d => this.docToMessage(d.data()))
+          .map(d => this.docToMessage(d.id, d.data()))
           .reverse();
       } catch (err) {
         console.error('[ChatStorageService] loadChat failed:', err);
@@ -42,6 +42,19 @@ export class ChatStorageService {
         await batch.commit();
       } catch (err) {
         console.error('[ChatStorageService] appendMessage failed:', err);
+      }
+    });
+  }
+
+  async deleteMessage(uid: string | null, message: Message): Promise<void> {
+    if (!uid || !message.id) return;
+
+    return runInInjectionContext(this.injector, async () => {
+      try {
+        const msgRef = doc(this.firestore, 'users', uid, 'chatHistory', message.id!);
+        await deleteDoc(msgRef);
+      } catch (err) {
+        console.error('[ChatStorageService] deleteMessage failed:', err);
       }
     });
   }
@@ -77,10 +90,11 @@ export class ChatStorageService {
     return docObj;
   }
 
-  private docToMessage(data: any): Message {
+  private docToMessage(id: string, data: any): Message {
     const msg: Message = {
       role: data.role,
-      content: data.content ?? ''
+      content: data.content ?? '',
+      id: id
     };
     if (data.blocks) msg.blocks = data.blocks;
     if (data.compareCard) msg.compareCard = data.compareCard;

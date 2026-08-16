@@ -298,6 +298,11 @@ this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
 
     this.loadingState = null;
   }
+  async deleteMessage(index: number) {
+  const msg = this.messages[index];
+  this.messages.splice(index, 1);
+  await this.chatStorage.deleteMessage(this.currentUid, msg);
+}
 
   // Document upload (policy document photo/PDF explanation)
   triggerFileUpload() {
