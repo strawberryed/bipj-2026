@@ -3,13 +3,11 @@ import { CompareCard, GeminiService, Message, ReplyBlock } from '../services/gem
 import { UserProfileData, UserProfileService } from '../services/user-profile.service';
 import { PolicyDataService, Plan } from '../services/policy-data';
 import { ChatStorageService } from '../services/chat-storage.service';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import jsPDF from 'jspdf';
 import { AlertController } from '@ionic/angular';
-
-// ─────────────────────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────────────────────
+import { Router, ActivatedRoute } from '@angular/router';
+import { EntitlementsService } from '../services/entitlement.service';
 
 const MAX_HISTORY = 50;
 const MAX_COMPARE_PLANS = 3;
@@ -49,7 +47,11 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   private policyData = inject(PolicyDataService);
   private chatStorage = inject(ChatStorageService);
   private alertCtrl = inject(AlertController);
-
+  private entitlements = inject(EntitlementsService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private entitlementsSub?: Subscription;
+  reportUnlocked = false;
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -63,10 +65,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   messages: Message[] = [];
   inputText = '';
 
-  // Contextual loading state — null when idle, otherwise indicates
-  // which operation is in progress. Used for showing meaningful
-  // "Analyzing your document..." vs "Preparing comparison..." messages
-  // in the typing indicator, rather than a generic spinner.
   loadingState: 'sending' | 'analyzing' | 'comparing' | null = null;
 
   /** Backwards-compat getter: true whenever any operation is in progress. */
@@ -99,18 +97,9 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
   // True while policy data is being fetched from Firestore on first load.
   isPolicyDataLoading = true;
 
-  // Tracks which reasoning panels are currently expanded (by message index
-  // in this.messages). Kept as a Set for O(1) toggle.
   expandedReasoning = new Set<number>();
 
-  // ─────────────────────────────────────────────────────────
   // Confidence badges — only shown for medium/low confidence
-  // ─────────────────────────────────────────────────────────
-
-  /**
-   * Whether to show a confidence badge on this message.
-   * High confidence is the default state and produces no badge (reduces clutter).
-   */
   shouldShowConfidence(msg: Message): boolean {
     return msg.role === 'assistant' && !!msg.confidence && msg.confidence !== 'high';
   }
@@ -155,10 +144,31 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
     await this.policyData.ensureLoaded();
     this.isPolicyDataLoading = false;
+
+this.entitlementsSub = this.entitlements.entitlements$.subscribe(e => {
+  this.reportUnlocked = e.reportUnlocked;
+  console.log('[Entitlements] received:', e); // ADD THIS
+});
+
+    this.route.queryParams.subscribe(async params => {
+      if (params['downloadSummary'] === 'true') {
+        // Clear the param immediately so it doesn't retrigger on future visits
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: {},
+          replaceUrl: true
+        });
+
+        // Give Firestore ~1.5s to emit the real entitlements value
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await this.downloadSummary();
+      }
+    });
   }
 
   ngOnDestroy() {
     this.profileSub?.unsubscribe();
+    this.entitlementsSub?.unsubscribe();
   }
 
   ngAfterViewChecked() {
@@ -168,16 +178,12 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     }
   }
 
-  // ─────────────────────────────────────────────────────────
   // Chat Persistence (per-user Firestore subcollection via ChatStorageService)
-  // ─────────────────────────────────────────────────────────
-
   /** Appends a single new message to the user's Firestore chat history. */
   private async persistMessage(message: Message) {
     await this.chatStorage.appendMessage(this.currentUid, message);
   }
 
-  /** Loads the user's chat history from Firestore into this.messages. */
   async loadChat() {
     this.messages = await this.chatStorage.loadChat(this.currentUid, MAX_HISTORY);
   }
@@ -188,7 +194,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       return;
     }
 
-    // Only reset local UI state on version change — NEVER wipe Firestore
     const resetKey = `cova_chat_reset_${CHAT_RESET_VERSION}_${uid}`;
     if (!localStorage.getItem(resetKey)) {
       localStorage.setItem(resetKey, 'done');
@@ -205,10 +210,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     await this.chatStorage.clearChat(this.currentUid);
   }
 
-  // ─────────────────────────────────────────────────────────
   // Profile updates (agentic profile-building)
-  // ─────────────────────────────────────────────────────────
-
   private async applyProfileUpdate(update?: Record<string, any>) {
     if (!update || !this.currentUid) return;
     try {
@@ -252,22 +254,20 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.inputText = '';
     this.loadingState = 'sending';
 
-    const userMsg: Message = { role: 'user', content: message };
+    const userMsg: Message = { role: 'user', content: message, timestamp: new Date() };
     this.messages.push(userMsg);
     await this.persistMessage(userMsg);
 
     const history = this.messages.slice(0, -1);
 
     try {
-      // Read profile fresh from Firestore to avoid stale/guest data
-      // from the userProfile$ subscription not having emitted yet.
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
       console.log('[send] liveProfile being sent to Gemini:', liveProfile);
       const res = await this.gemini.sendMessage(message, history, liveProfile);
 
       const newMessage: Message = Array.isArray(res.reply)
-        ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
-        : { role: 'assistant', content: res.reply as string };
+        ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[], timestamp: new Date() }
+        : { role: 'assistant', content: res.reply as string, timestamp: new Date() };
 
       if (res.followUpQuestion) {
         newMessage.followUpQuestion = res.followUpQuestion;
@@ -289,7 +289,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       console.error('[ChatbotPage] sendMessage failed:', e);
       const errorMsg: Message = {
         role: 'assistant',
-        content: "Sorry, something went wrong. Try again?"
+        content: "Sorry, something went wrong. Try again?",
+        timestamp: new Date()
       };
       this.messages.push(errorMsg);
       await this.persistMessage(errorMsg);
@@ -298,10 +299,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.loadingState = null;
   }
 
-  // ─────────────────────────────────────────────────────────
   // Document upload (policy document photo/PDF explanation)
-  // ─────────────────────────────────────────────────────────
-
   triggerFileUpload() {
     this.fileInput.nativeElement.click();
   }
@@ -327,7 +325,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     const uploadMsg: Message = {
       role: 'user',
       content: '',
-      attachment: { name: file.name, type: attachmentType }
+      attachment: { name: file.name, type: attachmentType },
+      timestamp: new Date()
     };
     this.messages.push(uploadMsg);
     await this.persistMessage(uploadMsg);
@@ -341,8 +340,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       const res = await this.gemini.analyzeDocument(base64Data, file.type, liveProfile);
 
       const newMessage: Message = Array.isArray(res.reply)
-        ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[] }
-        : { role: 'assistant', content: res.reply as string };
+        ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[], timestamp: new Date() }
+        : { role: 'assistant', content: res.reply as string, timestamp: new Date() };
 
       if (res.followUpQuestion) {
         newMessage.followUpQuestion = res.followUpQuestion;
@@ -364,7 +363,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       console.error('[ChatbotPage] analyzeDocument failed:', e);
       const errorMsg: Message = {
         role: 'assistant',
-        content: "Sorry, I couldn't process that document. Try again?"
+        content: "Sorry, I couldn't process that document. Try again?",
+        timestamp: new Date()
       };
       this.messages.push(errorMsg);
       await this.persistMessage(errorMsg);
@@ -387,18 +387,10 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     });
   }
 
-  // ─────────────────────────────────────────────────────────
   // Comparison
-  // ─────────────────────────────────────────────────────────
-
   openCompare() { this.isCompareOpen = true; }
   closeCompare() { this.isCompareOpen = false; }
 
-  /**
-   * Looks up full plan details via PolicyDataService — never trusts
-   * anything the AI wrote beyond the planId reference, so the modal
-   * always shows real, accurate figures.
-   */
   getPlanById(planId: string): Plan | undefined {
     return this.policyData.getPlanById(planId);
   }
@@ -446,7 +438,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     this.closeCompare();
 
     const names = this.selectedPlans.map(p => p.name).join(' and ');
-    const userMsg: Message = { role: 'user', content: `Compare ${names}` };
+    const userMsg: Message = { role: 'user', content: `Compare ${names}`, timestamp: new Date() };
     this.messages.push(userMsg);
     await this.persistMessage(userMsg);
 
@@ -471,7 +463,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
           rows,
           fitScores: res.fitScores
         },
-        followUpQuestion: res.followUpQuestion
+        followUpQuestion: res.followUpQuestion,
+        timestamp: new Date()
       };
       if (res.reasoning) {
         compareMsg.reasoning = res.reasoning;
@@ -488,7 +481,8 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       console.error('[ChatbotPage] compareMessage failed:', e);
       const errorMsg: Message = {
         role: 'assistant',
-        content: "Sorry, couldn't run the comparison. Try again?"
+        content: "Sorry, couldn't run the comparison. Try again?",
+        timestamp: new Date()
       };
       this.messages.push(errorMsg);
       await this.persistMessage(errorMsg);
@@ -502,9 +496,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     return card.fitScores?.find(f => f.planId === planId)?.score ?? 0;
   }
 
-  /**
-   * Toggles whether the reasoning panel for a given message index is open.
-   */
   toggleReasoning(messageIndex: number) {
     if (this.expandedReasoning.has(messageIndex)) {
       this.expandedReasoning.delete(messageIndex);
@@ -517,11 +508,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     return this.expandedReasoning.has(messageIndex);
   }
 
-  /**
-   * Maps a fit score to a color class used by the fit bar and percent text.
-   * Thresholds match the scoring anchors in gemini.service.ts's compareMessage
-   * prompt: 80-100 = strong, 50-79 = partial, below 50 = mismatch.
-   */
   getFitScoreColorClass(score: number): string {
     if (score >= 80) return 'fit-high';
     if (score >= 50) return 'fit-mid';
@@ -540,12 +526,29 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     await alert.present();
   }
 
-  // ─────────────────────────────────────────────────────────
   // Summary & PDF
-  // ─────────────────────────────────────────────────────────
-
   async downloadSummary() {
     if (this.messages.length === 0) return;
+
+    if (!this.reportUnlocked) {
+      const alert = await this.alertCtrl.create({
+        header: 'Unlock Summary Report',
+        message: 'Get a personalised PDF summary of your insurance conversation for just $5.00.',
+        buttons: [
+          { text: 'Not now', role: 'cancel' },
+          {
+            text: 'Unlock for $5',
+            handler: () => {
+              this.router.navigate(['/checkout-page'], {
+                queryParams: { report: 'true', consultant: 'false' }
+              });
+            }
+          }
+        ]
+      });
+      await alert.present();
+      return;
+    }
 
     this.isGeneratingSummary = true;
     try {
@@ -648,10 +651,6 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     doc.save(`cova-summary-${this.profile.fullName.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Utilities
-  // ─────────────────────────────────────────────────────────
-
   scrollToBottom() {
     try {
       this.messagesEnd.nativeElement.scrollIntoView({ behavior: 'smooth' });
@@ -660,7 +659,61 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     }
   }
 
-  nowTime() {
-    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  msgTime(msg: Message): string {
+    const d = msg.timestamp ?? new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  get sessionDateLabel(): string {
+    const ref = this.messages.length > 0 ? this.messages[0].timestamp : undefined;
+    return this.formatDividerDate(ref ?? new Date());
+  }
+
+  getDayDivider(index: number): string | null {
+    const msg = this.messages[index];
+    const date = msg.timestamp ?? new Date();
+
+    if (index === 0) {
+      return this.formatDividerDate(date);
+    }
+
+    const prev = this.messages[index - 1];
+    const prevDate = prev.timestamp ?? new Date();
+
+    const sameDay =
+      date.getFullYear() === prevDate.getFullYear() &&
+      date.getMonth() === prevDate.getMonth() &&
+      date.getDate() === prevDate.getDate();
+
+    return sameDay ? null : this.formatDividerDate(date);
+  }
+
+  private formatDividerDate(date: Date): string {
+    const today = new Date();
+    const isToday =
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate();
+
+    if (isToday) {
+      return 'TODAY';
+    }
+
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const isYesterday =
+      date.getFullYear() === yesterday.getFullYear() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getDate() === yesterday.getDate();
+
+    if (isYesterday) {
+      return 'YESTERDAY';
+    }
+
+    return date.toLocaleDateString('en-SG', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    }).toUpperCase();
   }
 }

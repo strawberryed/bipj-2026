@@ -37,6 +37,7 @@ export class EditProfilePage implements OnInit {
   displayName = '';
   fullName = '';
   email = '';
+  phoneNumber = '';
 
   // Personal info
   age: number | null = null;
@@ -78,6 +79,7 @@ export class EditProfilePage implements OnInit {
     this.displayName = p.displayName ?? p.fullName ?? '';
     this.fullName = p.fullName ?? '';
     this.email = p.email ?? '';
+    this.phoneNumber = p.phoneNumber ?? '';
     this.age = p.age ?? null;
     this.maritalStatus = p.maritalStatus ?? '';
     this.occupation = p.occupation ?? '';
@@ -90,8 +92,6 @@ export class EditProfilePage implements OnInit {
     this.selectedAvatar = p.avatar ?? 'avatar-1';
     this.uploadedPhotoBase64 = p.profilePhoto ?? null;
   }
-
-  // ── Avatar / Photo ───────────────────────────────────────────
 
   getAvatarIcon(id: string) { return AVATAR_MAP[id]?.icon ?? 'person'; }
   getAvatarBg(id: string) { return AVATAR_MAP[id]?.bg ?? '#ede9fe'; }
@@ -152,11 +152,14 @@ export class EditProfilePage implements OnInit {
     if (this.fileInput?.nativeElement) this.fileInput.nativeElement.value = '';
   }
 
-  // ── Save ─────────────────────────────────────────────────────
-
   async save() {
     if (!this.displayName.trim()) {
       this.showToast('Please enter a display name.');
+      return;
+    }
+
+    if (this.phoneNumber && !/^\+?[0-9]{8,15}$/.test(this.phoneNumber.trim().replace(/[\s-]/g, ''))) {
+      this.showToast('Please enter a valid phone number.');
       return;
     }
 
@@ -168,6 +171,7 @@ export class EditProfilePage implements OnInit {
       const update: Record<string, any> = {
         displayName: this.displayName.trim(),
         fullName: this.fullName.trim(),
+        phoneNumber: this.phoneNumber.trim(),
         age: this.age ? Number(this.age) : null,
         maritalStatus: this.maritalStatus,
         occupation: this.occupation,
@@ -199,8 +203,6 @@ export class EditProfilePage implements OnInit {
     }
   }
 
-  // ── Navigation / Auth ─────────────────────────────────────────
-
   goBack() {
     this.router.navigate(['/tabs/tab4']);
   }
@@ -225,7 +227,6 @@ export class EditProfilePage implements OnInit {
   }
 
   async confirmDeleteAccount() {
-    // Two-step confirmation — first alert warns, second requires typing "DELETE"
     const alert1 = await this.alertCtrl.create({
       header: 'Delete Account',
       message: 'This will permanently delete your account and all your data. This cannot be undone.',
@@ -260,7 +261,7 @@ export class EditProfilePage implements OnInit {
           handler: async (data) => {
             if (data.confirm !== 'DELETE') {
               this.showToast('Please type DELETE exactly to confirm.');
-              return false; // keep alert open
+              return false;
             }
             await this.deleteAccount();
             return true;
@@ -280,8 +281,6 @@ export class EditProfilePage implements OnInit {
       this.router.navigate(['/auth']);
     } catch (e: any) {
       await loader.dismiss();
-      // Firebase requires recent login for account deletion —
-      // if the session is too old, Auth throws 'requires-recent-login'
       if (e.code === 'auth/requires-recent-login') {
         this.showToast('Please log out and log back in, then try again.');
       } else {

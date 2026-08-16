@@ -37,6 +37,7 @@ export interface Message {
   attachment?: { name: string; type: 'image' | 'pdf' };
   reasoning?: string;
   confidence?: 'high' | 'medium' | 'low';
+  timestamp?: Date;   
 }
 
 export interface GeminiResponse {

@@ -48,4 +48,9 @@ export class ConsultantPage implements OnInit, OnDestroy {
       queryParams: { advisorName: consultant.name }
     });
   }
+  downloadSummary() {
+  this.router.navigate(['/tabs/chatbot'], {
+    queryParams: { downloadSummary: 'true' }
+  }); 
+}
 }

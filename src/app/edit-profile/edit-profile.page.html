@@ -15,6 +15,7 @@
 </ion-header>
 
 <ion-content class="edit-content">
+  <!-- Container with correct template placement -->
   <div class="edit-container" *ngIf="loaded; else loadingTpl">
 
     <!-- ── Avatar / Photo ── -->
@@ -71,6 +72,14 @@
           <ion-input [value]="email" readonly></ion-input>
         </ion-item>
         <span class="field-hint">Email cannot be changed here.</span>
+      </div>
+
+      <div class="field-group">
+        <ion-label class="field-label"><ion-icon name="call-outline"></ion-icon> Phone Number</ion-label>
+        <ion-item lines="none" class="custom-input">
+          <ion-input type="tel" [(ngModel)]="phoneNumber" placeholder="e.g. 9123 4567"></ion-input>
+        </ion-item>
+        <span class="field-hint">Used so consultants can call you for your booked meetings.</span>
       </div>
     </div>
 
@@ -199,9 +208,11 @@
 
   </div>
 
+  <!-- Loading Template placed outside of edit-container -->
   <ng-template #loadingTpl>
     <div class="loading-state">
       <ion-spinner name="crescent" color="primary"></ion-spinner>
     </div>
   </ng-template>
+
 </ion-content>

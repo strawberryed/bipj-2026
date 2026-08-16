@@ -100,7 +100,7 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   goToProfile() {
     this.closeDetailsModal();
-    this.router.navigate(['/tabs/tab3']);
+    this.router.navigate(['/edit-profile']);
   }
 
   rescheduleBooking(currentBooking: Booking) {

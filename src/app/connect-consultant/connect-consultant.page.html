@@ -33,7 +33,7 @@
         <ion-button *ngIf="!isPaidUser" size="small" class="upgrade-btn" (click)="upgradeUser()">
           Upgrade
         </ion-button>
-        <ion-button *ngIf="isPaidUser" size="small" color="light" fill="clear">
+        <ion-button *ngIf="isPaidUser" size="small" color="light" fill="clear" (click)="downloadSummary()">
           <ion-icon name="download-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </div>
@@ -44,9 +44,8 @@
 
   <div class="consultant-list-container">
 
-    <div class="protected-row"
-         *ngFor="let consultant of matchedConsultants"
-         (click)="isPaidUser ? goToBooking(consultant) : upgradeUser()">
+    <div class="protected-row" *ngFor="let consultant of matchedConsultants"
+      (click)="isPaidUser ? goToBooking(consultant) : upgradeUser()">
       <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
         <ion-avatar slot="start" class="consultant-avatar">
           <ion-icon name="person-circle" class="avatar-fallback-icon"></ion-icon>
@@ -56,7 +55,7 @@
           <p class="role-text">{{ consultant.title }}</p>
           <div class="tag-container">
             <ion-badge class="custom-badge text-purple"
-                       *ngFor="let tag of (consultant.matchReasons.length ? consultant.matchReasons : consultant.specialties) | slice:0:2">
+              *ngFor="let tag of (consultant.matchReasons.length ? consultant.matchReasons : consultant.specialties) | slice:0:2">
               {{ tag }}
             </ion-badge>
           </div>

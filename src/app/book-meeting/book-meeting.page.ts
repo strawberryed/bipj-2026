@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { BookingService } from '../services/booking';
@@ -14,7 +14,15 @@ import { CONSULTANTS, ConsultantProfile } from '../consultants';
   styleUrls: ['./book-meeting.page.scss'],
   standalone: false,
 })
-export class BookMeetingPage implements OnInit {
+export class BookMeetingPage {
+  private bookingService = inject(BookingService);
+  private router = inject(Router);
+  private toastController = inject(ToastController);
+  private route = inject(ActivatedRoute);
+  private entitlements = inject(EntitlementsService);
+  private profileService = inject(UserProfileService);
+  private matchingService = inject(ConsultantMatchingService);
+
   advisors: ConsultantProfile[] = CONSULTANTS;
 
   slots = [
@@ -30,18 +38,7 @@ export class BookMeetingPage implements OnInit {
   recommendedAdvisorName = '';
   advisorLocked = false;
   minimumDate: string = '';
-
-  constructor(
-    private bookingService: BookingService,
-    private router: Router,
-    private toastController: ToastController,
-    private route: ActivatedRoute,
-    private entitlements: EntitlementsService,
-    private profileService: UserProfileService,
-    private matchingService: ConsultantMatchingService
-  ) { }
-
-  ngOnInit(): void { }
+  userPhoneNumber: string = '';
 
   async ionViewWillEnter(): Promise<void> {
     // Ionic keeps tab-adjacent pages alive. Re-read the route every time this
@@ -69,6 +66,9 @@ export class BookMeetingPage implements OnInit {
     const matched = consultantId
       ? CONSULTANTS.find(advisor => advisor.id.toLowerCase() === consultantId)
       : CONSULTANTS.find(advisor => advisor.name.toLowerCase() === inboundAdvisorName.toLowerCase());
+    const profile = await firstValueFrom(this.profileService.userProfile$);
+    this.userPhoneNumber = profile?.phoneNumber || '';
+    const isReschedule = params['reschedule'] === 'true' || params['reschedule'] === true;
 
     // Any Tab 3 recommendation is a single-consultant booking. The explicit
     // flag remains supported, but fromTab3 also enforces the lock so a missing
@@ -82,30 +82,48 @@ export class BookMeetingPage implements OnInit {
       return;
     }
 
-    if (matched) {
-      this.selectedAdvisor = matched;
-      this.recommendedAdvisorName = matched.name;
-      return;
+    // Fetch the profile once — used for the phone number display, and as a
+    // fallback source for advisor matching below.
+    if (inboundAdvisorName) {
+      this.recommendedAdvisorName = inboundAdvisorName.toString().toUpperCase();
+      this.selectedAdvisor = matched ?? this.advisors[0];
+    } else {
+      // No advisor specified (e.g. a direct visit to this page) — fall back
+      // to computing the best match from the user's profile ourselves.
+      const topMatch = this.matchingService.bestMatch(profile);
+      this.recommendedAdvisorName = topMatch.matchScore > 0 ? topMatch.name : '';
+      this.selectedAdvisor = topMatch;
     }
 
-    const profile = await firstValueFrom(this.profileService.userProfile$);
-    const topMatch = this.matchingService.bestMatch(profile);
-    this.recommendedAdvisorName = topMatch.matchScore > 0 ? topMatch.name : '';
-    this.selectedAdvisor = topMatch;
+    // Reschedule flow: pre-fill the date/slot from the user's EXISTING
+    // booking, so they see what they currently have instead of a blank
+    // form that looks identical to booking fresh. This was previously
+    // read (`reschedule` param) but never actually used anywhere.
+    if (isReschedule) {
+      const currentBooking = await firstValueFrom(this.bookingService.activeBooking$);
+      if (currentBooking) {
+        this.selectedDate = currentBooking.bookingDate;
+        const matchingSlot = this.slots.find(s => s.time === currentBooking.timeSlot);
+        if (matchingSlot) {
+          this.selectedSlot = matchingSlot;
+        }
+      }
+    }
   }
-      selectAdvisor(advisor: any) {
-        this.selectedAdvisor = advisor;
-      }
-      selectSlot(slot: any) { this.selectedSlot = slot; }
 
-      onDateChange(event: Event) {
-        this.selectedDate = (event.target as HTMLInputElement).value;
-      }
+  selectAdvisor(advisor: any) {
+    this.selectedAdvisor = advisor;
+  }
+  selectSlot(slot: any) { this.selectedSlot = slot; }
 
-      private toLocalDateInputValue(date: Date): string {
-        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-        return offsetDate.toISOString().slice(0, 10);
-      }
+  onDateChange(event: Event) {
+    this.selectedDate = (event.target as HTMLInputElement).value;
+  }
+
+  private toLocalDateInputValue(date: Date): string {
+    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return offsetDate.toISOString().slice(0, 10);
+  }
 
   async presentSuccessToast(advisorName: string) {
     const toast = await this.toastController.create({

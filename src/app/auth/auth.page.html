@@ -26,6 +26,15 @@
         </div>
       </div>
 
+      <!-- Phone Number (Sign Up only) — used so consultants can call you for booked meetings -->
+      <div class="input-card" *ngIf="isSignUpMode">
+        <ion-icon name="call-outline" class="field-icon"></ion-icon>
+        <div class="field-body">
+          <label>Phone Number</label>
+          <ion-input type="tel" [(ngModel)]="phoneNumber" placeholder="e.g. 9123 4567"></ion-input>
+        </div>
+      </div>
+
       <!-- Email -->
       <div class="input-card">
         <ion-icon name="mail-outline" class="field-icon"></ion-icon>
