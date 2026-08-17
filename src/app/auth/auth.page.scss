@@ -11,30 +11,12 @@
 
   .brand-section {
     text-align: center;
-    margin-top: 30px;
-    margin-bottom: 30px;
+    margin-top: 130px;
+    margin-bottom: 5px;
 
-    .logo-badge {
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      background: #7c5cbf;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px auto;
-
-      ion-icon {
-        font-size: 32px;
-        color: #ffffff;
-      }
-    }
-
-    h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: #111827;
-      margin: 0 0 8px 0;
+    .logo-badge img {
+      width: 300px;
+      height: auto;
     }
 
     p {

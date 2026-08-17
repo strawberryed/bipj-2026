@@ -166,7 +166,14 @@ ion-content {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: $text-muted;
-  padding: 0 4px;
+  display: block;
+  text-align: right;
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
+.msg-row.user .msg-time {
+  color: rgba(255, 255, 255, 0.65);
 }
 
 // ── Typing indicator ─────────────────────────────────────────
@@ -1036,4 +1043,51 @@ ion-modal {
     background: rgba(248, 113, 113, 0.1);
     color: #c62828;
   }
+}
+
+// Reserve space for delete button so layout never shifts
+.msg-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+}
+
+.msg-row.user {
+  flex-direction: row-reverse;
+}
+
+.msg-row.assistant,
+.msg-row.bot {
+  flex-direction: row;
+}
+
+.delete-msg-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: flex-end;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.25;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  ion-icon {
+    font-size: 15px;
+    color: var(--ion-color-medium);
+  }
+}
+
+// Show on hover via parent, no layout shift since space is always reserved
+.msg-row:hover .delete-msg-btn {
+  visibility: visible;
 }

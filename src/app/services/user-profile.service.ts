@@ -118,7 +118,13 @@ export class UserProfileService {
     });
   }
 
-  async signUp(email: string, pass: string, fullName: string, phoneNumber?: string) {
+  async signUp(
+    email: string,
+    pass: string,
+    fullName: string,
+    role: 'customer' | 'consultant' = 'customer',
+    phoneNumber?: string
+  ) {
     const credential = await createUserWithEmailAndPassword(this.auth, email, pass);
     const uid = credential.user.uid;
 
@@ -127,7 +133,7 @@ export class UserProfileService {
       await setDoc(userDocRef, {
         fullName,
         email,
-        role: 'customer',
+        role,
         ...(phoneNumber ? { phoneNumber } : {}),
         isProfileSetupComplete: false,
         isOnboardingCompleted: false,

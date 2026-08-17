@@ -19,7 +19,6 @@
 
   <!-- Messages -->
   <div class="messages-area">
-    <!-- Date divider anchored to the first message's actual date -->
     <div class="time-divider">{{ sessionDateLabel }}</div>
 
     <!-- Welcome message -->
@@ -34,7 +33,6 @@
 
     <!-- Conversation -->
     <ng-container *ngFor="let msg of messages; let msgIndex = index">
-      <!-- Day boundary divider (shown when date changes between messages) -->
       <div class="time-divider" *ngIf="getDayDivider(msgIndex) as dividerLabel">
         {{ dividerLabel }}
       </div>
@@ -44,7 +42,6 @@
         <div class="compare-card">
           <div class="compare-card-title">PLAN COMPARISON</div>
 
-          <!-- Plan header columns -->
           <div class="compare-plans-header"
             [style.grid-template-columns]="'repeat(' + msg.compareCard.plans.length + ', 1fr)'">
             <div class="compare-plan-col" *ngFor="let plan of msg.compareCard.plans">
@@ -63,11 +60,9 @@
                   Why?
                 </button>
               </div>
-
             </div>
           </div>
 
-          <!-- Comparison rows -->
           <table class="compare-table">
             <tr *ngFor="let row of msg.compareCard.rows">
               <td class="row-label">{{ row.label }}</td>
@@ -95,8 +90,8 @@
               <div class="reasoning-panel-label">How Cova got here</div>
               <div class="reasoning-panel-text">{{ msg.reasoning }}</div>
             </div>
+            <span class="msg-time">{{ msgTime(msg) }}</span>
           </div>
-          <span class="msg-time">{{ msgTime(msg) }}</span>
         </div>
       </ng-container>
 
@@ -104,13 +99,14 @@
       <ng-template #plainBubble>
         <div class="msg-row" [ngClass]="msg.role">
 
-          <!-- Attachment (user's uploaded file) -->
+          <!-- Attachment bubble -->
           <div class="bubble bubble-attachment" *ngIf="msg.attachment">
             <ion-icon [name]="msg.attachment.type === 'pdf' ? 'document-text-outline' : 'image-outline'"></ion-icon>
             <span>{{ msg.attachment.name }}</span>
+            <span class="msg-time">{{ msgTime(msg) }}</span>
           </div>
 
-          <!-- Structured blocks -->
+          <!-- Structured blocks bubble -->
           <div class="bubble bubble-structured" *ngIf="!msg.attachment && msg.blocks">
             <span class="confidence-badge" *ngIf="shouldShowConfidence(msg)"
               [ngClass]="getConfidenceClass(msg.confidence!)">
@@ -119,27 +115,22 @@
             </span>
             <ng-container *ngFor="let block of msg.blocks">
 
-              <!-- Text block -->
               <p class="block-text" *ngIf="block.type === 'text'">
                 {{ block.content }}
               </p>
 
-              <!-- Header block -->
               <div class="block-header" *ngIf="block.type === 'header'">
                 {{ block.content }}
               </div>
 
-              <!-- Bullets block -->
               <ul class="block-bullets" *ngIf="block.type === 'bullets'">
                 <li *ngFor="let item of block['items']">{{ item }}</li>
               </ul>
 
-              <!-- Note block -->
               <div class="block-note" *ngIf="block.type === 'note'">
                 {{ block.content }}
               </div>
 
-              <!-- Plan card block (tappable) -->
               <div class="block-plan-card" *ngIf="block.type === 'planCard'" (click)="openPlanDetail(block['planId'])">
                 <div class="plan-card-header">
                   <span class="plan-card-name">{{ getPlanById(block['planId'])?.name }}</span>
@@ -151,7 +142,6 @@
 
             </ng-container>
 
-            <!-- Reasoning toggle (structured blocks bubble) -->
             <button *ngIf="msg.reasoning" class="reasoning-toggle" (click)="toggleReasoning(msgIndex)"
               [attr.aria-label]="isReasoningExpanded(msgIndex) ? 'Hide reasoning' : 'Show reasoning'">
               <ion-icon [name]="isReasoningExpanded(msgIndex) ? 'help-circle' : 'help-circle-outline'"></ion-icon>
@@ -160,9 +150,10 @@
               <div class="reasoning-panel-label">How Cova got here</div>
               <div class="reasoning-panel-text">{{ msg.reasoning }}</div>
             </div>
+            <span class="msg-time">{{ msgTime(msg) }}</span>
           </div>
 
-          <!-- Simple plain text -->
+          <!-- Simple plain text bubble -->
           <div class="bubble" *ngIf="!msg.attachment && !msg.blocks">
             <span class="confidence-badge" *ngIf="shouldShowConfidence(msg)"
               [ngClass]="getConfidenceClass(msg.confidence!)">
@@ -182,9 +173,13 @@
               <div class="reasoning-panel-label">How Cova got here</div>
               <div class="reasoning-panel-text">{{ msg.reasoning }}</div>
             </div>
+            <span class="msg-time">{{ msgTime(msg) }}</span>
           </div>
+          <button class="delete-msg-btn" *ngIf="msg.id"
+            (click)="deleteMessage(msgIndex)">
+            <ion-icon name="trash-outline"></ion-icon>
+          </button>
 
-          <span class="msg-time">{{ msgTime(msg) }}</span>
         </div>
       </ng-template>
 
@@ -214,12 +209,9 @@
     <ion-button fill="clear" (click)="openCompare()" [disabled]="isPolicyDataLoading">
       <ion-icon name="git-compare-outline"></ion-icon>
     </ion-button>
-    <!-- Upload file button -->
     <ion-button fill="clear" (click)="triggerFileUpload()" [disabled]="isLoading">
       <ion-icon name="document-attach-outline"></ion-icon>
     </ion-button>
-
-    <!-- Hidden file input, triggered programmatically via triggerFileUpload() -->
     <input #fileInput type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none"
       (change)="onFileSelected($event)" />
     <ion-input [(ngModel)]="inputText" placeholder="Ask anything..." (keyup.enter)="send()" class="input-field">
@@ -229,6 +221,7 @@
     </ion-button>
   </div>
 </ion-footer>
+
 <!-- Policy plan detail modal -->
 <ion-modal [isOpen]="isPlanDetailOpen" (didDismiss)="closePlanDetail()" [breakpoints]="[0, 0.8]"
   [initialBreakpoint]="0.8">
@@ -247,52 +240,37 @@
 
     <ion-content class="plan-detail-content" *ngIf="selectedPlanDetail as plan">
 
-      <!-- Premium as its own grouped container, like "Transfer details" -->
       <div class="plan-group">
-        <div class="plan-group-header">
-          <span>Premium</span>
-        </div>
+        <div class="plan-group-header"><span>Premium</span></div>
         <div class="plan-row">
           <span class="plan-row-label">Monthly cost</span>
           <span class="plan-row-value plan-row-value--accent">{{ plan.premium }}</span>
         </div>
       </div>
 
-      <!-- Covered -->
       <div class="plan-group">
-        <div class="plan-group-header">
-          <span>Covered</span>
-        </div>
+        <div class="plan-group-header"><span>Covered</span></div>
         <div class="plan-row" *ngFor="let item of plan.covered">
           <span class="plan-row-label">{{ item }}</span>
         </div>
       </div>
 
-      <!-- Not covered -->
       <div class="plan-group">
-        <div class="plan-group-header">
-          <span>Not covered</span>
-        </div>
+        <div class="plan-group-header"><span>Not covered</span></div>
         <div class="plan-row" *ngFor="let item of plan.notCovered">
           <span class="plan-row-label">{{ item }}</span>
         </div>
       </div>
 
-      <!-- Best for -->
       <div class="plan-group">
-        <div class="plan-group-header">
-          <span>Best for</span>
-        </div>
+        <div class="plan-group-header"><span>Best for</span></div>
         <div class="plan-row" *ngFor="let item of plan.bestFor">
           <span class="plan-row-label">{{ item }}</span>
         </div>
       </div>
 
-      <!-- Things to consider -->
       <div class="plan-group">
-        <div class="plan-group-header">
-          <span>Things to consider</span>
-        </div>
+        <div class="plan-group-header"><span>Things to consider</span></div>
         <div class="plan-row" *ngFor="let item of plan.considerations">
           <span class="plan-row-label">{{ item }}</span>
         </div>
@@ -301,7 +279,6 @@
     </ion-content>
   </ng-template>
 </ion-modal>
-
 
 <!-- Compare sheet -->
 <ion-modal [isOpen]="isCompareOpen" (didDismiss)="closeCompare()" [breakpoints]="[0, 0.95]" [initialBreakpoint]="0.95">
@@ -317,7 +294,6 @@
 
     <ion-content class="compare-content">
 
-      <!-- Category dropdown -->
       <div class="compare-category">
         <span class="category-prefix">Selected Product:</span>
         <select class="category-select" [(ngModel)]="currentCategoryLabel" (ngModelChange)="onCategoryChange()">
@@ -325,7 +301,6 @@
         </select>
       </div>
 
-      <!-- Plan checkboxes -->
       <div class="plan-list">
         <div class="plan-item" *ngFor="let plan of currentPlans" [class.checked]="isPlanSelected(plan)"
           (click)="togglePlan(plan)">
@@ -339,7 +314,6 @@
         </div>
       </div>
 
-      <!-- Compare button -->
       <div class="compare-footer">
         <button class="compare-run-btn" [disabled]="selectedPlans.length < 2" (click)="runComparison()">
           Compare Selected Plans &nbsp;→

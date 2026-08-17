@@ -59,8 +59,8 @@ export class Tab4Page implements OnInit, OnDestroy {
     });
   }
   ngOnDestroy() {
-  this.entitlementsSub?.unsubscribe();
-}
+    this.entitlementsSub?.unsubscribe();
+  }
 
   // ── Avatar helpers ──────────────────────────────────────────
 
@@ -90,6 +90,12 @@ export class Tab4Page implements OnInit, OnDestroy {
 
   navigateToLandingPage() {
     this.router.navigate(['/tabs/tab1']);
+  }
+  navigateToRecommendations() {
+    this.router.navigate(['/tabs/tab3']);
+  }
+  navigateToCheckout() {
+    this.router.navigate(['/connect-consultant']);
   }
 
   navigateToEditProfile() {
