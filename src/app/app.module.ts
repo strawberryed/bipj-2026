@@ -9,7 +9,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideFirestore, getFirestore } from '@angular/fire/firestore';
-import { environment } from 'src/environments/environment';
+import { environment } from '../environments/environment';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { getFunctions, provideFunctions } from '@angular/fire/functions';
 

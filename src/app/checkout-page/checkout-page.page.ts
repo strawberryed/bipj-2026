@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Auth } from '@angular/fire/auth';
 import { loadStripe, Stripe, StripeElements, StripeCardElement } from '@stripe/stripe-js';
-import { environment } from 'src/environments/environment';
+import { environment } from '../../environments/environment';
 import { EntitlementsService } from '../services/entitlement.service';
 import { BookingService } from '../services/booking';
 import { ToastController } from '@ionic/angular';
