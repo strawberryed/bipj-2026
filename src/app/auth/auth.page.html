@@ -1,22 +1,27 @@
 <ion-content class="ion-padding custom-theme">
   <div class="auth-container">
-    
+
     <!-- Branding Header -->
     <div class="brand-section">
       <div class="logo-badge">
-        <ion-icon name="shield-checkmark"></ion-icon>
+        <img src="assets/icon/cova-logo.png" alt="Cova Logo" />
       </div>
-      <h1>Cova</h1>
-      <p>{{ isSignUpMode ? (loginRole === 'consultant' ? 'Create a consultant account to manage customers, meetings and applications.' : 'Create an account to build your personalised profile.') : loginRole === 'consultant' ? 'Sign in to manage your customers, meetings and applications.' : 'Welcome back! Log in to access your recommendations.' }}</p>
+      <p>{{ isSignUpMode ? 'Create an account to build your personalised profile.' : 'Welcome back! Log in to access
+        your recommendations.' }}</p>
     </div>
 
     <!-- Auth Form -->
     <div class="form-section">
       <div class="role-switch" role="group" aria-label="Choose account type">
-        <button type="button" [class.active]="loginRole === 'customer'" [attr.aria-pressed]="loginRole === 'customer'" (click)="selectLoginRole('customer')"><ion-icon name="person-outline"></ion-icon><span><strong>Customer</strong><small>My coverage</small></span></button>
-        <button type="button" [class.active]="loginRole === 'consultant'" [attr.aria-pressed]="loginRole === 'consultant'" (click)="selectLoginRole('consultant')"><ion-icon name="briefcase-outline"></ion-icon><span><strong>Consultant</strong><small>Client workspace</small></span></button>
+        <button type="button" [class.active]="loginRole === 'customer'" [attr.aria-pressed]="loginRole === 'customer'"
+          (click)="selectLoginRole('customer')"><ion-icon
+            name="person-outline"></ion-icon><span><strong>Customer</strong><small>My coverage</small></span></button>
+        <button type="button" [class.active]="loginRole === 'consultant'"
+          [attr.aria-pressed]="loginRole === 'consultant'" (click)="selectLoginRole('consultant')"><ion-icon
+            name="briefcase-outline"></ion-icon><span><strong>Consultant</strong><small>Client
+              workspace</small></span></button>
       </div>
-      
+
       <!-- Full Name (Sign Up only) -->
       <div class="input-card" *ngIf="isSignUpMode">
         <ion-icon name="person-outline" class="field-icon"></ion-icon>
