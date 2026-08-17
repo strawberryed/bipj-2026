@@ -109,6 +109,13 @@
         height: 50px;
         border-radius: 12px;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .avatar-fallback-icon {
+          font-size: 56px;
+        }
       }
 
       h3 {

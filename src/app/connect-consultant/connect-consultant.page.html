@@ -48,7 +48,7 @@
       (click)="isPaidUser ? goToBooking(consultant) : upgradeUser()">
       <ion-item lines="none" class="consultant-item" [detail]="isPaidUser" [class.blurred-content]="!isPaidUser">
         <ion-avatar slot="start" class="consultant-avatar">
-          <ion-icon name="person-circle" class="avatar-fallback-icon"></ion-icon>
+          <ion-icon name="person-circle" class="avatar-fallback-icon" [style.color]="consultant.color"></ion-icon>
         </ion-avatar>
         <ion-label>
           <h3>{{ consultant.name }}</h3>
