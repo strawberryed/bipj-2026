@@ -15,11 +15,194 @@
     appearance: none;
     transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 
-    ion-avatar { width: 44px; height: 44px; }
-    h3 { font-weight: bold; margin: 0; font-size: 0.95rem; color: #111; }
-    p { margin: 2px 0 0 0; font-size: 0.8rem; color: #666; }
-  }
+    ion-avatar {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
+      .avatar-fallback-icon {
+        font-size: 50px;
+      }
+    }
+
+    .advisor-card:active {
+      transform: scale(0.99);
+    }
+
+    .advisor-card:focus-visible {
+      outline: 3px solid rgba(91, 37, 124, 0.22);
+      outline-offset: 2px;
+    }
+
+    .advisor-info {
+      flex: 1;
+    }
+
+    .selection-check {
+      color: #8f72a6;
+      font-size: 1.45rem;
+      flex: 0 0 auto;
+    }
+
+    .active-card .selection-check {
+      color: #5b257c;
+    }
+
+    .active-card {
+      background: #ffffff;
+      border: 2px solid #bfa3d4;
+    }
+
+    .recommended-card {
+      box-shadow: 0 0 0 2px rgba(91, 37, 124, 0.12);
+    }
+
+    .recommended-badge {
+      display: inline-flex;
+      margin-top: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #f3e8fc;
+      color: #5b257c;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .slots-grid {
+      margin: 0 -4px;
+
+      .slot-col {
+        padding: 4px;
+      }
+    }
+
+    .slot-box {
+      background: #e5e5ea;
+      padding: 14px;
+      border-radius: 6px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      border: 2px solid transparent;
+
+      .slot-time {
+        font-weight: bold;
+        color: #111;
+      }
+
+      .slot-duration {
+        font-size: 0.75rem;
+        color: #555;
+        margin-top: 2px;
+      }
+    }
+
+    .active-slot {
+      background: #ebdcf5;
+      border: 2px solid #5b257c;
+
+      .slot-time {
+        color: #5b257c;
+      }
+    }
+
+    .ai-banner {
+      background: #b57cd8;
+      color: white;
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+
+      .banner-icon ion-icon {
+        font-size: 1.6rem;
+      }
+
+      strong {
+        font-size: 0.85rem;
+      }
+
+      p {
+        margin: 2px 0 0 0;
+        font-size: 0.75rem;
+        color: #fdfcff;
+      }
+    }
+
+    .confirm-booking-btn {
+      --background: #e5e5ea;
+      --color: #111;
+      --border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .date-picker-field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+
+      >span {
+        color: #4d4d59;
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+    }
+
+    .date-input {
+      display: block;
+      width: 100%;
+      border: 2px solid #d9dce7;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #f8f9fb;
+      font-size: 0.95rem;
+      color: #111;
+      min-height: 48px;
+      outline: none;
+      cursor: pointer;
+      color-scheme: light;
+    }
+
+    .date-input:focus {
+      border-color: #5b257c;
+      background: #fdfcff;
+    }
+
+    .header-section,
+    .section-title,
+    .advisor-info,
+    .advisor-info h3,
+    .advisor-info p,
+    .ai-banner,
+    .banner-text,
+    .banner-text p {
+      min-width: 0;
+      max-width: 100%;
+      white-space: normal;
+      overflow: visible;
+      overflow-wrap: anywhere;
+    }
+
+    .advisor-card {
+      min-height: 76px;
+      height: auto;
+    }
+
+    .advisor-unavailable {
+      padding: 18px;
+      border-radius: 10px;
+      background: #fff4f4;
+      color: #7a2525;
+    }
+
+    .advisor-unavailable p {
+      margin: 6px 0 0;
+    }
+  }
   .advisor-card:active { transform: scale(0.99); }
   .advisor-card:focus-visible { outline: 3px solid rgba(91, 37, 124, 0.22); outline-offset: 2px; }
   .advisor-info { flex: 1; }

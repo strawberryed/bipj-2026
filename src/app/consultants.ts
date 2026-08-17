@@ -16,6 +16,7 @@ export interface ConsultantProfile {
   yearsExperience: number;
   specialties: string[];
   bio: string;
+  color: string; // used to tint the avatar icon so each consultant is visually distinct
 }
 
 export const CONSULTANTS: ConsultantProfile[] = [
@@ -25,7 +26,8 @@ export const CONSULTANTS: ConsultantProfile[] = [
     title: 'Financial and Health Advisor',
     yearsExperience: 8,
     specialties: ['Health Protection', 'Medical Expenses', 'Critical Illness'],
-    bio: 'Helps clients optimise health coverage and employee benefits.'
+    bio: 'Helps clients optimise health coverage and employee benefits.',
+    color: '#7c3aed'
   },
   {
     id: 'bobby',
@@ -33,7 +35,8 @@ export const CONSULTANTS: ConsultantProfile[] = [
     title: 'Senior Financial Advisor',
     yearsExperience: 10,
     specialties: ['Health Protection', 'Family Protection', 'Income Loss'],
-    bio: 'Specialises in switching and upgrading existing insurance plans.'
+    bio: 'Specialises in switching and upgrading existing insurance plans.',
+    color: '#2563eb'
   },
   {
     id: 'johnny-lee',
@@ -41,7 +44,8 @@ export const CONSULTANTS: ConsultantProfile[] = [
     title: 'Group and Individual Plans',
     yearsExperience: 5,
     specialties: ['Savings', 'Retirement', 'Wealth Accumulation'],
-    bio: 'Focuses on group and individual wealth-building plans.'
+    bio: 'Focuses on group and individual wealth-building plans.',
+    color: '#059669'
   },
   {
     id: 'melissa-tan',
@@ -49,7 +53,8 @@ export const CONSULTANTS: ConsultantProfile[] = [
     title: 'Retirement & Legacy Planning Specialist',
     yearsExperience: 12,
     specialties: ['Retirement', 'Wealth Accumulation', 'Savings'],
-    bio: 'Helps clients plan retirement income and legacy goals.'
+    bio: 'Helps clients plan retirement income and legacy goals.',
+    color: '#db2777'
   },
   {
     id: 'daniel-goh',
@@ -57,7 +62,8 @@ export const CONSULTANTS: ConsultantProfile[] = [
     title: 'Family Protection Advisor',
     yearsExperience: 7,
     specialties: ['Family Protection', 'Income Loss', 'Critical Illness'],
-    bio: 'Specialises in coverage for growing families and sole breadwinners.'
+    bio: 'Specialises in coverage for growing families and sole breadwinners.',
+    color: '#ea580c'
   },
   {
     id: 'priya-nair',
@@ -65,6 +71,7 @@ export const CONSULTANTS: ConsultantProfile[] = [
     title: 'Young Professionals Advisor',
     yearsExperience: 4,
     specialties: ['Health Protection', 'Savings', 'Medical Expenses'],
-    bio: 'Helps young working adults start their first protection and savings plans.'
+    bio: 'Helps young working adults start their first protection and savings plans.',
+    color: '#0891b2'
   }
 ];

@@ -15,27 +15,30 @@
   <h2 class="section-title">{{ advisorLocked ? 'BOOK WITH YOUR RECOMMENDED CONSULTANT' : 'YOUR MATCHED ADVISORS' }}</h2>
 
   <div class="advisor-list" *ngIf="advisors.length; else advisorUnavailable">
-    <button type="button" class="advisor-card" 
-         *ngFor="let advisor of advisors" 
-         [class.active-card]="selectedAdvisor?.name === advisor.name"
-         [class.recommended-card]="advisor.name === recommendedAdvisorName"
-         [attr.aria-pressed]="selectedAdvisor?.name === advisor.name"
-         (click)="selectAdvisor(advisor)">
+    <button type="button" class="advisor-card" *ngFor="let advisor of advisors"
+      [class.active-card]="selectedAdvisor?.name === advisor.name"
+      [class.recommended-card]="advisor.name === recommendedAdvisorName"
+      [attr.aria-pressed]="selectedAdvisor?.name === advisor.name" (click)="selectAdvisor(advisor)">
       <ion-avatar>
-        <ion-icon name="person-circle" class="avatar-fallback-icon"></ion-icon>
+        <ion-icon name="person-circle" class="avatar-fallback-icon" [style.color]="advisor.color"></ion-icon>
       </ion-avatar>
       <div class="advisor-info">
         <h3>{{ advisor.name }}</h3>
         <p>{{ advisor.title }}</p>
         <span class="recommended-badge" *ngIf="advisor.name === recommendedAdvisorName">Recommended for you</span>
       </div>
-      <ion-icon class="selection-check" [name]="selectedAdvisor?.name === advisor.name ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+      <ion-icon class="selection-check"
+        [name]="selectedAdvisor?.name === advisor.name ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
     </button>
   </div>
-  <ng-template #advisorUnavailable><div class="advisor-unavailable"><strong>Recommended consultant unavailable</strong><p>Please return to your timeline and try again.</p></div></ng-template>
+  <ng-template #advisorUnavailable>
+    <div class="advisor-unavailable"><strong>Recommended consultant unavailable</strong>
+      <p>Please return to your timeline and try again.</p>
+    </div>
+  </ng-template>
 
   <h2 class="section-title ion-margin-top">SELECT DATE</h2>
-  
+
   <label class="date-picker-field">
     <span>Preferred Meeting Date</span>
     <input type="date" class="date-input" [min]="minimumDate" [value]="selectedDate" (change)="onDateChange($event)" />
