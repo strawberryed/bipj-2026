@@ -8,6 +8,9 @@
 </ion-header>
 
 <ion-content class="ion-padding checkout-page">
+  <section class="checkout-hero" *ngIf="bookingQueryParams">
+    <span>SECURE BOOKING</span><h1>Confirm your consultation</h1><p>Review the appointment details before completing payment.</p>
+  </section>
   <h2 class="section-title">ORDER SUMMARY</h2>
   <div class="summary-box">
     <div class="summary-row item-row" *ngIf="includeReport">
@@ -34,13 +37,17 @@
 
   <h2 class="section-title ion-margin-top">PAYMENT METHOD</h2>
   <div class="card-brands ion-margin-bottom">
-    <ion-chip class="brand-chip" [class.active-chip]="selectedMethod === 'card'" (click)="setPaymentMethod('card')">
+    <ion-chip class="brand-chip" [disabled]="!cardPaymentsConfigured" [class.active-chip]="selectedMethod === 'card'" (click)="setPaymentMethod('card')">
       Credit Card
     </ion-chip>
     <ion-chip class="brand-chip" [class.active-chip]="selectedMethod === 'nets'" (click)="setPaymentMethod('nets')">
       NETS QR
     </ion-chip>
   </div>
+  <p class="payment-config-note" *ngIf="!cardPaymentsConfigured">
+    Test checkout is active. Connect Stripe keys to accept real card payments.
+  </p>
+  <div class="checkout-error" *ngIf="checkoutErrorMessage"><ion-icon name="alert-circle-outline"></ion-icon><span>{{ checkoutErrorMessage }}</span></div>
 
   <form *ngIf="selectedMethod === 'card'" [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form">
     <div class="input-group">
@@ -62,13 +69,15 @@
   </form>
 
   <div *ngIf="selectedMethod === 'nets'" class="nets-sim-box ion-text-center">
-    <p class="nets-instructions">Scan QR with your NETSPay or Banking App to complete checkout</p>
+    <span class="test-mode-pill">TEST PAYMENT</span><h3>NETS QR checkout</h3>
+    <p class="nets-instructions">Use the test confirmation below to complete this prototype booking.</p>
     <div class="qr-placeholder ion-margin-vertical">
       <ion-icon name="qr-code-outline"></ion-icon>
     </div>
     
     <ion-button expand="block" class="pay-btn nets-btn" [disabled]="isProcessing" (click)="processPayment()">
-      SIMULATE NETS QR SUCCESS
+      <ion-spinner *ngIf="isProcessing" name="crescent"></ion-spinner>
+      <span *ngIf="!isProcessing">CONFIRM TEST PAYMENT · ${{ totalPrice | number:'1.2-2' }}</span>
     </ion-button>
   </div>
 </ion-content>

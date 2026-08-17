@@ -1,1 +1,24 @@
 
+.consultant-tab-bar {
+  --background: #ffffff;
+  --border: 1px solid #d6e7fb;
+  min-height: 68px;
+  box-shadow: 0 -10px 30px rgba(21, 95, 180, 0.12);
+}
+
+.consultant-tab-bar ion-tab-button {
+  --color: #60758f;
+  --color-selected: #0f63c7;
+  --ripple-color: #b9d8fa;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.consultant-tab-bar ion-tab-button.tab-selected {
+  background: #edf6ff;
+}
+
+.consultant-tab-bar ion-icon {
+  font-size: 23px;
+  margin-bottom: 3px;
+}

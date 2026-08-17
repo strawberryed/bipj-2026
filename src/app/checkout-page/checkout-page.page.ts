@@ -1,12 +1,13 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Auth } from '@angular/fire/auth';
 import { loadStripe, Stripe, StripeElements, StripeCardElement } from '@stripe/stripe-js';
 import { environment } from 'src/environments/environment';
 import { EntitlementsService } from '../services/entitlement.service';
 import { BookingService } from '../services/booking';
+import { ToastController } from '@ionic/angular';
 
 @Component({
   selector: 'app-checkout-page',
@@ -22,16 +23,19 @@ export class CheckoutPage implements OnInit, AfterViewInit, OnDestroy {
   private bookingService = inject(BookingService);
   private functions = inject(Functions);
   private auth = inject(Auth);
+  private toastCtrl = inject(ToastController);
 
   paymentForm!: FormGroup;
   includeReport: boolean = true;
   includeConsultant: boolean = true;
   totalPrice: number = 15.00;
   selectedMethod: 'card' | 'nets' = 'card';
+  cardPaymentsConfigured = !!environment.stripePublishableKey?.trim();
   bookingQueryParams: Record<string, string> | null = null;
 
   isProcessing = false;
   cardErrorMessage = '';
+  checkoutErrorMessage = '';
 
   private stripe: Stripe | null = null;
   private elements: StripeElements | null = null;
@@ -66,6 +70,10 @@ export class CheckoutPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async ngAfterViewInit() {
+    if (!this.cardPaymentsConfigured) {
+      this.selectedMethod = 'nets';
+      return;
+    }
     this.stripe = await loadStripe(environment.stripePublishableKey);
     if (this.selectedMethod === 'card') {
       this.mountCardElement();
@@ -96,6 +104,10 @@ export class CheckoutPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setPaymentMethod(method: 'card' | 'nets') {
+    if (method === 'card' && !this.cardPaymentsConfigured) {
+      this.cardErrorMessage = 'Card payments are not configured. Add the Stripe publishable key or use NETS QR.';
+      return;
+    }
     this.selectedMethod = method;
     if (method === 'nets') {
       this.paymentForm.disable();
@@ -117,14 +129,20 @@ export class CheckoutPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.isProcessing) return;
     this.isProcessing = true;
     this.cardErrorMessage = '';
+    this.checkoutErrorMessage = '';
 
     try {
+      if (this.bookingQueryParams) {
+        const required = ['recommendedAdvisor', 'consultantId', 'bookingDate', 'timeSlot', 'bookingType'];
+        if (required.some(field => !this.bookingQueryParams?.[field]?.trim())) throw new Error('Your booking details are incomplete. Please return and select the consultant, date and time again.');
+        await this.bookingService.assertSlotAvailable(this.bookingQueryParams['consultantId'], this.bookingQueryParams['bookingDate'], this.bookingQueryParams['timeSlot'], this.bookingQueryParams['recommendedAdvisor']);
+      }
       if (this.selectedMethod === 'card') {
         await this.payWithCard();
       } else {
         // NETS QR stays simulated here — Stripe doesn't support NETS, so a real
         // NETS integration would go through a separate SG payment gateway.
-        alert('🇸🇬 NETS QR Dynamic Broadcast Token Verified! (simulated)');
+        await new Promise(resolve => setTimeout(resolve, 700));
       }
 
       // Persist entitlements based on what was actually purchased.
@@ -134,18 +152,23 @@ export class CheckoutPage implements OnInit, AfterViewInit, OnDestroy {
       });
       if (this.bookingQueryParams) {
         await this.bookingService.setBooking({
+          consultantId: this.bookingQueryParams['consultantId'],
           consultantName: this.bookingQueryParams['recommendedAdvisor'],
           consultantTitle: this.bookingQueryParams['consultantTitle'],
           bookingDate: this.bookingQueryParams['bookingDate'],
           timeSlot: this.bookingQueryParams['timeSlot'],
           type: this.bookingQueryParams['bookingType'],
         });
+        const toast = await this.toastCtrl.create({ message: 'Payment completed and meeting confirmed.', duration: 2800, position: 'top', color: 'success', icon: 'checkmark-circle-outline' });
+        await toast.present();
         await this.router.navigate(['/tabs/tab1']);
       } else {
         await this.router.navigate(['/connect-consultant']);
       }
     } catch (error: any) {
-      this.cardErrorMessage = error.message || 'Something went wrong. Please try again.';
+      const message = error.message || 'Something went wrong. Please try again.';
+      this.checkoutErrorMessage = message;
+      if (this.selectedMethod === 'card') this.cardErrorMessage = message;
     } finally {
       this.isProcessing = false;
     }

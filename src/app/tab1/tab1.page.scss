@@ -414,3 +414,71 @@ ion-modal {
     font-size: 18px;
   }
 }
+
+ion-modal.recommendations-modal,
+ion-modal.plan-comparison-modal {
+  --width: min(760px, calc(100vw - 32px));
+  --height: min(880px, calc(100dvh - 32px));
+  --border-radius: 24px;
+  --box-shadow: 0 28px 80px rgba(37, 19, 49, 0.28);
+}
+
+ion-modal.plan-comparison-modal { --width: min(1100px, calc(100vw - 32px)); }
+
+.recommendations-content,
+.comparison-content { --background: #f7f5fa; }
+
+.recommendations-intro,
+.comparison-summary {
+  padding: 24px 22px 20px;
+  background: linear-gradient(145deg, #482267, #7950ae);
+  color: #fff;
+
+  > span { font-size: 11px; font-weight: 800; letter-spacing: .14em; opacity: .76; }
+  h2 { margin: 6px 0 7px; color: #fff; font-size: 24px; font-weight: 750; }
+  p { max-width: 620px; margin: 0; color: rgba(255,255,255,.82); font-size: 13px; line-height: 1.55; }
+}
+
+.recommendations-loading,
+.empty-recommendations { display: grid; place-items: center; gap: 8px; min-height: 240px; color: #786b80; }
+.recommendation-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 16px; }
+.recommendation-card { display: flex; flex-direction: column; min-width: 0; padding: 17px; border: 1px solid #e5dced; border-radius: 18px; background: #fff; box-shadow: 0 6px 22px rgba(54,26,72,.06); }
+.recommendation-topline { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.recommendation-topline > strong { margin-left: auto; color: #6d2b9e; font-size: 13px; }
+.best-badge, .category-badge { padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 750; }
+.best-badge { background: #6e2da4; color: #fff; }
+.category-badge { background: #f0e8f7; color: #674378; }
+.recommendation-card h3 { margin: 13px 0 6px; color: #2f183e; font-size: 18px; line-height: 1.25; }
+.plan-description { margin: 0; color: #756c7a; font-size: 13px; line-height: 1.5; }
+.plan-premium { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 9px; padding: 11px 12px; border-radius: 11px; background: #f8f4fb; color: #68299a; }
+.plan-premium small { color: #786d7e; font-size: 11px; }
+.plan-premium strong { font-size: 14px; }
+.match-reasons { margin: 9px 0 12px; padding-left: 18px; color: #54465c; font-size: 12px; line-height: 1.55; }
+.coverage-preview { display: grid; gap: 4px; margin: auto 0 12px; padding-top: 3px; color: #63566a; font-size: 12px; line-height: 1.45; }
+.coverage-preview small { color: #8c7d93; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.compare-select { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 43px; border: 1px solid #7741a1; border-radius: 12px; background: #fff; color: #6d2b9e; font-size: 12px; font-weight: 750; cursor: pointer; }
+.compare-select.selected { background: #6d2b9e; color: #fff; }
+.compare-select:disabled { opacity: .42; }
+.recommendation-footer { padding: 11px 16px max(11px, env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -5px 18px rgba(40,20,52,.09); }
+.recommendation-footer button { width: 100%; min-height: 47px; border: 0; border-radius: 13px; background: #6d2b9e; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; }
+.recommendation-footer button:disabled { background: #d5ccd9; }
+
+.comparison-scroll { overflow: auto; padding: 16px; }
+.comparison-scroll table { width: 100%; min-width: 780px; overflow: hidden; border: 1px solid #e3d9e9; border-collapse: separate; border-spacing: 0; border-radius: 15px; background: #fff; font-size: 12px; }
+.comparison-scroll th, .comparison-scroll td { min-width: 200px; padding: 13px; border-right: 1px solid #ece4f0; border-bottom: 1px solid #ece4f0; color: #514657; vertical-align: top; text-align: left; line-height: 1.5; }
+.comparison-scroll th:first-child { position: sticky; left: 0; z-index: 2; min-width: 120px; background: #f7f1fb; color: #552276; font-weight: 800; }
+.comparison-scroll thead th { background: #63308f; color: #fff; font-size: 12px; }
+.comparison-scroll thead th:first-child { z-index: 3; background: #4f226f; }
+.comparison-scroll tr:last-child > * { border-bottom: 0; }
+.comparison-scroll th:last-child, .comparison-scroll td:last-child { border-right: 0; }
+.comparison-scroll ul { margin: 0; padding-left: 16px; }
+.comparison-scroll li { margin-bottom: 5px; }
+.fit-score { color: #6d2b9e; font-size: 16px; }
+
+@media (max-width: 680px) {
+  ion-modal.recommendations-modal,
+  ion-modal.plan-comparison-modal { --width: 100%; --height: 100%; --border-radius: 0; }
+  .recommendation-list { grid-template-columns: 1fr; padding: 12px; }
+  .recommendations-intro, .comparison-summary { padding: 20px 16px 17px; }
+  .recommendations-intro h2, .comparison-summary h2 { font-size: 21px; }
+}

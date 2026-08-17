@@ -470,10 +470,13 @@ $text-muted: #6c757d;
 }
 
 .profile-name {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: $text-dark;
-  margin: 0 0 4px;
+  max-width: 100%;
+  font-size: 1.75rem;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #f4e8ff;
+  text-shadow: 0 2px 12px rgba(116, 43, 165, .42);
+  margin: 0 0 6px;
 }
 
 .profile-email {

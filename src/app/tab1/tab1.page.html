@@ -223,7 +223,7 @@
       </ion-col>
 
       <ion-col size="6">
-        <ion-card class="action-card" button="true" routerLink="/tabs/tab4">
+        <ion-card class="action-card" button="true" (click)="openRecommendations()">
           <ion-card-content>
             <ion-icon name="document-text-outline" class="action-icon"></ion-icon>
             <h2>Recommendations</h2>
@@ -245,4 +245,74 @@
       </ion-col>
     </ion-row>
   </ion-grid>
+
+  <ion-modal [isOpen]="recommendationsOpen" (didDismiss)="closeRecommendations()" class="recommendations-modal">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Recommended for you</ion-title>
+          <ion-buttons slot="end"><ion-button (click)="closeRecommendations()"><ion-icon name="close-outline"></ion-icon></ion-button></ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="recommendations-content">
+        <section class="recommendations-intro">
+          <span>PERSONALISED MATCHES</span>
+          <h2>Plans matched to your profile</h2>
+          <p>Scores use your goals, concern, budget, dependants and existing coverage. Select 2–3 plans for a detailed comparison.</p>
+        </section>
+        <div class="recommendations-loading" *ngIf="recommendationsLoading"><ion-spinner name="crescent"></ion-spinner><p>Matching plans…</p></div>
+        <div class="recommendation-list" *ngIf="!recommendationsLoading">
+          <article class="recommendation-card" *ngFor="let plan of recommendedPlans; let first = first">
+            <div class="recommendation-topline">
+              <span class="best-badge" *ngIf="first">Best match</span>
+              <span class="category-badge">{{ plan.category }}</span>
+              <strong>{{ plan.matchScore }}% fit</strong>
+            </div>
+            <h3>{{ plan.name }}</h3>
+            <p class="plan-description">{{ plan.description }}</p>
+            <div class="plan-premium"><small>Premium</small><strong>{{ plan.premium }}</strong></div>
+            <ul class="match-reasons"><li *ngFor="let reason of plan.matchReasons">{{ reason }}</li></ul>
+            <div class="coverage-preview" *ngIf="plan.covered?.length"><small>Key coverage</small><span>{{ coveragePreview(plan) }}</span></div>
+            <button type="button" class="compare-select" [class.selected]="isSelectedForComparison(plan.id)"
+              [disabled]="comparisonSelection.length >= 3 && !isSelectedForComparison(plan.id)" (click)="toggleComparison(plan)">
+              <ion-icon [name]="isSelectedForComparison(plan.id) ? 'checkmark-circle' : 'add-circle-outline'"></ion-icon>
+              {{ isSelectedForComparison(plan.id) ? 'Selected for comparison' : 'Add to comparison' }}
+            </button>
+          </article>
+          <div class="empty-recommendations" *ngIf="!recommendedPlans.length"><ion-icon name="documents-outline"></ion-icon><p>No plans are currently available.</p></div>
+        </div>
+      </ion-content>
+      <ion-footer class="recommendation-footer" *ngIf="recommendedPlans.length">
+        <button type="button" [disabled]="comparisonSelection.length < 2" (click)="openComparison()">
+          Compare {{ comparisonSelection.length || '' }} {{ comparisonSelection.length === 1 ? 'plan' : 'plans' }}
+        </button>
+      </ion-footer>
+    </ng-template>
+  </ion-modal>
+
+  <ion-modal [isOpen]="comparisonOpen" (didDismiss)="comparisonOpen = false" class="plan-comparison-modal">
+    <ng-template>
+      <ion-header class="ion-no-border"><ion-toolbar><ion-buttons slot="start"><ion-button (click)="comparisonOpen = false"><ion-icon name="arrow-back-outline"></ion-icon></ion-button></ion-buttons><ion-title>Plan comparison</ion-title></ion-toolbar></ion-header>
+      <ion-content class="comparison-content">
+        <section class="comparison-summary"><span>DETAILED COMPARISON</span><h2>Your selected plans</h2><p>All values below come directly from the current plan records.</p></section>
+        <div class="comparison-scroll">
+          <table>
+            <thead><tr><th>Feature</th><th *ngFor="let plan of comparisonSelection">{{ plan.name }}</th></tr></thead>
+            <tbody>
+              <tr><th>Profile fit</th><td *ngFor="let plan of comparisonSelection"><strong class="fit-score">{{ plan.matchScore }}%</strong></td></tr>
+              <tr><th>Category</th><td *ngFor="let plan of comparisonSelection">{{ plan.category }}</td></tr>
+              <tr><th>Premium</th><td *ngFor="let plan of comparisonSelection"><strong>{{ plan.premium }}</strong></td></tr>
+              <tr><th>Description</th><td *ngFor="let plan of comparisonSelection">{{ plan.description }}</td></tr>
+              <tr><th>Why it matches</th><td *ngFor="let plan of comparisonSelection"><ul><li *ngFor="let item of plan.matchReasons">{{ item }}</li></ul></td></tr>
+              <tr><th>Covered</th><td *ngFor="let plan of comparisonSelection"><ul><li *ngFor="let item of plan.covered">{{ item }}</li><li *ngIf="!plan.covered?.length">Not specified</li></ul></td></tr>
+              <tr><th>Not covered</th><td *ngFor="let plan of comparisonSelection"><ul><li *ngFor="let item of plan.notCovered">{{ item }}</li><li *ngIf="!plan.notCovered?.length">Not specified</li></ul></td></tr>
+              <tr><th>Best for</th><td *ngFor="let plan of comparisonSelection"><ul><li *ngFor="let item of plan.bestFor">{{ item }}</li><li *ngIf="!plan.bestFor?.length">Not specified</li></ul></td></tr>
+              <tr><th>Risks</th><td *ngFor="let plan of comparisonSelection"><ul><li *ngFor="let item of plan.risks">{{ item }}</li><li *ngIf="!plan.risks?.length">Not specified</li></ul></td></tr>
+              <tr><th>Considerations</th><td *ngFor="let plan of comparisonSelection"><ul><li *ngFor="let item of plan.considerations">{{ item }}</li><li *ngIf="!plan.considerations?.length">Not specified</li></ul></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>

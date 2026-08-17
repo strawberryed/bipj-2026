@@ -64,6 +64,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   messages: Message[] = [];
   inputText = '';
+  attachedProposal: Plan | null = null;
 
   loadingState: 'sending' | 'analyzing' | 'comparing' | null = null;
 
@@ -151,6 +152,15 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     });
 
     this.route.queryParams.subscribe(async params => {
+      if (params['question']) this.inputText = String(params['question']);
+      if (params['planId']) {
+        this.attachedProposal = this.policyData.getPlanById(String(params['planId'])) ?? null;
+      }
+      if (params['compare'] === 'true') {
+        const initialPlan = this.policyData.getPlanById(String(params['comparisonPlanId'] ?? ''));
+        this.selectedPlans = initialPlan ? [initialPlan] : [];
+        this.isCompareOpen = true;
+      }
       if (params['downloadSummary'] === 'true') {
         // Clear the param immediately so it doesn't retrigger on future visits
         this.router.navigate([], {
@@ -226,7 +236,7 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
 
   // Profile updates (agentic profile-building)
   private async applyProfileUpdate(update?: Record<string, any>) {
-    if (!update || !this.currentUid) return;
+    if (!update || !this.currentUid || this.profile.role === 'consultant') return;
     try {
       // Special-case existingPlans: Firestore merge treats arrays as scalars
       // (replaces the whole array), but semantically the AI's extraction
@@ -265,10 +275,16 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
       return;
     }
 
+    const proposal = this.attachedProposal;
     this.inputText = '';
+    this.attachedProposal = null;
     this.loadingState = 'sending';
 
-    const userMsg: Message = { role: 'user', content: message, timestamp: new Date() };
+    const userMsg: Message = {
+      role: 'user', content: message,
+      proposal: proposal ? { id: proposal.id, name: proposal.name } : undefined,
+      timestamp: new Date()
+    };
     this.messages.push(userMsg);
     await this.persistMessage(userMsg);
 
@@ -277,7 +293,17 @@ export class ChatbotPage implements AfterViewChecked, OnInit, OnDestroy {
     try {
       const liveProfile = await this.profileService.getCurrentProfile() ?? this.profile;
       console.log('[send] liveProfile being sent to Gemini:', liveProfile);
-      const res = await this.gemini.sendMessage(message, history, liveProfile);
+      const proposalContext = proposal ? [
+        'The customer attached this specific insurance proposal:',
+        `Name: ${proposal.name}`,
+        `Category: ${proposal.category}`,
+        `Premium: ${proposal.premium}`,
+        `Description: ${proposal.description}`,
+        `Covered: ${proposal.covered?.join(', ') || 'Not specified'}`,
+        `Exclusions: ${proposal.notCovered?.join(', ') || 'Not specified'}`,
+        `Customer question: ${message}`
+      ].join('\n') : message;
+      const res = await this.gemini.sendMessage(proposalContext, history, liveProfile);
 
       const newMessage: Message = Array.isArray(res.reply)
         ? { role: 'assistant', content: '', blocks: res.reply as ReplyBlock[], timestamp: new Date() }

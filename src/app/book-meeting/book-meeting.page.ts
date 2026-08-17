@@ -39,6 +39,8 @@ export class BookMeetingPage {
   advisorLocked = false;
   minimumDate: string = '';
   userPhoneNumber: string = '';
+  blockedDates: string[] = [];
+  dateAvailabilityMessage = '';
 
   async ionViewWillEnter(): Promise<void> {
     // Ionic keeps tab-adjacent pages alive. Re-read the route every time this
@@ -79,6 +81,9 @@ export class BookMeetingPage {
       this.advisors = matched ? [matched] : [];
       this.selectedAdvisor = matched ?? null;
       this.recommendedAdvisorName = matched?.name ?? inboundAdvisorName.toUpperCase();
+      if (this.selectedAdvisor) {
+        await this.refreshBlockedDates();
+      }
       return;
     }
 
@@ -93,6 +98,9 @@ export class BookMeetingPage {
       const topMatch = this.matchingService.bestMatch(profile);
       this.recommendedAdvisorName = topMatch.matchScore > 0 ? topMatch.name : '';
       this.selectedAdvisor = topMatch;
+    }
+    if (this.selectedAdvisor) {
+      await this.refreshBlockedDates();
     }
 
     // Reschedule flow: pre-fill the date/slot from the user's EXISTING
@@ -111,13 +119,53 @@ export class BookMeetingPage {
     }
   }
 
-  selectAdvisor(advisor: any) {
+  async selectAdvisor(advisor: any) {
     this.selectedAdvisor = advisor;
+    this.selectedSlot = null;
+    this.selectedDate = '';
+    this.dateAvailabilityMessage = '';
+    if (this.selectedAdvisor) {
+      await this.refreshBlockedDates();
+    }
   }
-  selectSlot(slot: any) { this.selectedSlot = slot; }
+  get selectedDateBlocked(): boolean {
+    return !!this.selectedDate && this.blockedDates.includes(this.selectedDate);
+  }
+
+  selectSlot(slot: any) {
+    if (this.selectedDateBlocked) {
+      this.selectedSlot = null;
+      this.dateAvailabilityMessage = `${this.selectedAdvisor?.name || 'This consultant'} is unavailable on that date. Please select another booking date.`;
+      return;
+    }
+    this.selectedSlot = slot;
+  }
+
+  private async refreshBlockedDates(): Promise<void> {
+    if (!this.selectedAdvisor) {
+      this.blockedDates = [];
+      this.dateAvailabilityMessage = '';
+      return;
+    }
+    this.blockedDates = await this.bookingService.getBlockedDates(this.selectedAdvisor.id);
+    if (this.selectedDate && this.blockedDates.includes(this.selectedDate)) {
+      this.selectedDate = '';
+      this.selectedSlot = null;
+      this.dateAvailabilityMessage = `${this.selectedAdvisor.name} is unavailable on that date. Please choose another date.`;
+    } else {
+      this.dateAvailabilityMessage = '';
+    }
+  }
 
   onDateChange(event: Event) {
-    this.selectedDate = (event.target as HTMLInputElement).value;
+    const nextDate = (event.target as HTMLInputElement).value;
+    this.selectedDate = nextDate;
+    if (nextDate && this.blockedDates.includes(nextDate)) {
+      this.selectedSlot = null;
+      this.dateAvailabilityMessage = `${this.selectedAdvisor?.name || 'This consultant'} is unavailable on that date. Please select another booking date.`;
+      return;
+    }
+    this.dateAvailabilityMessage = '';
   }
 
   private toLocalDateInputValue(date: Date): string {
@@ -151,6 +199,10 @@ export class BookMeetingPage {
 
   async confirmBooking() {
     if (!this.selectedAdvisor || !this.selectedSlot || !this.selectedDate) return;
+    if (this.blockedDates.includes(this.selectedDate)) {
+      this.dateAvailabilityMessage = `${this.selectedAdvisor.name} is unavailable on that date. Please choose another date.`;
+      return;
+    }
 
     if (this.advisorLocked) {
       await this.router.navigate(['/checkout-page'], {
@@ -172,6 +224,7 @@ export class BookMeetingPage {
 
     try {
       await this.bookingService.setBooking({
+        consultantId: this.selectedAdvisor.id,
         consultantName: this.selectedAdvisor.name,
         consultantTitle: this.selectedAdvisor.title,
         bookingDate: this.selectedDate,

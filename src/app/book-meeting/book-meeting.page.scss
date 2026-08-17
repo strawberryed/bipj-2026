@@ -65,6 +65,22 @@
     .slot-duration { font-size: 0.75rem; color: #555; margin-top: 2px; }
   }
 
+  .slot-box.disabled-slot {
+    opacity: .45;
+    cursor: not-allowed;
+    pointer-events: auto;
+    filter: grayscale(.35);
+  }
+
+  .slot-box.disabled-slot .slot-time::after {
+    content: 'Unavailable';
+    display: block;
+    margin-top: 3px;
+    color: #a34b35;
+    font-size: .62rem;
+    font-weight: 700;
+  }
+
   .active-slot {
     background: #ebdcf5;
     border: 2px solid #5b257c;

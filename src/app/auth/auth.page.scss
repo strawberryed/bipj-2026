@@ -184,3 +184,45 @@
     margin-top: 24px;
   }
 }
+
+.custom-theme.consultant-theme {
+  --background: #f4f9ff;
+
+  .brand-section .logo-badge { background: #175fc4; }
+
+  .form-section {
+    .role-switch {
+      border-color: #d5e6fb;
+      background: #edf5ff;
+
+      button {
+        color: #60758f;
+
+        ion-icon { background: rgba(23, 95, 196, 0.1); }
+
+        &.active {
+          border-color: #bdd7f6;
+          color: #175fc4;
+          box-shadow: 0 5px 14px rgba(23, 95, 196, 0.14);
+        }
+      }
+    }
+
+    .input-card {
+      border-color: #dbe9f8;
+
+      .field-icon {
+        color: #175fc4;
+        background: #e5f1ff;
+      }
+    }
+
+    .primary-btn {
+      --background: #175fc4;
+      --background-hover: #134895;
+      --background-activated: #134895;
+    }
+
+    .toggle-mode p a { color: #175fc4; }
+  }
+}

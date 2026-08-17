@@ -1,5 +1,7 @@
 .checkout-page {
-  --background: #ffffff;
+  --background: #f7f4fa;
+  --padding-start: max(16px, calc((100% - 560px) / 2));
+  --padding-end: max(16px, calc((100% - 560px) / 2));
 
   ion-content {
     --background: #ffffff;
@@ -30,8 +32,10 @@
   }
 
   .summary-box {
-    background: #e5e5ea;
-    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #e6ddeb;
+    border-radius: 16px;
+    box-shadow: 0 7px 24px rgba(54, 27, 69, .06);
     overflow: hidden;
 
     .summary-row {
@@ -72,7 +76,7 @@
     }
 
     .total-row {
-      background: #d1d1d6;
+      background: #f3edf7;
       font-weight: bold;
 
       .total-label {
@@ -161,10 +165,11 @@
   }
 
   .nets-sim-box {
-    background: #f4f4f7;
+    background: #ffffff;
     padding: 32px 20px;
-    border-radius: 6px;
-    border: 1px solid #e5e5ea;
+    border-radius: 18px;
+    border: 1px solid #e5daeb;
+    box-shadow: 0 8px 26px rgba(54,27,69,.07);
 
     .nets-instructions {
       font-size: 0.85rem;
@@ -173,12 +178,12 @@
     }
 
     .qr-placeholder {
-      font-size: 8rem;
-      color: #111111;
+      font-size: 7rem;
+      color: #552579;
     }
 
     .nets-btn {
-      --background: #009688;
+      --background: #64288f;
       --color: white;
       --border-radius: 6px;
       border-radius: 6px;
@@ -281,5 +286,23 @@
   display: block;
   width: 100%;
 }
+.checkout-hero { margin:-16px -16px 22px;padding:26px 22px 23px;border-radius:0 0 22px 22px;background:linear-gradient(145deg,#482267,#7950ae);color:#fff; }
+.checkout-hero span { font-size:10px;font-weight:850;letter-spacing:.13em;opacity:.75; }
+.checkout-hero h1 { margin:5px 0 6px;color:#fff;font-size:1.55rem; }
+.checkout-hero p { margin:0;color:rgba(255,255,255,.8);font-size:.78rem;line-height:1.45; }
+.checkout-error { display:flex;align-items:flex-start;gap:8px;margin:0 0 14px;padding:12px 13px;border:1px solid #efc0ba;border-radius:11px;background:#fff1ef;color:#9b4036;font-size:.76rem;line-height:1.45; }
+.checkout-error ion-icon { flex:0 0 auto;margin-top:1px;font-size:17px; }
+.test-mode-pill { display:inline-flex;padding:5px 9px;border-radius:999px;background:#eee2f6;color:#64288f;font-size:10px;font-weight:850;letter-spacing:.06em; }
+.nets-sim-box h3 { margin:12px 0 4px;color:#2e193c;font-size:1.05rem; }
 
+}
+.payment-config-note {
+  margin: 0 0 16px;
+  padding: 11px 13px;
+  border: 1px solid #ead9b4;
+  border-radius: 10px;
+  background: #fff9ec;
+  color: #765b22;
+  font-size: 12px;
+  line-height: 1.45;
 }

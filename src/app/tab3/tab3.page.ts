@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Plan, PolicyDataService } from '../services/policy-data';
 import { ApplicationSubmission, MeetingRecord, TimelineRecord, TimelineType, UserRecord, WorkspaceService } from '../services/workspace.service';
@@ -20,6 +20,7 @@ type RadarMetric = 'protection' | 'value' | 'flexibility' | 'benefits' | 'covera
 })
 export class Tab3Page implements OnInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly workspace = inject(WorkspaceService);
   private readonly policyData = inject(PolicyDataService);
   private readonly bookingService = inject(BookingService);
@@ -30,6 +31,7 @@ export class Tab3Page implements OnInit, OnDestroy {
   activeUser: UserRecord | null = null;
   timeline: TimelineRecord[] = [];
   meetings: MeetingRecord[] = [];
+  applications: ApplicationSubmission[] = [];
   customers: UserRecord[] = [];
   policies: RankedPlan[] = [];
   unreadCount = 0;
@@ -46,18 +48,36 @@ export class Tab3Page implements OnInit, OnDestroy {
   chatCountLoading = true;
   customersLoading = true;
   selectedTimelineItem: TimelineRecord | null = null;
+  selectedMeetingOverride: MeetingRecord | null = null;
   proposalAccepted = false;
   proposalSubmitting = false;
   proposalSubmitError = '';
   applicationSubmission: ApplicationSubmission | null = null;
+  selectedSubmittedApplication: ApplicationSubmission | null = null;
   deepAnalysisPlan: RankedPlan | null = null;
   rescheduleOpen = false;
   rescheduleDate = '';
   rescheduleSaving = false;
   rescheduleMessage = '';
+  consultantQuestionOpen = false;
+  consultantQuestionMeetingId = '';
+  consultantQuestionText = '';
+  consultantQuestionSaving = false;
+  consultantQuestionMessage = '';
+  applicationReviewSaving = false;
+  applicationReviewMessage = '';
+  consultantSignature = '';
+  blockedDateInput = '';
+  blockedDateReason = '';
+  blockingAvailability = false;
+  blockedDates: string[] = [];
+  consultantView: 'active' | 'completed' = 'active';
 
   ngOnInit(): void {
     this.subscriptions.add(this.workspace.currentUser$.subscribe({ next: account => this.connectAccount(account), error: error => this.handleDataError('account', error) }));
+    this.subscriptions.add(this.route.queryParamMap.subscribe(params => {
+      if (params.get('section') === 'meetings') setTimeout(() => document.getElementById('consultant-meetings')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }));
     void this.loadPlans();
   }
 
@@ -78,17 +98,51 @@ export class Tab3Page implements OnInit, OnDestroy {
   get selectedPolicy(): RankedPlan | undefined {
     return this.policies.find(plan => plan.id === this.selectedPolicyId) ?? this.policies[0];
   }
+  get selectedApplicationPlan(): RankedPlan | undefined {
+    const name = this.selectedSubmittedApplication?.planName.trim().toLowerCase();
+    return name ? this.policies.find(plan => plan.name.trim().toLowerCase() === name) : undefined;
+  }
   get displayedTimeline(): TimelineRecord[] {
-    if (!this.isConsultant) return this.timeline;
+    const today = this.singaporeDate(new Date());
+    const visibleEvents = this.timeline.filter(item => {
+      if (item.channel === 'meeting-question') return false;
+      if (item.type !== 'consultation') return true;
+      const meetingDate = item.meetingDate || item.detail.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0];
+      return !meetingDate || meetingDate >= today;
+    });
+    if (!this.isConsultant) return visibleEvents;
     const customerId = this.selectedClient?.id;
-    return customerId ? this.timeline.filter(item => item.customerId === customerId) : [];
+    return customerId ? visibleEvents.filter(item => item.customerId === customerId) : [];
   }
   get displayedMeetings(): MeetingRecord[] {
-    if (!this.isConsultant) return this.meetings;
+    const today = this.singaporeDate(new Date());
+    const currentMeetings = this.meetings.filter(meeting => this.isConsultant && this.consultantView === 'completed'
+      ? this.isCompletedMeeting(meeting, today)
+      : !this.isCompletedMeeting(meeting, today));
+    if (!this.isConsultant) return currentMeetings;
     const customerId = this.selectedClient?.id;
-    return customerId ? this.meetings.filter(meeting => meeting.customerId === customerId) : [];
+    return customerId ? currentMeetings.filter(meeting => meeting.customerId === customerId) : [];
+  }
+  get displayedApplications(): ApplicationSubmission[] {
+    if (!this.isConsultant) return this.applications;
+    const customerId = this.selectedClient?.id;
+    return customerId ? this.applications.filter(application => application.customerId === customerId && (this.consultantView === 'completed'
+      ? application.status !== 'pending-review'
+      : application.status === 'pending-review')) : [];
+  }
+  private isCompletedMeeting(meeting: MeetingRecord, today: string): boolean {
+    return meeting.status === 'completed' || meeting.status === 'cancelled' || (!!meeting.date && meeting.date < today);
   }
   get activityLoading(): boolean { return this.timelineLoading || (this.isConsultant && this.customersLoading); }
+  applicationStatusLabel(status: ApplicationSubmission['status'] | undefined): string {
+    if (status === 'approved') return 'Approved';
+    if (status === 'rejected') return 'Needs attention';
+    return 'Pending review';
+  }
+  applicationForTimeline(item: TimelineRecord): ApplicationSubmission | undefined {
+    const planName = item.policyOptions?.[0]?.toLowerCase();
+    return this.applications.find(application => application.planName.toLowerCase() === planName);
+  }
   get upcomingCountLoading(): boolean { return this.meetingsLoading || (this.isConsultant && this.customersLoading); }
   get upcomingMeetings(): MeetingRecord[] {
     const today = this.singaporeDate(new Date());
@@ -101,14 +155,89 @@ export class Tab3Page implements OnInit, OnDestroy {
     return this.customers.filter(item => !query || item.name.toLowerCase().includes(query) || (item.email || '').toLowerCase().includes(query));
   }
 
+  tagDescription(label: string): string {
+    const lookup = label.trim();
+    const descriptions: Record<string, string> = {
+      Savings: 'A savings goal focused on building reserves for future needs, emergencies, or long-term plans.',
+      Retirement: 'A retirement goal aimed at long-term income and financial independence later in life.',
+      'Wealth accumulation': 'A goal to grow invested assets and build long-term financial security.',
+      Protection: 'A goal to safeguard the household against major life or financial risks.',
+      Education: 'Saving for tuition, study costs, or future learning needs.',
+      'Emergency fund': 'Cash reserved for unexpected events or sudden household expenses.',
+      'Home purchase': 'Setting aside funds for a property deposit or other home-buying milestone.',
+      Travel: 'Planning for holidays, trips, or future mobility goals.',
+      'Debt management': 'Reducing or managing borrowing and repayable obligations more effectively.',
+      'Income protection': 'Coverage designed to maintain financial stability if income is reduced or interrupted.',
+      'Critical illness': 'Cover to help manage major medical events and treatment costs.',
+      'Family protection': 'A goal to protect dependants and household stability against major risks.',
+      'Health protection': 'A focus on safeguarding health-related costs and medical support.',
+      'Long-term wealth': 'A goal to build broader wealth and financial growth over time.',
+    };
+
+    return descriptions[lookup] ?? `This profile goal is about ${lookup || 'your stated financial need'}.`;
+  }
+
   selectClient(client: UserRecord): void {
+    if (this.selectedClientId === client.id) return;
     this.selectedClientId = client.id;
+    this.selectedPolicyId = '';
+    this.selectedTimelineItem = null;
+    this.deepAnalysisPlan = null;
+    this.applicationSubmission = null;
     this.rankPlans(client);
+  }
+  setConsultantView(view: 'active' | 'completed'): void {
+    this.consultantView = view;
+    this.selectedSubmittedApplication = null;
+    this.selectedTimelineItem = null;
+  }
+  get consultantSchedule(): MeetingRecord[] {
+    return this.displayedMeetings.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  }
+  meetingCustomerName(meeting: MeetingRecord): string {
+    return this.customers.find(customer => customer.id === meeting.customerId)?.name || 'Unknown customer';
   }
 
   selectPolicy(policy: RankedPlan): void {
     this.selectedPolicyId = policy.id;
     document.querySelector('.recommended-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  openSubmittedApplication(application: ApplicationSubmission): void { this.selectedSubmittedApplication = application; this.applicationReviewMessage = ''; this.consultantSignature = ''; }
+  closeSubmittedApplication(): void { this.selectedSubmittedApplication = null; this.applicationReviewMessage = ''; this.consultantSignature = ''; }
+  pendingReviewCount(customerId: string): number {
+    const pendingApplications = this.applications.filter(item => item.customerId === customerId && item.status === 'pending-review').length;
+    const pendingQuestions = this.timeline.filter(item => item.customerId === customerId && item.channel === 'meeting-question' && !item.readBy?.includes(this.activeUser?.id ?? '')).length;
+    return pendingApplications + pendingQuestions;
+  }
+  openNextReview(customer: UserRecord, event?: Event): void {
+    event?.stopPropagation();
+    this.selectClient(customer);
+    const application = this.applications.find(item => item.customerId === customer.id && item.status === 'pending-review');
+    if (application) {
+      setTimeout(() => document.querySelector('.application-record')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
+      this.openSubmittedApplication(application);
+      return;
+    }
+    const question = this.timeline.find(item => item.customerId === customer.id && item.channel === 'meeting-question' && !item.readBy?.includes(this.activeUser?.id ?? ''));
+    if (question) {
+      setTimeout(() => document.querySelector('#consultant-meetings')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+      this.openTimelineItem(question);
+    }
+  }
+  signatureMatches(): boolean { return this.consultantSignature.trim().toLowerCase() === this.activeUser?.name.trim().toLowerCase(); }
+  async reviewApplication(status: 'approved' | 'rejected'): Promise<void> {
+    const application = this.selectedSubmittedApplication;
+    if (!application || !this.activeUser || !this.isConsultant || this.applicationReviewSaving || (status === 'approved' && application.status === 'approved')) return;
+    this.applicationReviewSaving = true;
+    this.applicationReviewMessage = '';
+    try {
+      await this.workspace.reviewApplication(application, this.activeUser, status, this.consultantSignature);
+      this.applicationReviewMessage = status === 'approved' ? 'Application approved. The customer has been notified.' : 'Marked as needing attention. The customer has been notified.';
+      if (status === 'approved') this.closeSubmittedApplication();
+    } catch (error: any) {
+      this.applicationReviewMessage = error?.message || 'Could not update this application.';
+    } finally { this.applicationReviewSaving = false; }
   }
 
   viewPlanProposal(policy: RankedPlan): void {
@@ -138,6 +267,12 @@ export class Tab3Page implements OnInit, OnDestroy {
   compareDetailedPlan(): void {
     this.deepAnalysisPlan = null;
     document.querySelector('.alternative-plan')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  openPlanComparison(policy?: RankedPlan): void {
+    void this.router.navigate(['/tabs/chatbot'], {
+      queryParams: { compare: 'true', comparisonPlanId: policy?.id ?? this.selectedPolicy?.id ?? '' }
+    });
   }
 
   radarScore(plan: RankedPlan, metric: RadarMetric): number {
@@ -207,6 +342,7 @@ export class Tab3Page implements OnInit, OnDestroy {
   }
 
   openTimelineItem(item: TimelineRecord): void {
+    this.selectedMeetingOverride = null;
     this.selectedTimelineItem = item;
     this.proposalAccepted = false;
     this.applicationSubmission = null;
@@ -215,8 +351,11 @@ export class Tab3Page implements OnInit, OnDestroy {
 
   closeTimelineItem(): void {
     this.selectedTimelineItem = null;
+    this.selectedMeetingOverride = null;
     this.rescheduleOpen = false;
     this.rescheduleMessage = '';
+    this.consultantQuestionOpen = false;
+    this.consultantQuestionMessage = '';
   }
 
   get minimumRescheduleDate(): string {
@@ -255,11 +394,44 @@ export class Tab3Page implements OnInit, OnDestroy {
   }
 
   get selectedMeeting(): MeetingRecord | undefined {
-    if (!this.selectedTimelineItem || this.selectedTimelineItem.type !== 'consultation') return undefined;
-    return this.meetings.find(meeting =>
+    if (this.selectedMeetingOverride) return this.selectedMeetingOverride;
+    if (!this.selectedTimelineItem) return undefined;
+    const availableMeetings = this.isConsultant ? this.displayedMeetings : this.meetings;
+    if (this.selectedTimelineItem.meetingId) {
+      return availableMeetings.find(meeting => meeting.id === this.selectedTimelineItem?.meetingId);
+    }
+    if (this.selectedTimelineItem.type !== 'consultation') return undefined;
+    return availableMeetings.find(meeting =>
       (!!this.selectedTimelineItem?.consultantId && meeting.consultantId === this.selectedTimelineItem.consultantId) ||
       this.selectedTimelineItem?.detail.toLowerCase().includes(meeting.consultantName.toLowerCase())
-    ) ?? this.meetings[0];
+    ) ?? availableMeetings[0];
+  }
+  meetingQuestionsFor(meeting: MeetingRecord): TimelineRecord[] {
+    return this.timeline
+      .filter(item => item.channel === 'meeting-question' && item.meetingId === meeting.id)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  openMeetingDetails(meeting: MeetingRecord): void {
+    this.selectedMeetingOverride = meeting;
+    this.selectedTimelineItem = {
+      id: `meeting-${meeting.id}`,
+      customerId: meeting.customerId,
+      consultantId: meeting.consultantId,
+      type: 'consultation',
+      channel: meeting.channel,
+      title: 'Meeting details',
+      detail: meeting.specialty,
+      meetingId: meeting.id,
+      meetingDate: meeting.date,
+      createdAt: meeting.updatedAt,
+      readBy: [],
+    };
+    this.consultantQuestionOpen = false;
+    this.consultantQuestionMessage = '';
+  }
+  get selectedMeetingQuestions(): TimelineRecord[] {
+    const meeting = this.selectedMeeting;
+    return meeting ? this.meetingQuestionsFor(meeting) : [];
   }
   get selectedProposalPlan(): RankedPlan | undefined {
     if (this.selectedTimelineItem?.type !== 'proposal') return undefined;
@@ -285,12 +457,97 @@ export class Tab3Page implements OnInit, OnDestroy {
       this.proposalSubmitting = false;
     }
   }
+  reviewProposalApplication(plan: RankedPlan): void {
+    const application = this.displayedApplications.find(item =>
+      item.planName.trim().toLowerCase() === plan.name.trim().toLowerCase()
+    );
+    if (application) {
+      this.openSubmittedApplication(application);
+      return;
+    }
+    this.proposalSubmitError = 'No customer application is attached to this proposal yet.';
+  }
   openChatbot(): void { void this.router.navigate(['/tabs/chatbot']); }
+
+  askAiAboutPlan(plan: Plan): void {
+    this.closeTimelineItem();
+    void this.router.navigate(['/tabs/chatbot'], { queryParams: { planId: plan.id, question: `I have a question about this proposal.` } });
+  }
+
+  askAiAboutMeeting(meeting: MeetingRecord): void {
+    const questions = this.meetingQuestionsFor(meeting);
+    if (!questions.length) return;
+    const question = [
+      'Answer the customer questions below for my upcoming consultant meeting.',
+      ...questions.map((item, index) => `${index + 1}. ${item.detail}`),
+      'Give a clear, accurate response for each question separately. Do not invent questions or add a generic meeting briefing.'
+    ].join('\n');
+    this.closeTimelineItem();
+    void this.router.navigate(['/tabs/chatbot'], { queryParams: { question } });
+  }
+
+  askConsultantAboutPlan(plan: RankedPlan): void {
+    this.selectedPolicyId = plan.id;
+    this.consultantQuestionOpen = true;
+    this.consultantQuestionMessage = '';
+    this.consultantQuestionMeetingId ||= this.displayedMeetings[0]?.id ?? '';
+  }
+
+  askQuestionAboutMeeting(meeting: MeetingRecord): void {
+    this.consultantQuestionOpen = true;
+    this.consultantQuestionMessage = '';
+    this.consultantQuestionMeetingId = meeting.id;
+    this.consultantQuestionText = '';
+  }
+
+  async submitConsultantQuestion(plan?: RankedPlan): Promise<void> {
+    const customer = this.recommendationProfile;
+    const meeting = this.displayedMeetings.find(item => item.id === this.consultantQuestionMeetingId);
+    const question = this.consultantQuestionText.trim();
+    if (!customer || !meeting || !question || this.consultantQuestionSaving) return;
+    this.consultantQuestionSaving = true;
+    this.consultantQuestionMessage = '';
+    try {
+      await this.workspace.submitMeetingQuestion(customer, meeting, question, plan?.name ?? '');
+      this.consultantQuestionText = '';
+      this.consultantQuestionMessage = 'Question sent to your consultant for this meeting.';
+    } catch (error) {
+      console.error('[Tab3] Could not send consultant question:', error);
+      this.consultantQuestionMessage = 'Could not send your question. Please try again.';
+    } finally {
+      this.consultantQuestionSaving = false;
+    }
+  }
 
   async markRead(): Promise<void> {
     if (!this.activeUser) return;
     await this.workspace.markTimelineRead(this.activeUser.id, this.timeline);
     this.unreadCount = 0;
+  }
+
+  async saveBlockedDate(): Promise<void> {
+    if (!this.activeUser || this.activeUser.role !== 'consultant' || !this.blockedDateInput || this.blockingAvailability) return;
+    this.blockingAvailability = true;
+    try {
+      await this.bookingService.setConsultantAvailability(this.activeUser.id, this.blockedDateInput, true, this.blockedDateReason.trim());
+      if (!this.blockedDates.includes(this.blockedDateInput)) {
+        this.blockedDates = [...this.blockedDates, this.blockedDateInput].sort();
+      }
+      this.blockedDateInput = '';
+      this.blockedDateReason = '';
+    } finally {
+      this.blockingAvailability = false;
+    }
+  }
+
+  onBlockedDateInput(event: Event): void {
+    this.blockedDateInput = (event.target as HTMLInputElement).value;
+  }
+
+  async clearBlockedDate(date: string): Promise<void> {
+    if (!this.activeUser || this.activeUser.role !== 'consultant') return;
+    await this.bookingService.setConsultantAvailability(this.activeUser.id, date, false, '');
+    this.blockedDates = this.blockedDates.filter(item => item !== date);
   }
 
   async signOut(): Promise<void> {
@@ -300,13 +557,17 @@ export class Tab3Page implements OnInit, OnDestroy {
 
   recommendedAdvisor(plan: Plan): string { return this.advisorForPlan(plan); }
 
+  whyPlanFits(plan: RankedPlan): string {
+    return plan.matchReasons.slice(0, 2).join(' ');
+  }
+
   private advisorId(name: string): string {
     return name.toLowerCase().replace(/\s+/g, '-');
   }
 
   private advisorForPlan(plan: Plan): string {
     if (plan.filterCategory === 'life' || plan.filterCategory === 'ci') return 'JOHNNY LEE';
-    if (plan.filterCategory === 'wealth') return 'BRANDON';
+    if (plan.filterCategory === 'wealth') return 'BOBBY';
     return 'SARAH LIM';
   }
 
@@ -347,6 +608,7 @@ export class Tab3Page implements OnInit, OnDestroy {
     this.activeUser = account;
     this.timeline = [];
     this.meetings = [];
+    this.applications = [];
     this.customers = [];
     this.chatCount = 0;
     this.unreadCount = 0;
@@ -360,18 +622,39 @@ export class Tab3Page implements OnInit, OnDestroy {
 
     this.accountSubscriptions.add(this.workspace.timelineFor(account).subscribe({ next: events => { this.timeline = events; this.unreadCount = events.filter(event => !event.readBy?.includes(account.id)).length; this.timelineLoading = false; }, error: error => { this.timelineLoading = false; this.handleDataError('timeline', error); } }));
     this.accountSubscriptions.add(this.workspace.meetingsFor(account).subscribe({ next: meetings => { this.meetings = meetings; this.meetingsLoading = false; }, error: error => { this.meetingsLoading = false; this.handleDataError('meetings', error); } }));
+    this.accountSubscriptions.add(this.workspace.applicationsFor(account).subscribe({
+      next: applications => {
+        this.applications = applications;
+        if (account.role === 'consultant') {
+          void Promise.all(applications.filter(item => item.status !== 'pending-review').map(item => this.workspace.compactApplicationTimeline(item)));
+        }
+        if (this.applicationSubmission) {
+          this.applicationSubmission = applications.find(item => item.id === this.applicationSubmission?.id) ?? this.applicationSubmission;
+        }
+      },
+      error: error => this.handleDataError('applications', error)
+    }));
     if (account.role === 'customer') this.connectChatCount(account.id);
     if (account.role === 'consultant') {
+      void this.loadConsultantBlockedDates();
       this.accountSubscriptions.add(this.workspace.customers().subscribe({
         next: customers => {
           this.customers = customers;
           this.customersLoading = false;
-          if (!customers.some(client => client.id === this.selectedClientId)) this.selectedClientId = customers[0]?.id ?? '';
+          if (!customers.some(client => client.id === this.selectedClientId)) {
+            this.selectedClientId = customers[0]?.id ?? '';
+            this.selectedPolicyId = '';
+          }
           this.rankPlans(this.selectedClient ?? null);
         },
         error: error => { this.customersLoading = false; this.handleDataError('customers', error); },
       }));
     }
+  }
+
+  private async loadConsultantBlockedDates(): Promise<void> {
+    if (!this.activeUser || this.activeUser.role !== 'consultant') return;
+    this.blockedDates = await this.bookingService.getBlockedDates(this.activeUser.id);
   }
 
   private handleDataError(source: string, error: unknown): void {
@@ -417,7 +700,7 @@ export class Tab3Page implements OnInit, OnDestroy {
     if (budget && premium !== null) {
       if (premium <= budget) {
         score += 20;
-        reasons.push(`Fits within your S$${budget} monthly budget.`);
+        reasons.push(`Its ${plan.premium} premium stays within your S$${budget} monthly budget.`);
       } else {
         score -= 18;
         reasons.push(`Costs more than your S$${budget} monthly budget; review affordability with an adviser.`);
@@ -431,12 +714,12 @@ export class Tab3Page implements OnInit, OnDestroy {
       reasons.push('May overlap with existing coverage, so a gap review is recommended.');
     } else if (profile.hasExistingInsurance) {
       score += 8;
-      reasons.push('Adds a different coverage area from the plans listed in your profile.');
+      reasons.push(`It adds ${plan.category.toLowerCase()} coverage without directly duplicating your listed plans.`);
     }
 
     if ((profile.dependents ?? 0) > 0 && (plan.filterCategory === 'life' || plan.filterCategory === 'ci')) {
       score += 10;
-      reasons.push('Provides relevant protection for someone with dependants.');
+      reasons.push(`Its ${plan.filterCategory === 'life' ? 'income and life' : 'critical illness'} protection is relevant because you support ${profile.dependents} dependant${profile.dependents === 1 ? '' : 's'}.`);
     }
     if (!reasons.length) reasons.push('A general option to discuss after reviewing your coverage gaps.');
 

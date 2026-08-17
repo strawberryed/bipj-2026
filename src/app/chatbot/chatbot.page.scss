@@ -484,7 +484,8 @@ ion-modal {
   background: $surface;
   border-radius: 16px;
   padding: 16px;
-  max-width: 92%;
+  width: min(980px, 96%);
+  max-width: 96%;
   align-self: flex-start;
   box-shadow: 0 2px 8px rgba(90, 61, 158, 0.08), 0 0 0 1px rgba(90, 61, 158, 0.04);
   margin-bottom: 4px;
@@ -512,19 +513,30 @@ ion-modal {
 
 .compare-plans-header {
   display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  min-width: 760px;
+  margin-bottom: 10px;
 }
 
+.compare-grid-scroll { overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; scrollbar-color: $lavender-mid transparent; }
+.compare-header-spacer { display:flex;align-items:flex-end;padding:0 10px 11px;color:$text-muted;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase; }
+
 .compare-plan-col {
-  background: $lavender;
-  border-radius: 12px;
-  padding: 12px 14px;
+  display:flex;
+  min-height:108px;
+  flex-direction:column;
+  box-sizing:border-box;
+  background: linear-gradient(145deg, #f3edf8, #ebe3f3);
+  border:1px solid rgba(124,92,191,.1);
+  border-radius: 14px;
+  padding: 14px 15px 11px;
 }
 
 .compare-plan-name {
+  min-height:34px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 750;
+  line-height:1.3;
   color: $text;
   margin-bottom: 4px;
 }
@@ -539,6 +551,11 @@ ion-modal {
 .compare-table {
   width: 100%;
   border-collapse: collapse;
+  min-width:760px;
+  table-layout:fixed;
+  border:1px solid $border;
+  border-radius:12px;
+  overflow:hidden;
   font-size: 12px;
 
   tr {
@@ -546,18 +563,24 @@ ion-modal {
   }
 
   td {
-    padding: 7px 4px;
+    padding: 12px 14px;
+    border-right:1px solid $border;
     color: $text-mid;
     vertical-align: top;
     line-height: 1.4;
 
     &.row-label {
-      color: $text-muted;
-      font-size: 11px;
-      width: 30%;
-      padding-right: 8px;
+      width:150px;
+      background:#faf8fc;
+      color:$text;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.01em;
     }
   }
+
+  td:last-child { border-right:0; }
+  tr:first-child { border-top:0; }
 }
 
 .compare-card-time {
@@ -686,13 +709,13 @@ ion-modal {
 }
 
 .why-btn {
-  background: none;
-  border: none;
+  background: rgba(124,92,191,.1);
+  border: 0;
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: $lavender-text;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 4px 8px;
   text-decoration: none;
   border-radius: 4px;
   transition: background 0.15s;
@@ -1090,4 +1113,67 @@ ion-modal {
 // Show on hover via parent, no layout shift since space is always reserved
 .msg-row:hover .delete-msg-btn {
   visibility: visible;
+}
+
+@media (max-width: 700px) {
+  .compare-card { width:100%;max-width:100%;padding:13px;border-radius:14px; }
+  .compare-plans-header,.compare-table { min-width:700px; }
+  .compare-table td.row-label { width:130px; }
+}
+
+.attached-proposal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 14px 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(112, 45, 172, 0.2);
+  border-radius: 14px;
+  background: #f7f1fc;
+  color: #48206b;
+}
+
+.attached-proposal-main,
+.message-proposal {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.attached-proposal-main {
+  flex: 1;
+
+  ion-icon { font-size: 22px; flex-shrink: 0; }
+  span { display: grid; min-width: 0; font-weight: 700; }
+  small { color: #806b91; font-size: 11px; font-weight: 500; }
+}
+
+.attached-proposal-remove {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(112, 45, 172, 0.09);
+  color: #702dac;
+  cursor: pointer;
+}
+
+.message-proposal {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.14);
+
+  span { display: grid; flex: 1; min-width: 0; font-weight: 700; }
+  small { font-size: 10px; font-weight: 500; opacity: 0.75; }
 }

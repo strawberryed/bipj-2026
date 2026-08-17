@@ -35,6 +35,7 @@ export interface Message {
   compareCard?: CompareCard;
   followUpQuestion?: string;
   attachment?: { name: string; type: 'image' | 'pdf' };
+  proposal?: { id: string; name: string };
   reasoning?: string;
   confidence?: 'high' | 'medium' | 'low';
   timestamp?: Date;
@@ -249,6 +250,7 @@ export class GeminiService {
 
     return `
 ACTIVE USER PROFILE:
+- Account role: ${profile.role === 'consultant' ? 'Consultant' : 'Customer'}
 - Name: ${s(profile.fullName)}
 - Age: ${n(profile.age)}
 - Occupation: ${s(profile.occupation) || 'Not specified'}
@@ -263,6 +265,7 @@ ${existingPlansText}
 - Top concern: ${s(profile.topConcern) || 'Not specified'}
 
 Use this profile to personalise all responses. Reference the user by name naturally.
+${profile.role === 'consultant' ? 'The active user is a consultant. Provide professional product explanations, meeting preparation help, and client-service guidance. Do not treat the consultant as the insured customer and do not update their personal insurance profile.' : ''}
 Tailor fit scores, recommendations, and explanations to their specific situation.
 If a field is "Not specified", don't guess — acknowledge the gap or ask a clarifying question instead of inventing details.
 When the user has existing plans listed, factor those in — avoid recommending duplicates or plans that overlap heavily with what they already have. Suggest coverage gaps instead.

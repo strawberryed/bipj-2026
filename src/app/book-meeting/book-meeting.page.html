@@ -40,12 +40,13 @@
     <span>Preferred Meeting Date</span>
     <input type="date" class="date-input" [min]="minimumDate" [value]="selectedDate" (change)="onDateChange($event)" />
   </label>
+  <p class="date-availability-message" *ngIf="dateAvailabilityMessage">{{ dateAvailabilityMessage }}</p>
 
   <h2 class="section-title ion-margin-top">AVAILABLE SLOTS</h2>
 
   <ion-row class="slots-grid">
     <ion-col size="6" *ngFor="let slot of slots" class="slot-col">
-      <div class="slot-box" [class.active-slot]="selectedSlot === slot" (click)="selectSlot(slot)">
+      <div class="slot-box" [class.active-slot]="selectedSlot === slot" [class.disabled-slot]="selectedDateBlocked" [attr.aria-disabled]="selectedDateBlocked" [attr.tabindex]="selectedDateBlocked ? -1 : 0" (click)="selectSlot(slot)" (keydown.enter)="selectSlot(slot)" (keydown.space)="$event.preventDefault(); selectSlot(slot)">
         <span class="slot-time">{{ slot.time }}</span>
         <span class="slot-duration">{{ slot.duration }}</span>
       </div>

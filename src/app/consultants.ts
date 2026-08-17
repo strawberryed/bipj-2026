@@ -28,8 +28,8 @@ export const CONSULTANTS: ConsultantProfile[] = [
     bio: 'Helps clients optimise health coverage and employee benefits.'
   },
   {
-    id: 'brandon',
-    name: 'BRANDON',
+    id: 'bobby',
+    name: 'BOBBY',
     title: 'Senior Financial Advisor',
     yearsExperience: 10,
     specialties: ['Health Protection', 'Family Protection', 'Income Loss'],

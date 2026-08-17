@@ -27,7 +27,8 @@
         Hi <ng-container *ngIf="profile.fullName && profile.fullName !== 'Guest'"> <strong>{{ profile.fullName.split('
             ')[0] }}</strong></ng-container>!
         I'm <strong>Cova</strong>, your Prudential insurance assistant.
-        Ask me anything about your coverage or to simplify any policy terms.
+        <ng-container *ngIf="profile.role === 'consultant'; else customerWelcome">Ask me about product details, client meeting preparation, coverage gaps, or policy terminology.</ng-container>
+        <ng-template #customerWelcome>Ask me anything about your coverage or to simplify any policy terms.</ng-template>
       </div>
     </div>
 
@@ -42,8 +43,10 @@
         <div class="compare-card">
           <div class="compare-card-title">PLAN COMPARISON</div>
 
+          <div class="compare-grid-scroll">
           <div class="compare-plans-header"
-            [style.grid-template-columns]="'repeat(' + msg.compareCard.plans.length + ', 1fr)'">
+            [style.grid-template-columns]="'150px repeat(' + msg.compareCard.plans.length + ', minmax(190px, 1fr))'">
+            <div class="compare-header-spacer">Comparison</div>
             <div class="compare-plan-col" *ngFor="let plan of msg.compareCard.plans">
               <div class="compare-plan-name">{{ plan.name }}</div>
               <div class="compare-plan-price">{{ plan.premium }}</div>
@@ -69,6 +72,7 @@
               <td *ngFor="let val of row.values">{{ val }}</td>
             </tr>
           </table>
+          </div>
 
           <div class="compare-card-time">{{ msgTime(msg) }}</div>
         </div>
@@ -155,6 +159,12 @@
 
           <!-- Simple plain text bubble -->
           <div class="bubble" *ngIf="!msg.attachment && !msg.blocks">
+            <button type="button" class="message-proposal" *ngIf="msg.proposal"
+              (click)="openPlanDetail(msg.proposal.id)">
+              <ion-icon name="document-text-outline"></ion-icon>
+              <span><small>Attached proposal</small>{{ msg.proposal.name }}</span>
+              <ion-icon name="chevron-forward-outline"></ion-icon>
+            </button>
             <span class="confidence-badge" *ngIf="shouldShowConfidence(msg)"
               [ngClass]="getConfidenceClass(msg.confidence!)">
               <ion-icon name="shield-half-outline"></ion-icon>
@@ -205,6 +215,16 @@
 
 <!-- Input bar -->
 <ion-footer class="ion-no-border">
+  <div class="attached-proposal" *ngIf="attachedProposal as proposal">
+    <button type="button" class="attached-proposal-main" (click)="openPlanDetail(proposal.id)">
+      <ion-icon name="document-text-outline"></ion-icon>
+      <span><small>Proposal attached</small>{{ proposal.name }}</span>
+    </button>
+    <button type="button" class="attached-proposal-remove" aria-label="Remove attached proposal"
+      (click)="attachedProposal = null">
+      <ion-icon name="close-outline"></ion-icon>
+    </button>
+  </div>
   <div class="input-bar">
     <ion-button fill="clear" (click)="openCompare()" [disabled]="isPolicyDataLoading">
       <ion-icon name="git-compare-outline"></ion-icon>

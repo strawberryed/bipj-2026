@@ -1,4 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { WorkspaceService } from '../services/workspace.service';
 
 @Component({
   selector: 'app-tabs',
@@ -6,8 +9,26 @@ import { Component } from '@angular/core';
   styleUrls: ['tabs.page.scss'],
   standalone: false,
 })
-export class TabsPage {
+export class TabsPage implements OnInit, OnDestroy {
+  private readonly workspace = inject(WorkspaceService);
+  private readonly router = inject(Router);
+  private readonly subscription = new Subscription();
 
-  constructor() {}
+  isConsultant = false;
+
+  ngOnInit(): void {
+    this.subscription.add(this.workspace.currentUser$.subscribe(account => {
+      this.isConsultant = account?.role === 'consultant';
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  async consultantLogout(): Promise<void> {
+    await this.workspace.logout();
+    await this.router.navigate(['/auth']);
+  }
 
 }
